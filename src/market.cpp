@@ -98,6 +98,33 @@ double Market::AggregatedImbalance(uint32_t instrument_id) {
   return bid_sz / (bid_sz + ask_sz);
 }
 
+/**
+ * Calculates the aggregated order book imbalance across multiple depth levels and venues.
+ * * Provides a "Global Deep Book" feature by summing the total bid and ask volume 
+ * for the top N price levels across all active publishers. Aggregating multiple levels 
+ * reduces noise from top-of-book "flickering" and helps detect layering-based 
+ * spoofing strategies.
+ * * @param instrument_id The unique identifier for the financial instrument.
+ * @param depth The number of price levels (ticks) to aggregate from each side of the book.
+ * @return A normalized ratio [0.0, 1.0]. A value of 0.5 indicates a balanced deep book; 
+ * values nearing 1.0 indicate heavy buy-side concentration across the specified depth.
+ */
+double Market::AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth) {
+    double total_bid_sz = 0;
+    double total_ask_sz = 0;
+
+    // Access the vector of PublisherBooks for this instrument
+    for (const auto& pub_book : GetBooksByPub(instrument_id)) {
+        for (std::size_t i = 0; i < depth; ++i) {
+            total_bid_sz += static_cast<double>(pub_book.book.GetBidLevel(i).size);
+            total_ask_sz += static_cast<double>(pub_book.book.GetAskLevel(i).size);
+        }
+    }
+
+    double total_vol = total_bid_sz + total_ask_sz;
+    return (total_vol == 0) ? 0.5 : (total_bid_sz / total_vol);
+}
+
 // -------------------------------------------
 
 void Market::Apply(const db::MboMsg &mbo_msg) {

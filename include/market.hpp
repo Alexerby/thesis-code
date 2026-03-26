@@ -37,6 +37,8 @@ public:
   // Routes the incoming MBO message to the correct internal Book
   void Apply(const db::MboMsg &mbo_msg);
 
+  double AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth);
+
 private:
   // Instrument ID -> List of PublisherBooks
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
