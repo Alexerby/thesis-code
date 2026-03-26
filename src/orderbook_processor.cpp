@@ -2,11 +2,10 @@
 #include "databento/dbn_file_store.hpp"
 #include "databento/record.hpp"
 
-OrderBookProcessor::OrderBookProcessor() {
-}
+OrderBookProcessor::OrderBookProcessor() {}
 
 // Transforms raw DBN records into EnrichedOrders
-std::vector<EnrichedOrder>
+EnrichedOrderBook
 OrderBookProcessor::ProcessRecords(db::DbnFileStore &store) {
     std::vector<EnrichedOrder> orders;
 
