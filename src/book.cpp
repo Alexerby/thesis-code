@@ -113,10 +113,55 @@ void Book::Apply(const db::MboMsg &mbo) {
   case db::Action::Modify:
     Modify(mbo);
     break;
+  case db::Action::Fill:
+    Fill(mbo);
+    break;
   default:
     break;
   }
 }
+
+/**
+ * Internal primitive to calculate the order book imbalance (OBI) ratio.
+ * * Uses the current Best Bid and Best Offer (BBO) sizes to determine 
+ * the relative buying pressure for this specific book instance.
+ * * Formula: BidSize / (BidSize + AskSize)
+ * * @return A normalized value [0.0, 1.0]. 0.5 is neutral; 
+ * values nearing 1.0 indicate heavy buy-side (bid) concentration.
+ */
+double Book::CalculateImbalance() const {
+  auto bid = GetBidLevel();
+  auto ask = GetAskLevel();
+
+  double bid_sz = static_cast<double>(bid.size);
+  double ask_sz = static_cast<double>(ask.size);
+
+  if (bid_sz + ask_sz == 0)
+    return 0.5; // Return 0.5 for a perfectly "neutral" empty book
+
+  return bid_sz / (bid_sz + ask_sz);
+}
+
+/**
+ * Calculates imbalance across multiple price levels to provide a 
+ * smoother "Deep Book" feature for machine learning.
+ * @param depth The number of price levels to include (default is 1 for BBO).
+ */
+double Book::CalculateDeepImbalance(std::size_t depth) const {
+    double total_bid_sz = 0;
+    double total_ask_sz = 0;
+
+    for (std::size_t i = 0; i < depth; ++i) {
+        total_bid_sz += static_cast<double>(GetBidLevel(i).size);
+        total_ask_sz += static_cast<double>(GetAskLevel(i).size);
+    }
+
+    double total_vol = total_bid_sz + total_ask_sz;
+    return (total_vol == 0) ? 0.5 : (total_bid_sz / total_vol);
+}
+
+
+// -------------------------------------------
 
 // Private Implementation Logic
 PriceLevel Book::GetPriceLevel(int64_t price, const LevelOrders &level) {
@@ -156,6 +201,27 @@ void Book::Add(db::MboMsg mbo) {
 }
 
 void Book::Cancel(db::MboMsg mbo) {
+  auto &side_levels = GetSideLevels(mbo.side);
+  if (side_levels.find(mbo.price) == side_levels.end())
+    return;
+
+  LevelOrders &level = side_levels[mbo.price];
+  auto it = GetLevelOrder(level, mbo.order_id);
+
+  if (it == level.end())
+    return; // Order not found, ignore and continue
+
+  if (it->size <= mbo.size) {
+    orders_by_id_.erase(mbo.order_id);
+    level.erase(it);
+    if (level.empty())
+      RemoveLevel(mbo.side, mbo.price);
+  } else {
+    it->size -= mbo.size;
+  }
+}
+
+void Book::Fill(db::MboMsg mbo) {
   auto &side_levels = GetSideLevels(mbo.side);
   if (side_levels.find(mbo.price) == side_levels.end())
     return;

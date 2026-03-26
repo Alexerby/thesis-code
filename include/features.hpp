@@ -5,7 +5,7 @@ namespace db = databento;
 
 struct Features {
   int64_t order_age_ns{0};
-  int64_t tick_imbalance{0};
+  double order_imbalance{0.0};
   double distance_from_mid{0.0};
 };
 

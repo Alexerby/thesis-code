@@ -25,8 +25,14 @@ public:
   std::pair<PriceLevel, PriceLevel> Bbo(uint32_t instrument_id,
                                         uint16_t publisher_id);
 
+  // Imbalance for a specific publisher
+  double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
+
   // Aggregated BBO across all publishers (The "Consolidated" Book)
   std::pair<PriceLevel, PriceLevel> AggregatedBbo(uint32_t instrument_id);
+
+  // Aggregated Imbalance across all publishers
+  double AggregatedImbalance(uint32_t instrument_id);
 
   // Routes the incoming MBO message to the correct internal Book
   void Apply(const db::MboMsg &mbo_msg);

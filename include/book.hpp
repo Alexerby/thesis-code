@@ -3,6 +3,7 @@
 
 #include "databento/enums.hpp"
 #include "databento/record.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <databento/record.hpp>
 #include <map>
@@ -40,6 +41,9 @@ public:
   std::vector<db::BidAskPair> GetSnapshot(std::size_t level_count = 1) const;
 
   void Apply(const db::MboMsg &mbo);
+  double CalculateImbalance() const;
+
+  double CalculateDeepImbalance(std::size_t depth) const;
 
 private:
   // Internal Types
@@ -60,6 +64,7 @@ private:
   void Add(db::MboMsg mbo);
   void Cancel(db::MboMsg mbo);
   void Modify(db::MboMsg mbo);
+  void Fill(db::MboMsg mbo);
 
   SideLevels &GetSideLevels(db::Side side);
   LevelOrders &GetLevel(db::Side side, int64_t price);

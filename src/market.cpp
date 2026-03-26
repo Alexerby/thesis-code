@@ -62,6 +62,44 @@ Market::AggregatedBbo(uint32_t instrument_id) {
   return {agg_bid, agg_ask};
 }
 
+// -------------------------------------------
+// Feature Engineering
+// -------------------------------------------
+
+/**
+* Calculates the orderbook imbalance for a specific publisher (venue).
+* @param instrument_id The unique identifier for the instrument (ISIN/Symbol).
+* @param publisher_id  The specific data source or venue (e.g., CME, NYSE).
+* @return A ratio [0.0, 1.0] where > 0.5 indicates buy-side pressure on this venue.
+* */
+double Market::Imbalance(uint32_t instrument_id, uint16_t publisher_id) {
+  const auto &book = GetBook(instrument_id, publisher_id);
+  return book.CalculateImbalance();
+}
+
+/**
+ * Calculates the consolidated order book imbalance for an instrument.
+ * * Provides a "Global" view by aggregating liquidity across all venues 
+ * (CME, ICE, etc.). Effectively measures the total market-wide buying 
+ * versus selling pressure for a single ISIN.
+ * * @param instrument_id The unique identifier for the financial instrument (ISIN/Symbol).
+ * @return A ratio [0.0, 1.0] where 1.0 represents a market entirely dominated by 
+ * bids (buy-side) across all active publishers.
+ */
+double Market::AggregatedImbalance(uint32_t instrument_id) {
+  auto bbo = AggregatedBbo(instrument_id);
+
+  double bid_sz = static_cast<double>(bbo.first.size);
+  double ask_sz = static_cast<double>(bbo.second.size);
+
+  if (bid_sz + ask_sz == 0)
+    return 0.5;
+
+  return bid_sz / (bid_sz + ask_sz);
+}
+
+// -------------------------------------------
+
 void Market::Apply(const db::MboMsg &mbo_msg) {
 
   // Map all books to instrument IDs
