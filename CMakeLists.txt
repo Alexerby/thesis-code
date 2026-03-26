@@ -20,8 +20,9 @@ FetchContent_MakeAvailable(databento)
 add_executable(
     main 
     src/main.cpp
-    src/metadata_handler.cpp
-    src/orderbook_processor.cpp
+    src/metadata.cpp
+    src/book.cpp
+    src/market.cpp
 )
 
 # Add include/ directory to the include path
