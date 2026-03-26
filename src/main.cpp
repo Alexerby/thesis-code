@@ -15,4 +15,6 @@ int main() {
     // Orderbook processing
     OrderBookProcessor obp;
     auto enriched_orders = obp.ProcessRecords(store);
+
+    std::cout << obp.m_total_obs << std::endl;
 }

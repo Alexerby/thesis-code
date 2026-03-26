@@ -11,7 +11,7 @@ OrderBookProcessor::ProcessRecords(db::DbnFileStore &store) {
     std::vector<EnrichedOrder> orders;
 
     const db::Record *record;
-    size_t count = 0;
+    uint64_t count = 0; // local count
 
     while ((record = store.NextRecord()) != nullptr) {
         if (record->Header().rtype == databento::RType::Mbo) {
@@ -26,6 +26,7 @@ OrderBookProcessor::ProcessRecords(db::DbnFileStore &store) {
             count++;
         }
     }
+    m_total_obs = count;
     return orders;
 }
 

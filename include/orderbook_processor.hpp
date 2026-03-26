@@ -51,7 +51,8 @@ using EnrichedOrderBook = std::vector<EnrichedOrder>;
 class OrderBookProcessor {
   public:
     OrderBookProcessor();
-
+    uint64_t m_total_obs;
+    
     std::vector<EnrichedOrder> ProcessRecords(db::DbnFileStore &store);
 
   private:
@@ -59,6 +60,7 @@ class OrderBookProcessor {
     // Price -> Aggregate volumes
     std::map<int64_t, uint32_t> m_bids;
     std::map<int64_t, uint32_t> m_asks;
+
 
     // Track individual order lifecycle for "Order Age" calculations
     std::unordered_map<uint64_t, OrderState> m_active_orders;
