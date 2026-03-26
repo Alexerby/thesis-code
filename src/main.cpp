@@ -9,8 +9,8 @@ int main() {
 
     // Metadata
     MetadataParser mdParser(store);
-    auto summary = mdParser.GetSummary();
-    std::cout << summary.to_string() << std::endl;
+    MetadataSummary metadataSummary = mdParser.GetSummary();
+    std::cout << metadataSummary.to_string() << std::endl;
 
     // Orderbook processing
     OrderBookProcessor obp;
