@@ -23,6 +23,7 @@ add_executable(
     src/metadata.cpp
     src/book.cpp
     src/market.cpp
+    src/visualizer.cpp
 )
 
 # Add include/ directory to the include path

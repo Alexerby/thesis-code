@@ -1,13 +1,12 @@
-#include <chrono> // For sleep
 #include <databento/dbn_file_store.hpp>
 #include <databento/symbol_map.hpp>
-#include <iomanip>
 #include <iostream>
-#include <thread> // For sleep
 
-#include "constants.hpp"
+#include "databento/datetime.hpp"
 #include "market.hpp"
 #include "metadata.hpp"
+#include "visualizer.hpp"
+
 // TODO: Define different callbacks for investigating the data,
 // so we can pass these anonymous functions into our replay.
 
@@ -24,46 +23,29 @@ int main() {
     std::cout << md_parser.GetSummary().to_string() << std::endl;
   };
 
+  // Define the levels your thesis cares about
+  std::vector<std::size_t> depths = {1, 3, 5, 10, 30, 50};
+
+  // Create the visualizer with a 20ms refresh (faster than default)
+  Visualizer viz(depths);
+
   auto record_callback = [&](const db::Record &record) {
     if (auto *mbo = record.GetIf<db::MboMsg>()) {
       market.Apply(*mbo);
 
       if (mbo->flags.IsLast()) {
-        const auto &symbol = symbol_map.At(*mbo);
-        auto bbo = market.AggregatedBbo(mbo->hd.instrument_id);
-
-        // Clear screen
-        std::cout << constants::CLEAR;
-        std::cout << constants::YEL << ">> " << symbol << " | ";
-        std::cout << db::ToIso8601(mbo->ts_recv) << constants::RESET << "\n";
-
-        const std::vector<std::size_t> depths = {1, 3, 5, 10, 30, 50};
+        MarketState state;
+        state.symbol = symbol_map.At(*mbo);
+        state.timestamp = db::ToIso8601(mbo->ts_recv);
+        state.bbo = market.AggregatedBbo(mbo->hd.instrument_id);
 
         for (auto d : depths) {
           double imb = market.AggregatedDeepImbalance(mbo->hd.instrument_id, d);
-          int bar_width = 20;
-          int pos = static_cast<int>(imb * bar_width);
-
-          std::string label = "L" + std::to_string(d) + " Imbalance:";
-          std::cout << std::left << std::setw(15) << label << " ["
-                    << constants::GRN << std::string(pos, '|')
-                    << constants::RESET << std::string(bar_width - pos, '.')
-                    << "] " << std::fixed << std::setprecision(4) << imb
-                    << "\n";
+          state.imbalance_levels.push_back({"L" + std::to_string(d), imb});
         }
 
-        std::cout << "\n";
-        if (!bbo.second.IsEmpty())
-          std::cout << constants::RED << "  ASK  " << constants::RESET
-                    << bbo.second << "\n";
-        if (!bbo.first.IsEmpty())
-          std::cout << constants::GRN << "  BID  " << constants::RESET
-                    << bbo.first << "\n";
-
-        std::cout << std::string(60, '-') << std::endl;
-
-        // Pause the "Tape": 50ms delay
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        // 5. Pass the completed state to the visualizer
+        viz.Render(state);
       }
     }
     return db::KeepGoing::Continue;
