@@ -11,5 +11,6 @@ struct ImbalanceLevels {
 struct FeatureVector {
   ImbalanceLevels imbalance_levels;
   int64_t mid_price;
-  int64_t sprad;
+  int64_t spread;
+  bool is_fomc_active;
 };
