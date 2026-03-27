@@ -123,23 +123,21 @@ void Book::Apply(const db::MboMsg &mbo) {
 
 /**
  * Internal primitive to calculate the order book imbalance (OBI) ratio.
- * * Uses the current Best Bid and Best Offer (BBO) sizes to determine 
- * the relative buying pressure for this specific book instance.
- * * Formula: BidSize / (BidSize + AskSize)
- * * @return A normalized value [0.0, 1.0]. 0.5 is neutral; 
- * values nearing 1.0 indicate heavy buy-side (bid) concentration.
+ * Formula: (BidSize - AskSize) / (BidSize + AskSize)
+ * @return A normalized value [-1.0, 1.0]. 0.0 is neutral.
  */
 double Book::CalculateImbalance() const {
-  auto bid = GetBidLevel();
-  auto ask = GetAskLevel();
+    auto bid = GetBidLevel();
+    auto ask = GetAskLevel();
 
-  double bid_sz = static_cast<double>(bid.size);
-  double ask_sz = static_cast<double>(ask.size);
+    double bid_sz = static_cast<double>(bid.size);
+    double ask_sz = static_cast<double>(ask.size);
 
-  if (bid_sz + ask_sz == 0)
-    return 0.5; // Return 0.5 for a perfectly "neutral" empty book
+    double total_vol = bid_sz + ask_sz;
+    if (total_vol == 0)
+        return 0.0; 
 
-  return bid_sz / (bid_sz + ask_sz);
+    return (bid_sz - ask_sz) / total_vol;
 }
 
 /**

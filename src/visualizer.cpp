@@ -16,18 +16,36 @@ void Visualizer::DrawHeader(const MarketState &state) {
 }
 
 void Visualizer::DrawMetricBar(const std::string &label, double value) {
-  int bar_width = 20;
-  int pos = static_cast<int>(value * bar_width);
+    const int bar_width = 20;
+    const int mid = bar_width / 2; // Position 10
+    
+    // Clamp value to [-1, 1] for safety
+    double clamped = std::max(-1.0, std::min(1.0, value));
+    
+    // Calculate how many characters to fill (0 to 10)
+    int fill_amount = static_cast<int>(std::abs(clamped) * mid);
+    
+    std::string bar = std::string(bar_width, '.');
+    std::string color = RESET;
 
-  if (pos > bar_width)
-    pos = bar_width;
-  if (pos < 0)
-    pos = 0;
+    if (clamped > 0.01) { // Positive: Fill right side
+        color = GRN;
+        for (int i = 0; i < fill_amount; ++i) {
+            bar[mid + i] = '|';
+        }
+    } else if (clamped < -0.01) { // Negative: Fill left side
+        color = RED;
+        for (int i = 0; i < fill_amount; ++i) {
+            bar[mid - 1 - i] = '|';
+        }
+    } else {
+        // Neutral: Just a center marker
+        bar[mid] = ':';
+    }
 
-  std::cout << std::left << std::setw(15) << label << " [" << GRN
-            << std::string(pos, '|') << RESET
-            << std::string(bar_width - pos, '.') << "] " << std::fixed
-            << std::setprecision(4) << value << "\n";
+    std::cout << std::left << std::setw(15) << label << " [" 
+              << color << bar << RESET << "] " 
+              << std::fixed << std::setprecision(4) << value << "\n";
 }
 
 void Visualizer::DrawBBO(const std::pair<PriceLevel, PriceLevel> &bbo) {

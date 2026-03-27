@@ -37,9 +37,15 @@ public:
   // Routes the incoming MBO message to the correct internal Book
   void Apply(const db::MboMsg &mbo_msg);
 
+  // Aggregated imbalance calculations
   double AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth);
+  double AggregatedImbalanceVelocity(uint32_t instrument_id, std::size_t depth);
 
 private:
   // Instrument ID -> List of PublisherBooks
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
+
+   // Tracks the previous imbalance state to calculate velocity/delta signals.
+   // Structure: { instrument_id -> { depth_level -> last_known_imbalance_ratio }
+  std::unordered_map<uint32_t, std::unordered_map<std::size_t, double>> last_imbalances_;
 };

@@ -24,9 +24,9 @@ int main() {
   };
 
   // Define the levels your thesis cares about
-  std::vector<std::size_t> depths = {1, 3, 5, 10, 30, 50};
+  std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
 
-  // Create the visualizer with a 20ms refresh (faster than default)
+  // Create the visualizer
   Visualizer viz(depths);
 
   auto record_callback = [&](const db::Record &record) {
@@ -40,11 +40,17 @@ int main() {
         state.bbo = market.AggregatedBbo(mbo->hd.instrument_id);
 
         for (auto d : depths) {
+
+          // Absolute imbalance (state)
           double imb = market.AggregatedDeepImbalance(mbo->hd.instrument_id, d);
           state.imbalance_levels.push_back({"L" + std::to_string(d), imb});
+
+          // Change in imabalance (velocity)
+          double diff = market.AggregatedImbalanceVelocity(mbo->hd.instrument_id, d);
+          state.imbalance_levels.push_back({"L" + std::to_string(d) + " Diff ", diff});
         }
 
-        // 5. Pass the completed state to the visualizer
+        // Pass the completed state to the visualizer
         viz.Render(state);
       }
     }

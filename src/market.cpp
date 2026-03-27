@@ -113,7 +113,6 @@ double Market::AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth
     double total_bid_sz = 0;
     double total_ask_sz = 0;
 
-    // Access the vector of PublisherBooks for this instrument
     for (const auto& pub_book : GetBooksByPub(instrument_id)) {
         for (std::size_t i = 0; i < depth; ++i) {
             total_bid_sz += static_cast<double>(pub_book.book.GetBidLevel(i).size);
@@ -122,7 +121,38 @@ double Market::AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth
     }
 
     double total_vol = total_bid_sz + total_ask_sz;
-    return (total_vol == 0) ? 0.5 : (total_bid_sz / total_vol);
+    return (total_vol == 0) ? 0.0 : (total_bid_sz - total_ask_sz) / total_vol;
+}
+
+/**
+ * Calculates the aggregated velocity (delta) in the order book imbalance 
+ * between the current event and the previous state. 
+ *
+ * Serves as a high-frequency feature to detect "Balance Shocks"—sudden shifts 
+ * in book pressure caused by aggressive layering, large cancellations, or 
+ * sweeping the top of the book (Sweep-to-Fill order).
+ *
+ * @param instrument_id Unique identifier for the product (e.g., ES M6).
+ * @param depth Number of price levels to aggregate.
+ * @return The first-order difference ΔI ∈ [-2, 1.0] representing the 
+ * direction and magnitude of the book shock.
+ */
+double Market::AggregatedImbalanceVelocity(uint32_t instrument_id, std::size_t depth) {
+
+    // Calculate current imbalance
+    double current_imb = AggregatedDeepImbalance(instrument_id, depth);
+
+    // Lookup and update previous imbalance
+    double prev_imb = current_imb;
+    if (last_imbalances_[instrument_id].count(depth)) {
+        prev_imb = last_imbalances_[instrument_id][depth];
+    }
+
+    // Calculate delta
+    double vel = current_imb - prev_imb;
+    last_imbalances_[instrument_id][depth] = current_imb;
+
+    return vel;
 }
 
 // -------------------------------------------

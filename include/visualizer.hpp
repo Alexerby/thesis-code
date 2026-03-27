@@ -20,7 +20,7 @@ public:
   // Fixed constructor syntax and member initialization
   Visualizer(
       const std::vector<std::size_t> &depths,
-      std::chrono::milliseconds refresh_rate = std::chrono::milliseconds(50));
+      std::chrono::milliseconds refresh_rate = std::chrono::milliseconds(20));
 
   void Render(const MarketState &state);
 
