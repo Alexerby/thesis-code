@@ -1,5 +1,4 @@
 #include "book.hpp"
-#include "databento/dbn_file_store.hpp"
 #include "databento/pretty.hpp"
 #include "databento/record.hpp"
 
@@ -100,6 +99,8 @@ std::vector<db::BidAskPair> Book::GetSnapshot(std::size_t level_count) const {
 }
 
 void Book::Apply(const db::MboMsg &mbo) {
+  this->last_ts_recv_ = mbo.ts_recv.time_since_epoch().count();
+
   switch (mbo.action) {
   case db::Action::Clear:
     Clear();
@@ -116,52 +117,41 @@ void Book::Apply(const db::MboMsg &mbo) {
   case db::Action::Fill:
     Fill(mbo);
     break;
+  case db::Action::Trade:
+    Trade(mbo);
+    break;
   default:
     break;
   }
 }
 
-/**
- * Internal primitive to calculate the order book imbalance (OBI) ratio.
- * Formula: (BidSize - AskSize) / (BidSize + AskSize)
- * @return A normalized value [-1.0, 1.0]. 0.0 is neutral.
- */
 double Book::CalculateImbalance() const {
-    auto bid = GetBidLevel();
-    auto ask = GetAskLevel();
+  auto bid = GetBidLevel();
+  auto ask = GetAskLevel();
 
-    double bid_sz = static_cast<double>(bid.size);
-    double ask_sz = static_cast<double>(ask.size);
+  double bid_sz = static_cast<double>(bid.size);
+  double ask_sz = static_cast<double>(ask.size);
 
-    double total_vol = bid_sz + ask_sz;
-    if (total_vol == 0)
-        return 0.0; 
+  double total_vol = bid_sz + ask_sz;
+  if (total_vol == 0)
+    return 0.0;
 
-    return (bid_sz - ask_sz) / total_vol;
+  return (bid_sz - ask_sz) / total_vol;
 }
 
-/**
- * Calculates imbalance across multiple price levels to provide a 
- * smoother "Deep Book" feature for machine learning.
- * @param depth The number of price levels to include (default is 1 for BBO).
- */
 double Book::CalculateDeepImbalance(std::size_t depth) const {
-    double total_bid_sz = 0;
-    double total_ask_sz = 0;
+  double total_bid_sz = 0;
+  double total_ask_sz = 0;
 
-    for (std::size_t i = 0; i < depth; ++i) {
-        total_bid_sz += static_cast<double>(GetBidLevel(i).size);
-        total_ask_sz += static_cast<double>(GetAskLevel(i).size);
-    }
+  for (std::size_t i = 0; i < depth; ++i) {
+    total_bid_sz += static_cast<double>(GetBidLevel(i).size);
+    total_ask_sz += static_cast<double>(GetAskLevel(i).size);
+  }
 
-    double total_vol = total_bid_sz + total_ask_sz;
-    return (total_vol == 0) ? 0.5 : (total_bid_sz / total_vol);
+  double total_vol = total_bid_sz + total_ask_sz;
+  return (total_vol == 0) ? 0.5 : (total_bid_sz / total_vol);
 }
 
-
-// -------------------------------------------
-
-// Private Implementation Logic
 PriceLevel Book::GetPriceLevel(int64_t price, const LevelOrders &level) {
   PriceLevel res{price};
   for (const auto &order : level) {
@@ -185,7 +175,7 @@ void Book::Clear() {
   bids_.clear();
 }
 
-void Book::Add(db::MboMsg mbo) {
+void Book::Add(const db::MboMsg &mbo) {
   if (mbo.flags.IsTob()) {
     SideLevels &levels = GetSideLevels(mbo.side);
     levels.clear();
@@ -198,7 +188,7 @@ void Book::Add(db::MboMsg mbo) {
   }
 }
 
-void Book::Cancel(db::MboMsg mbo) {
+void Book::Cancel(const db::MboMsg &mbo) {
   auto &side_levels = GetSideLevels(mbo.side);
   if (side_levels.find(mbo.price) == side_levels.end())
     return;
@@ -207,7 +197,7 @@ void Book::Cancel(db::MboMsg mbo) {
   auto it = GetLevelOrder(level, mbo.order_id);
 
   if (it == level.end())
-    return; // Order not found, ignore and continue
+    return;
 
   if (it->size <= mbo.size) {
     orders_by_id_.erase(mbo.order_id);
@@ -219,7 +209,7 @@ void Book::Cancel(db::MboMsg mbo) {
   }
 }
 
-void Book::Fill(db::MboMsg mbo) {
+void Book::Fill(const db::MboMsg &mbo) {
   auto &side_levels = GetSideLevels(mbo.side);
   if (side_levels.find(mbo.price) == side_levels.end())
     return;
@@ -228,7 +218,7 @@ void Book::Fill(db::MboMsg mbo) {
   auto it = GetLevelOrder(level, mbo.order_id);
 
   if (it == level.end())
-    return; // Order not found, ignore and continue
+    return;
 
   if (it->size <= mbo.size) {
     orders_by_id_.erase(mbo.order_id);
@@ -240,7 +230,18 @@ void Book::Fill(db::MboMsg mbo) {
   }
 }
 
-void Book::Modify(db::MboMsg mbo) {
+void Book::Trade(const db::MboMsg &mbo) {
+  if (mbo.price != db::kUndefPrice) {
+    last_execution_.price = mbo.price;
+    last_execution_.volume = mbo.size;
+    last_execution_.side = mbo.side;
+    last_execution_.ts_recv = mbo.ts_recv;
+
+    this->total_trade_volume_ += mbo.size;
+  }
+}
+
+void Book::Modify(const db::MboMsg &mbo) {
   auto it = orders_by_id_.find(mbo.order_id);
   if (it == orders_by_id_.end()) {
     Add(mbo);

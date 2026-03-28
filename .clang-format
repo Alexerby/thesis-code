@@ -1,1 +1,27 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+
+# --- Key Formatting Rules ---
+ColumnLimit: 80
 IndentWidth: 2
+
+# --- Brace Style (Attach) ---
+# This puts the { on the same line as the function/if/loop
+BreakBeforeBraces: Attach
+
+# --- Space Before Brace ---
+# This ensures there is a space: "void func() {" instead of "void func(){"
+SpaceBeforeParens: ControlStatements
+# Google style (the base) already defaults to a space before { 
+# but you can be explicit:
+BracketSpacing: false
+
+# --- Fixing the "Ugly" Alignment ---
+AlignAfterOpenBracket: DontAlign
+BinPackArguments: false
+BinPackParameters: false
+
+# --- Cleanups ---
+AllowShortFunctionsOnASingleLine: None
+---

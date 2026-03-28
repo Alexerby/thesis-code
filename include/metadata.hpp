@@ -27,6 +27,8 @@ class MetadataParser {
 public:
   explicit MetadataParser(const db::Metadata &meta);
   MetadataSummary GetSummary() const;
+  void ValidateSchema() const;
+  
 
 private:
   uint8_t version;

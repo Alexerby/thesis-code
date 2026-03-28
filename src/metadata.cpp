@@ -1,19 +1,22 @@
 #include "metadata.hpp"
+#include "databento/datetime.hpp"
 #include <databento/enums.hpp>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
+#include "datetime.hpp"
+
+namespace db = databento;
 
 MetadataParser::MetadataParser(const db::Metadata &meta) {
   version = meta.version;
   dataset = meta.dataset;
 
-  schema = meta.schema.has_value() 
-      ? db::ToString(meta.schema.value()) 
-      : "Unknown";
+  schema =
+      meta.schema.has_value() ? db::ToString(meta.schema.value()) : "Unknown";
 
-  stype_in = meta.stype_in.has_value() 
-      ? db::ToString(meta.stype_in.value())
-      : "Unknown";
+  stype_in = meta.stype_in.has_value() ? db::ToString(meta.stype_in.value())
+                                       : "Unknown";
 
   stype_out = db::ToString(meta.stype_out);
   start_ts = meta.start.time_since_epoch().count();
@@ -40,6 +43,11 @@ std::string MetadataSummary::to_string() const {
   row("DBN Version:") << static_cast<int>(version) << "\n";
   row("Dataset:") << dataset << "\n";
   row("Schema:") << schema << "\n";
+
+// This works by wrapping the number in the correct time type
+row("Start Time:") << utils::epoch_to_str(start_ts) << "\n";
+row("End Time:")   << utils::epoch_to_str(end_ts) << "\n";
+
   row("SType In/Out:") << stype_in << " -> " << stype_out << "\n";
   row("Record Limit:") << (record_count == 0 ? "None"
                                              : std::to_string(record_count))
@@ -60,3 +68,13 @@ std::string MetadataSummary::to_string() const {
 
   return ss.str();
 }
+
+void MetadataParser::ValidateSchema() const {
+    if (this->schema != "mbo") {
+        std::cerr << "FATAL: Dataset schema is '" << schema 
+                  << "'. Thesis logic requires 'mbo' (Market By Order).\n"
+                  << "Aggregated schemas (mbp/tob) will break Order ID tracking." << std::endl;
+        std::exit(1);
+    }
+}
+
