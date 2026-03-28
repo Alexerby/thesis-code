@@ -36,12 +36,21 @@ public:
   void SetTimeDomain(uint64_t start_ts, uint64_t end_ts);
 
 private:
-  // Layout helpers
+  // Logic helpers
+  void UpdateHistory(const MarketState &state);
+  int GetVisibleLength(const std::string &str);
+
+  // Layout and Widget helpers
   std::string GetHeader(const MarketState &state);
   std::string GetMetricBar(const std::string &label, double value);
+  std::string GetBBO(const std::pair<PriceLevel, PriceLevel> &bbo);
+  std::vector<std::string> GetDashboardLines(const MarketState &state);
   std::vector<std::string> GetOrderbookLines(const MarketState &state);
   std::vector<std::string> GetPriceChartLines();
-  std::string GetBBO(const std::pair<PriceLevel, PriceLevel> &bbo);
+  
+  void DrawSplitPanel(const std::vector<std::string> &left,
+                      const std::vector<std::string> &right);
+  void DrawPriceHistory();
 
   // Depths to be handled by the visualizer logic
   std::vector<std::size_t> m_depths;
