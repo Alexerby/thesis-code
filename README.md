@@ -25,6 +25,7 @@ The following dependencies are integrated via CMake `FetchContent`:
 
 ## Building and Usage
 
+### Quick Start
 To configure, build, and run the default analysis:
 
 ```bash
@@ -33,3 +34,19 @@ chmod +x run.sh
 ```
 
 The system will automatically process the data located in the `data/` directory and initialize the visual interface.
+
+### Data Downloader
+To download new market data using the Databento API:
+
+```bash
+./run.sh downloader <YOUR_API_KEY>
+```
+
+Alternatively, you can set the `DATABENTO_API_KEY` environment variable:
+
+```bash
+export DATABENTO_API_KEY="your_key_here"
+./run.sh downloader
+```
+
+The downloader will perform a cost analysis and ask for confirmation before incurring any charges.

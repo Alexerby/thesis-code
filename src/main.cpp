@@ -20,28 +20,20 @@ int main() {
 
     std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
     Visualizer viz(depths);
-    bool domain_set = false;
 
     auto analysis = [&](const db::MboMsg &mbo) {
-      if (!domain_set) {
-        viz.SetTimeDomain(engine.GetMetadata().start_ts,
-                          engine.GetMetadata().end_ts);
-        domain_set = true;
-      }
-
       // Record telemetry for every single action (including Fills)
       tel.RecordAction(static_cast<char>(mbo.action));
 
-      MarketState state = market.CaptureState(mbo.hd.instrument_id, depths,
-                                              engine.GetSymbolMap().At(mbo),
-                                              db::ToIso8601(mbo.ts_recv),
-                                              mbo.ts_recv.time_since_epoch().count());
+      // Capture the current market state with nanosecond precision
+      MarketState state = market.CaptureState(
+          mbo.hd.instrument_id, depths, engine.GetSymbolMap().At(mbo),
+          db::ToIso8601(mbo.ts_recv), mbo.ts_recv.time_since_epoch().count());
 
-      // viz.Render(state);
-      TradeExecution last_trade = market.GetLastTrade(mbo.hd.instrument_id);
-
-      viz.Render(state);
+      // Delegate rendering and history tracking to the visualizer
+      viz.RecordAction(state, engine.GetMetadata());
     };
+
     engine.Run(market, analysis);
 
     tel.PrintSummary();
