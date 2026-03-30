@@ -1,6 +1,7 @@
 #include "book.hpp"
 #include "databento/pretty.hpp"
 #include "databento/record.hpp"
+#include "logging.hpp"
 
 std::ostream &operator<<(std::ostream &stream, const PriceLevel &level) {
   if (level.IsEmpty()) {
@@ -100,26 +101,37 @@ std::vector<db::BidAskPair> Book::GetSnapshot(std::size_t level_count) const {
 
 void Book::Apply(const db::MboMsg &mbo) {
   switch (mbo.action) {
-  case db::Action::Clear:
+  case db::Action::Clear: {
     Clear();
     break;
-  case db::Action::Add:
+  }
+  case db::Action::Add: {
     Add(mbo);
     break;
-  case db::Action::Cancel:
+  }
+  case db::Action::Cancel: {
     Cancel(mbo);
     break;
-  case db::Action::Modify:
+  }
+  case db::Action::Modify: {
     Modify(mbo);
+
+    // For me to identify if Action::Modify has been called.
+    // This should not be the case and therefore marked as CRITICAL.
+    Logger logger("action_modifcation.log");
+    logger.log(CRITICAL, "Book::Apply | Case Action::Modify called.");
     break;
-  case db::Action::Fill:
+  }
+  case db::Action::Fill: {
     Fill(mbo);
     break;
-  case db::Action::Trade:
+  }
+  case db::Action::Trade: {
     Trade(mbo);
     break;
   default:
     break;
+  }
   }
 }
 
