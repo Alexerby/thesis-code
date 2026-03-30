@@ -9,28 +9,22 @@
 #include "telemetry.hpp"
 #include "visualizer.hpp"
 
-#include "databento/constants.hpp" // kFixedPriceScale
-#include "datetime.hpp"
-
 int main() {
   try {
     Market market;
     MarketTelemetry tel;
-    ReplayEngine engine("./data/fomc.dbn.zst");
+    ReplayEngine engine("./data/multi_instrument.dbn.zst");
 
     std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
     Visualizer viz(depths);
+    viz.SetFocus("AAPL");
 
     auto analysis = [&](const db::MboMsg &mbo) {
-      // Record telemetry for every single action (including Fills)
       tel.RecordAction(static_cast<char>(mbo.action));
-
-      // Capture the current market state with nanosecond precision
       MarketState state = market.CaptureState(
           mbo.hd.instrument_id, depths, engine.GetSymbolMap().At(mbo),
           db::ToIso8601(mbo.ts_recv), mbo.ts_recv.time_since_epoch().count());
 
-      // Delegate rendering and history tracking to the visualizer
       viz.RecordAction(state, engine.GetMetadata());
     };
 

@@ -26,21 +26,26 @@ The following dependencies are integrated via CMake `FetchContent`:
 ## Building and Usage
 
 ### Quick Start
-To configure, build, and run the default analysis:
+To configure, build, and run one of the framework components:
 
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
 
-The system will automatically process the data located in the `data/` directory and initialize the visual interface.
+If no target is specified, the script will prompt you to select from the available components (e.g., `visualizer`).
 
-### Data Downloader
-To download new market data using the Databento API:
+### Available Targets
+You can use `run.sh` to run different components of the framework by providing the target name as an argument:
 
 ```bash
-./run.sh downloader <YOUR_API_KEY>
+./run.sh visualizer  # Start the TUI market visualizer
+./run.sh downloader <API_KEY>  # Fetch new data from Databento
+./run.sh feature_exporter  # Export engineered features to CSV (WIP)
 ```
+
+Alternatively, run without arguments to select interactively. Use `-h` or `--help` for more information.
+
 
 Alternatively, you can set the `DATABENTO_API_KEY` environment variable:
 

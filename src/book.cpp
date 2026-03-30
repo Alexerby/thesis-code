@@ -99,8 +99,6 @@ std::vector<db::BidAskPair> Book::GetSnapshot(std::size_t level_count) const {
 }
 
 void Book::Apply(const db::MboMsg &mbo) {
-  this->last_ts_recv_ = mbo.ts_recv.time_since_epoch().count();
-
   switch (mbo.action) {
   case db::Action::Clear:
     Clear();

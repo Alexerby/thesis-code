@@ -1,11 +1,30 @@
 #pragma once
 
 #include "book.hpp"
-#include "visualizer.hpp"
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+
+/**
+ * @struct MarketState
+ * @brief Represents a point-in-time snapshot of the market for a specific symbol.
+ */
+struct MarketState {
+  std::string symbol;             ///< Ticker symbol
+  std::string timestamp;          ///< ISO-8601 formatted event time
+  uint64_t ts_recv;               ///< Nanoseconds since epoch
+
+  std::pair<PriceLevel, PriceLevel> bbo; ///< Best Bid and Best Offer
+
+  std::vector<std::pair<std::string, double>> imbalance_levels; ///< Multi-level imbalance signals
+  std::vector<std::pair<std::string, double>> volume_levels;    ///< Price/Volume levels for visualization
+
+  int64_t last_trade_price;       ///< Price of the most recent execution
+  uint32_t last_trade_volume;     ///< Size of the most recent execution
+  uint64_t total_trade_volume;    ///< Cumulative trade volume for the session
+};
 
 /**
  * @class Market
@@ -27,13 +46,6 @@ public:
   Market() = default;
 
   /**
-   * @brief Retrieves all publisher-specific books for a given instrument.
-   * @param instrument_id The unique identifier for the financial instrument.
-   * @return A constant reference to the vector of PublisherBook objects.
-   */
-  const std::vector<PublisherBook> &GetBooksByPub(uint32_t instrument_id);
-
-  /**
    * @brief Retrieves a specific order book for an instrument-publisher pair.
    * @param instrument_id The unique identifier for the instrument.
    * @param publisher_id The unique identifier for the venue/publisher.
@@ -43,6 +55,13 @@ public:
   const Book &GetBook(uint32_t instrument_id, uint16_t publisher_id);
 
   /**
+   * @brief Retrieves all publisher-specific books for a given instrument.
+   * @param instrument_id The unique identifier for the financial instrument.
+   * @return A constant reference to the vector of PublisherBook objects.
+   */
+  const std::vector<PublisherBook> &GetBooksByPub(uint32_t instrument_id);
+
+  /**
    * @brief Returns the Best-Bid-Offer (BBO) for a specific publisher.
    * @param instrument_id The unique identifier for the instrument.
    * @param publisher_id The unique identifier for the venue.
@@ -50,14 +69,6 @@ public:
    */
   std::pair<PriceLevel, PriceLevel> Bbo(uint32_t instrument_id,
                                         uint16_t publisher_id);
-
-  /**
-   * @brief Calculates top-of-execution book imbalance for a specific venue.
-   * @param instrument_id Unique instrument identifier.
-   * @param publisher_id Unique venue identifier.
-   * @return Normalized ratio [-1.0, 1.0].
-   */
-  double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
 
   /**
    * @brief Aggregates the Best-Bid-Offer across all active publishers.
@@ -74,6 +85,14 @@ public:
    * @param mbo_msg The raw Databento MBO message.
    */
   void Apply(const db::MboMsg &mbo_msg);
+
+  /**
+   * @brief Calculates top-of-execution book imbalance for a specific venue.
+   * @param instrument_id Unique instrument identifier.
+   * @param publisher_id Unique venue identifier.
+   * @return Normalized ratio [-1.0, 1.0].
+   */
+  double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
 
   /**
    * @brief Calculates global imbalance across all venues up to a specific

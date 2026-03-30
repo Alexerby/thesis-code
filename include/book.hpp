@@ -171,7 +171,6 @@ private:
   Orders orders_by_id_;
   SideLevels offers_;
   SideLevels bids_;
-  uint64_t last_ts_recv_;
 
   // Trade
   TradeExecution last_execution_{};
