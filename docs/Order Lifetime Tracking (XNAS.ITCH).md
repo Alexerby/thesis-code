@@ -1,5 +1,10 @@
 # Routing of MBO Messages for XNAS.ITCH
-This document contains guidelines and information about how this project tracks orders for the XNAS.ITCH datafeed.
+This document contains guidelines and information about the algorithmic order tracking for the XNAS.ITCH market data feed.
+
+The [Databento MBO Schema](https://databento.com/docs/schemas-and-data-formats/mbo#fields-mbo?historical=cpp&live=cpp&reference=python) contains multiple fields which are not utilized for the XNAS.ITCH data.
+This is clearly out of necessity from Databento's side, but is not immediately clear to the end user of their historical data.
+
+This document serves as a basis for understanding the implemented algorithm for order lifetime tracking, which should relatively easy to consume for individuals without prior experience in CPP.
 
 ## Introduction
 
@@ -54,9 +59,12 @@ We can therefore ignore these events when tracking the state of the order and tr
 ## Algorithm
 This project implements the following algorithm for (i) routing and (ii) tracking the life duration of an order.
 
-This algorithm requires two data structures. 
-* `std::unordered_map` (persistent) where the `order_id` is the key.
-* `std::unordered_map` (staging area) where the `sequence_id` is the key.
+This algorithm requires three data structures
+| Structure | Type | Key/Value | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Order Map** | `std::unordered_map` | `order_id` $\rightarrow$ `Order` | **Persistent Store:** Quick lookup when a Cancel/Fill arrives. |
+| **Staging Map** | `std::unordered_map` | `sequence_id` $\rightarrow$ `Fill` | **Staging Area:** Matches asynchronous fills to orders. |
+| **Expiry Queue** | `std::deque` | `pair<order_id, ts>` | **TTL Tracker:** Keeps track of who is the "oldest" for pruning. |
 
 
 ```mermaid
@@ -67,67 +75,75 @@ config:
   theme: dark
 ---
 flowchart TB
+    %% START & CLEANUP
+    A([MBOMsg]) --> Prune[Prune Expired Orders<br/>Check Expiry Queue Front]
+    Prune --> Action{Action Routing}
 
-    %% START NODE
-    A[MBOMsg] --> Action{Action Type}
+    %% EXPIRE LOGIC
+    Prune -.->|O-1 Check| ExpiryQueue
+    ExpiryQueue -.->|Erase| OrderMap
 
     %% ADD BRANCH
-    Action -->|Add| PersistentLookupAdd{Order ID in<br/>Persistent Map?}
+    Action -->|Add| PersistentLookupAdd{Order ID in<br/>Order Map?}
     
-    PersistentLookupAdd -->|No| NewOrder[Insert New Record<br/>into Persistent Map]
-    PersistentLookupAdd -->|Yes| IncrementVol[Update Existing Record:<br/>Volume += New Volume]
+    PersistentLookupAdd -->|No| NewOrder[Insert New Record into<br/>Order Map & Expiry Queue]
+    PersistentLookupAdd -->|Yes| IncrementVol[Update Order Map Record:<br/>Volume += New Volume]
 
     %% FILL BRANCH
-    Action -->|Fill| StageFill[Store Fill Details in Staging Area<br/>Key: sequence_id]
+    Action -->|Fill| StageFill[Insert into Staging Map<br/>Key: sequence_id]
 
     %% CANCEL BRANCH
-    Action -->|Cancel| StagingLookup{sequence_id in<br/>Staging Area?}
+    Action -->|Cancel| StagingLookup{sequence_id in<br/>Staging Map?}
     
-    StagingLookup -->|Yes| ProcessFill[Reconcile Fill:<br/>Update Persistent Map Volume]
-    StagingLookup -->|No| PureCancel[Reduce Order Size for Order ID from<br/>Persistent Map]
+    StagingLookup -->|Yes| ProcessFill[Reconcile:<br/>Update Order Map Volume]
+    StagingLookup -->|No| PureCancel[Reduce Order Map Size<br/>Using Order ID]
 
     %% EAGER CLEANUP CHECK
     ProcessFill --> VolCheck{Volume <= 0?}
     PureCancel --> VolCheck
 
-    VolCheck -->|Yes| EraseOrder[Erase Order from<br/>Persistent Map]
-    VolCheck -->|No| UpdateState[Keep Order in<br/>Persistent Map]
+    VolCheck -->|Yes| EraseOrder[Erase from Order Map]
+    VolCheck -->|No| UpdateState[Keep in Order Map]
 
     %% MODIFY BRANCH
-    Action -->|Modify| ModStep[Kill Program]
+    Action -->|Modify| ModStep[Kill Program <br> Should not exist in ITCH]
+
+    %% DATA STORES
+    subgraph Storage [Memory Management]
+        OrderMap[(Order Map<br/>unordered_map<br/>Key: order_id)]
+        StagingMap[(Staging Map<br/>unordered_map<br/>Key: sequence_id)]
+        ExpiryQueue[(Expiry Queue<br/>deque<br/>Value: id + ts)]
+    end
 
     %% FINAL STATES
-    NewOrder --> End([Persistent State Updated])
+    NewOrder --> End([State Updated])
     IncrementVol --> End
     StageFill --> End
     EraseOrder --> End
     UpdateState --> End
 
-    %% Styling Nodes
-    style Action fill:#2d3436,stroke:#00cec9
-    style NewOrder fill:#1b4d3e,stroke:#2ecc71
+    %% --- CLASS DEFINITIONS ---
+    classDef decision fill:#8e44ad,stroke:#9b59b6
+    classDef destructive fill:#d63031,stroke:#ff7675
+    classDef success fill:#1b4d3e,stroke:#2ecc71
+    classDef staging fill:#6c5ce7,stroke:#a29bfe
+    classDef alert fill:#c0392b,stroke:#ff0000,color:#fff,stroke-width:4px
+    classDef storage fill:#2d3436,stroke:#00cec9,stroke-dasharray: 5 5
+
+    %% --- APPLYING CLASSES ---
+    class PersistentLookupAdd,StagingLookup,VolCheck,Action decision
+    class EraseOrder,ModStep destructive
+    class NewOrder success
+    class StageFill,StagingLookup,StagingMap staging
+    class Storage,OrderMap,ExpiryQueue storage
+    
+    %% Specific overrides
+    style Prune fill:#e67e22,stroke:#d35400
     style IncrementVol fill:#2980b9,stroke:#3498db
-    style StageFill fill:#6c5ce7,stroke:#a29bfe
-    style StagingLookup fill:#6c5ce7,stroke:#a29bfe
     style PureCancel fill:#e17055,stroke:#fab1a0
     style ProcessFill fill:#e17055,stroke:#fab1a0
-    style ModStep fill:#c0392b,stroke:#ff0000,color:#ffffff,stroke-width:4px
-    style VolCheck fill:#8e44ad,stroke:#9b59b6
-    style EraseOrder fill:#d63031,stroke:#ff7675
 
-    %% Consistent Arrow Coloring
-    %% PersistentLookupAdd paths: No (Red), Yes (Green)
-    linkStyle 2 stroke:#ff4757,color:#ff4757
-    linkStyle 3 stroke:#2ed573,color:#2ed573
-
-    %% StagingLookup paths: Yes (Green), No (Red)
-    linkStyle 6 stroke:#2ed573,color:#2ed573
-    linkStyle 7 stroke:#ff4757,color:#ff4757
-
-    %% Modify path: Danger (Red)
-    linkStyle 8 stroke:#ff0000,stroke-width:3px,color:#ff0000
-
-    %% VolCheck paths: Yes (Red/Destructive), No (Green/Safe)
-    linkStyle 11 stroke:#ff4757,color:#ff4757
-    linkStyle 12 stroke:#2ed573,color:#2ed573
+    %% Link Styling
+    linkStyle 15 stroke:#ff4757,color:#ff4757
+    linkStyle 4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20 stroke:#2ed573,color:#2ed573
 ```
