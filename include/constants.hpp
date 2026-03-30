@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace constants {
 // 1e9 = 1 second

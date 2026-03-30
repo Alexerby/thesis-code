@@ -1,33 +1,28 @@
 #include "metadata.hpp"
+#include "databento/datetime.hpp"
+#include <chrono>
 #include <databento/enums.hpp>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 
-MetadataParser::MetadataParser(const db::Metadata &meta) {
-  version = meta.version;
-  dataset = meta.dataset;
+namespace db = databento;
 
-  schema = meta.schema.has_value() 
-      ? db::ToString(meta.schema.value()) 
-      : "Unknown";
-
-  stype_in = meta.stype_in.has_value() 
-      ? db::ToString(meta.stype_in.value())
-      : "Unknown";
-
-  stype_out = db::ToString(meta.stype_out);
-  start_ts = meta.start.time_since_epoch().count();
-  end_ts = meta.end.time_since_epoch().count();
-  record_count = meta.limit;
-  ts_out = meta.ts_out;
-  symbols = meta.symbols;
-  partial = meta.partial;
-  not_found = meta.not_found;
-}
+MetadataParser::MetadataParser(const db::Metadata &meta)
+    : version_(meta.version), dataset_(meta.dataset),
+      schema_(meta.schema.has_value() ? db::ToString(meta.schema.value())
+                                      : "Unknown"),
+      stype_in_(meta.stype_in.has_value() ? db::ToString(meta.stype_in.value())
+                                          : "Unknown"),
+      stype_out_(db::ToString(meta.stype_out)),
+      start_ts_(meta.start.time_since_epoch().count()),
+      end_ts_(meta.end.time_since_epoch().count()), record_count_(meta.limit),
+      ts_out_(meta.ts_out), symbols_(meta.symbols), partial_(meta.partial),
+      not_found_(meta.not_found) {}
 
 MetadataSummary MetadataParser::GetSummary() const {
-  return {version, dataset,      schema, stype_in, stype_out, start_ts,
-          end_ts,  record_count, ts_out, symbols,  partial,   not_found};
+  return {version_, dataset_,      schema_, stype_in_, stype_out_, start_ts_,
+          end_ts_,  record_count_, ts_out_, symbols_,  partial_,   not_found_};
 }
 
 std::string MetadataSummary::to_string() const {
@@ -40,6 +35,15 @@ std::string MetadataSummary::to_string() const {
   row("DBN Version:") << static_cast<int>(version) << "\n";
   row("Dataset:") << dataset << "\n";
   row("Schema:") << schema << "\n";
+
+  row("Start Time:") << db::ToIso8601(
+                            db::UnixNanos{std::chrono::nanoseconds{start_ts}})
+                     << "\n";
+
+  row("End Time:") << db::ToIso8601(
+                          db::UnixNanos{std::chrono::nanoseconds{end_ts}})
+                   << "\n";
+
   row("SType In/Out:") << stype_in << " -> " << stype_out << "\n";
   row("Record Limit:") << (record_count == 0 ? "None"
                                              : std::to_string(record_count))
@@ -59,4 +63,14 @@ std::string MetadataSummary::to_string() const {
   ss << "---------------------------\n";
 
   return ss.str();
+}
+
+void MetadataParser::ValidateSchema() const {
+  if (this->schema_ != "mbo") {
+    std::cerr << "FATAL: Dataset schema is '" << schema_
+              << "'. Thesis logic requires 'mbo' (Market By Order).\n"
+              << "Aggregated schemas (mbp/tob) will break Order ID tracking."
+              << std::endl;
+    std::exit(1);
+  }
 }

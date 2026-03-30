@@ -16,22 +16,41 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(databento)
 
-# This projects executable
+# This projects executables
 add_executable(
-    main 
-    src/main.cpp
+    visualizer 
+    src/visualizer_main.cpp
+    src/metadata.cpp
+    src/book.cpp
+    src/market.cpp
+    src/visualizer.cpp
+)
+
+add_executable(
+    downloader
+    src/downloader.cpp
+)
+
+add_executable(
+    feature_exporter
     src/metadata.cpp
     src/book.cpp
     src/market.cpp
 )
 
 # Add include/ directory to the include path
-target_include_directories(main PRIVATE include)
+target_include_directories(visualizer PRIVATE include)
+target_include_directories(downloader PRIVATE include)
+target_include_directories(feature_exporter PRIVATE include)
 
 # Linking the library
-target_link_libraries(main PRIVATE databento::databento date::date)
+target_link_libraries(visualizer PRIVATE databento::databento date::date)
+target_link_libraries(downloader PRIVATE databento::databento)
+target_link_libraries(feature_exporter PRIVATE databento::databento date::date)
 
 # Set C++ standard to 17 or higher
-target_compile_features(main PRIVATE cxx_std_17)
+target_compile_features(visualizer PRIVATE cxx_std_17)
+target_compile_features(downloader PRIVATE cxx_std_17)
+target_compile_features(feature_exporter PRIVATE cxx_std_17)
 
 
