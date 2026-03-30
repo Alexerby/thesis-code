@@ -1,5 +1,5 @@
-# Routing of MBO Messages
-This document contains information about how the models in this project simplifies the order message routing when tracking individual orders. 
+# Routing of MBO Messages for XNAS.ITCH
+This document contains guidelines and information about how this project tracks orders for the XNAS.ITCH datafeed.
 
 ## Introduction
 
