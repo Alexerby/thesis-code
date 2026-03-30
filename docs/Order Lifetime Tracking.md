@@ -9,19 +9,17 @@ The following actions are defined in the [Databento MBO Schema](https://databent
 
 ```mermaid
 flowchart TD
-    classDef theme fill:none,stroke:currentColor
-
-    Root([MBOMsg::Action]):::theme
+    Root([MBOMsg::Action])
     
     subgraph Operations [" "]
         direction LR
-        A[Add]:::theme
-        C[Cancel]:::theme
-        M[Modify]:::theme
-        T[Trade]:::theme
-        F[Fill]:::theme
-        N[None]:::theme 
-        C[Clear]:::thee
+        A[Add]
+        C[Cancel]
+        M[Modify]
+        T[Trade]
+        F[Fill]
+        N[None]
+        CLR[Clear]
     end
 
     Root --> A
@@ -30,8 +28,9 @@ flowchart TD
     Root --> T
     Root --> F
     Root --> N
+    Root --> CLR
 
-    style Operations fill:none,stroke:currentColor,stroke-dasharray: 5 5
+    style Operations fill:none,stroke-dasharray: 5 5
 ```
 
 By inspecting the data, one will immediately arrive a couple of insights in how the messages are treated by the exchanges, and therefore Databento.
@@ -67,18 +66,36 @@ We can therefore ignore these events when tracking the state of the order and tr
 
 ```mermaid
 flowchart LR
-    classDef src fill:none,stroke:currentColor,stroke-width:1px,color:currentColor
-    classDef dst fill:none,stroke:currentColor,stroke-width:1px,color:currentColor
-    classDef dropped fill:none,stroke:currentColor,stroke-width:1px,stroke-dasharray:4 3,color:currentColor
+    %% Source Nodes
+    Add(Add)
+    Cancel_pure(Cancel)
+    Modify(Modify)
+    Trade(Trade)
+    Fill(Fill)
+    Cancel_fill(Cancel <br/>same sequence)
+    Clear(Clear)
 
-    Add:::src --> ADD[Add\nAdds liquidity to the book]:::dst
-    Cancel_pure[Cancel]:::src --> CXL[Cancel\nPure cancellation]:::dst
-    Modify:::src --> MOD_A[Add\nPrice improved]:::dst
-    Modify --> MOD_C[Cancel\nQty reduced]:::dst
-    Trade:::src --> IGN[Ignored\nNot needed for book state]:::dropped
-    Fill:::src --> FILL_OUT[Fill\nMerged on F_LAST 128]:::dst
-    Cancel_fill[Cancel\nsame sequence]:::src --> FILL_OUT
-    Clear:::src --> CLR[Clear\nSession start / exchange flush]:::dst
+    %% Destination Nodes
+    ADD_OUT[Add <br/>Adds liquidity]
+    CXL_OUT[Cancel <br/>Pure cancellation]
+    MOD_A[Add <br/>Price improved]
+    MOD_C[Cancel <br/>Qty reduced]
+    IGN_OUT[Ignored <br/>Not needed for state]
+    FILL_OUT[Fill <br/>Merged on F_LAST 128]
+    CLR_OUT[Clear <br/>Session/Flush]
+
+    %% Connections
+    Add --> ADD_OUT
+    Cancel_pure --> CXL_OUT
+    Modify --> MOD_A
+    Modify --> MOD_C
+    Trade -.-> IGN_OUT
+    Fill --> FILL_OUT
+    Cancel_fill --> FILL_OUT
+    Clear --> CLR_OUT
+
+    %% Styling for "Ignored" path
+    style IGN_OUT stroke-dasharray: 5 5
 ```
 
 
