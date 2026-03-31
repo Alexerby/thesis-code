@@ -28,8 +28,20 @@ add_executable(thesis
 # Include paths
 target_include_directories(thesis PRIVATE include)
 
-# Linking
+# Link the single main executable
 target_link_libraries(thesis 
+    PRIVATE 
+    databento::databento 
+    date::date
+)
+
+# Testing
+add_executable(order_tracker_tests
+    tests/test_order_tracker.cpp
+    src/order_tracker.cpp
+)
+target_include_directories(order_tracker_tests PRIVATE include)
+target_link_libraries(order_tracker_tests 
     PRIVATE 
     databento::databento 
     date::date
