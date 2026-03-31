@@ -393,10 +393,10 @@ std::pair<double, double> Visualizer::GetPriceRange(const std::string &symbol,
 }
 
 void Visualizer::RecordAction(const MarketState &state,
-                              const MetadataSummary &meta) {
+                              const databento::Metadata &meta) {
   if (!m_domain_set) {
-    m_global_start = meta.start_ts;
-    m_global_end = meta.end_ts;
+    m_global_start = meta.start.time_since_epoch().count();
+    m_global_end = meta.end.time_since_epoch().count();
     m_domain_set = true;
   }
 

@@ -118,7 +118,7 @@ void Book::Apply(const db::MboMsg &mbo) {
 
     // For me to identify if Action::Modify has been called.
     // This should not be the case and therefore marked as CRITICAL.
-    Logger logger("action_modifcation.log");
+    Logger logger("action_modification.log");
     logger.log(CRITICAL, "Book::Apply | Case Action::Modify called.");
     break;
   }

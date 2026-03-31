@@ -1,12 +1,15 @@
-# Routing of MBO Messages for XNAS.ITCH
+# Order (Lifetime) Tracking
+
 This document contains guidelines and information about the algorithmic order tracking for the XNAS.ITCH market data feed.
+
+## Routing of MBO Messages for XNAS.ITCH
 
 The [Databento MBO Schema](https://databento.com/docs/schemas-and-data-formats/mbo#fields-mbo?historical=cpp&live=cpp&reference=python) contains multiple fields which are not utilized for the XNAS.ITCH data.
 This is clearly out of necessity from Databento's side, but is not immediately clear to the end user of their historical data.
 
 This document serves as a basis for understanding the implemented algorithm for order lifetime tracking, which should relatively easy to consume for individuals without prior experience in CPP.
 
-## Introduction
+### Introduction
 
 Every MBO Message contains a field  `Action`.
 The following actions are defined in the [Databento MBO Schema](https://databento.com/docs/schemas-and-data-formats/mbo#fields-mbo?historical=cpp&live=cpp&reference=python):
@@ -46,7 +49,7 @@ flowchart TD
 
 By inspecting the data, one will immediately arrive a couple of insights in how the messages are treated by the exchanges, and therefore Databento.
 
-## Simplifying the MBO Schema by remapping events
+### Simplifying the MBO Schema by remapping events
 * **Modifications** are not streamed as `Action::Modify`, but rather as either an `Action::Add` or an `Action::Cancel` (partial) on an existing `order_id`.
 * For tracking the state of the order book ($\mathcal L_t$) `Action::Trade` is not relevant for us.
 * Fill is represented by an `Action::Fill` followed by an `Action::Cancel` sharing `sequence` (and `ts_recv`).
@@ -56,7 +59,7 @@ We can therefore ignore these events when tracking the state of the order and tr
 
 ---
 
-## Algorithm
+### Algorithm
 This project implements the following algorithm for (i) routing and (ii) tracking the life duration of an order.
 
 This algorithm requires three data structures
@@ -108,6 +111,11 @@ flowchart TB
     %% MODIFY BRANCH
     Action -->|Modify| ModStep[Kill Program <br> Should not exist in ITCH]
 
+    %% CLEAR BRANCH
+    Action -->|Clear| ClearBook[Erase: Order Map, Staging Map, Expiry Queue]
+
+
+
     %% DATA STORES
     subgraph Storage [Memory Management]
         OrderMap[(Order Map<br/>unordered_map<br/>Key: order_id)]
@@ -132,7 +140,7 @@ flowchart TB
 
     %% --- APPLYING CLASSES ---
     class PersistentLookupAdd,StagingLookup,VolCheck,Action decision
-    class EraseOrder,ModStep destructive
+    class EraseOrder,ModStep,ClearBook destructive
     class NewOrder success
     class StageFill,StagingLookup,StagingMap staging
     class Storage,OrderMap,ExpiryQueue storage

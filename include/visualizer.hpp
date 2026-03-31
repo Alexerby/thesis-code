@@ -5,8 +5,7 @@
 
 #pragma once
 
-#include "book.hpp" // PriceLevel
-#include "metadata.hpp"
+#include <databento/dbn.hpp>
 #include <chrono>
 #include <string>
 #include <unordered_map>
@@ -33,9 +32,9 @@ public:
   /**
    * @brief Records a new market state update. Triggers a render if the refresh rate is met.
    * @param state The newly captured market state.
-   * @param meta Metadata summary for time domain context.
+   * @param meta Metadata for time domain context.
    */
-  void RecordAction(const MarketState &state, const MetadataSummary &meta);
+  void RecordAction(const MarketState &state, const databento::Metadata &meta);
 
   /**
    * @brief Sets the primary symbol to be focused in the main dashboard panels.

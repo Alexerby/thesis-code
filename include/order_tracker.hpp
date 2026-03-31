@@ -1,15 +1,19 @@
-/* This module sets up the functionality for tracking
- * orders over their lifetime.
- * As of now functinality is only implemented for the
- * XNAS.ITCH feed.
+/**
+ * @file order_tracker.hpp
+ * @brief Implements the state of individual orders.
+ *
+ * MBOMessages are very noisy and a single action
+ * in the order book is often represented by multiple
+ * messages. In order to track the lifetime of orders
+ * this module consumes these order messages and constructs
+ * the `alive' orders as a single std::unordered_map<uint64_t, Order>.
+ * This gives a picture of the `state' (\mathcal{S})) of the order book
+ * in the Event-State-Space.
  */
 
+#pragma once
 
-// TODO: 
-// - Create instance method for
-//  *  
-
-#include "databento/enums.hpp"
+#include "databento/record.hpp"
 #include <chrono>
 #include <cstdint>
 #include <deque>
@@ -17,11 +21,16 @@
 
 namespace db = databento;
 
+// Supports only XNAS.ITCH for now
+enum class FeedType { XNAS_ITCH };
+
 // Represents the tracking of an individual order
 struct Order {
-  db::Side side;
-  int64_t price;
-  uint32_t volume;
+  uint64_t order_id;
+  int64_t size;  // Remaining quantity
+  int64_t price; // Current price
+  db::Side side; // Ask or Bid
+  std::chrono::steady_clock::time_point entry_time;
 };
 
 /* @class OrderTracker
@@ -29,27 +38,37 @@ struct Order {
  */
 class OrderTracker {
 public:
-  void upsert(uint64_t id, const Order &order);
+  using OrderMap = std::unordered_map<uint64_t, Order>;
+  using StagingMap = std::unordered_map<uint64_t, db::MboMsg>;
+  using ExpiryQueue =
+      std::deque<std::pair<uint64_t, std::chrono::steady_clock::time_point>>;
+
+  explicit OrderTracker(uint32_t instrument_id, FeedType feed_type)
+      : instrument_id_(instrument_id), feed_type_(feed_type) {}
+
+  /* @brief Routes the incoming order message to order map.
+   * @param mbo The incoming MBO message.
+   */
+  void Router(const db::MboMsg &mbo);
+
+  // Persistent Map (Key: OrderID)
+  OrderMap order_map{};
 
 private:
-  // Persistent Map (Key: OrderID)
-  std::unordered_map<uint64_t, Order> orderBook;
+  // Data for which instrument and feed we are tracking
+  uint32_t instrument_id_;
+  FeedType feed_type_;
 
   // Staging Map (Key: Sequence ID)
-  std::unordered_map<uint64_t, Order> stagingArea;
+  StagingMap staging_map_{};
 
   // TTL Tracker pair<order_id, ts>
-  std::deque<std::pair<uint64_t, std::chrono::steady_clock::time_point>>
-      expiryQueue;
+  ExpiryQueue expiry_queue_{};
 
-  void prune_zombies() {
-    auto now = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::minutes(1);
-
-    while (!expiryQueue.empty() &&
-           (now - expiryQueue.front().second) > timeout) {
-      orderBook.erase(expiryQueue.front().first);
-      expiryQueue.pop_front();
-    }
-  }
+  void Add(const db::MboMsg &mbo);
+  void Modify(const db::MboMsg &mbo);
+  void Fill(const db::MboMsg &mbo);
+  void Cancel(const db::MboMsg &mbo);
+  void Clear(const db::MboMsg &mbo);
+  void PruneZombies();
 };
