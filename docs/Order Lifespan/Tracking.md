@@ -93,10 +93,13 @@ flowchart TB
 
     %% CANCEL BRANCH
     Action -->|Cancel| IsCancelLast{Flg == 128?}
+    IsCancelLast -->|No| PureCancel[Reduce OrderMap Size]
+    IsCancelLast -->|Yes| CheckStaged{Pending Vol?}
     
-    IsCancelLast -->|No| PureCancel[Reduce OrderMap Size<br/>Directly via OrderID]
-    IsCancelLast -->|Yes| CheckStaged{Pending Vol<br/>for OrderID?}
-    
+    %% CLEAR BRANCH
+    Action -->|Clear| Reset[Erase: OrderMap,<br/>PendingVolumeMap,<br/>ExpiryQueue]
+    Reset --> End
+
     %% RECONCILIATION
     CheckStaged -->|Yes| Reconcile[OrderMap.Vol -=<br/>Staged + Msg.Size]
     CheckStaged -->|No| Reconcile[OrderMap.Vol -=<br/>Msg.Size]
@@ -139,5 +142,5 @@ flowchart TB
     class OrderMap,NewOrder,EraseOrder,UpdateState,Reconcile,PureCancel storage
     class PendingVolumeMap,Accumulate,ClearStaged staging
     class ExpiryQueue,Prune expiry
-    class EraseOrder destructive
+    class EraseOrder,Reset destructive
 ```
