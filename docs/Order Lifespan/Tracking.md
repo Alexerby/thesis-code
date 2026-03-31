@@ -78,80 +78,66 @@ config:
   theme: dark
 ---
 flowchart TB
-    %% START & CLEANUP
-    A([MBOMsg]) --> Prune[Prune Expired Orders<br/>Check Expiry Queue Front]
+    A([MBOMsg]) --> Prune[Prune Expired Orders]
     Prune --> Action{Action Routing}
 
     %% EXPIRE LOGIC
     Prune -.->|O-1 Check| ExpiryQueue
     ExpiryQueue -.->|Erase| OrderMap
 
-    %% ADD BRANCH
-    Action -->|Add| PersistentLookupAdd{Order ID in<br/>Order Map?}
-    
-    PersistentLookupAdd -->|No| NewOrder[Insert New Record into<br/>Order Map & Expiry Queue]
-    PersistentLookupAdd -->|Yes| IncrementVol[Update Order Map Record:<br/>Volume += New Volume]
-
     %% FILL BRANCH
-    Action -->|Fill| StageFill[Insert into Staging Map<br/>Key: sequence_id]
+    Action -->|Fill| Accumulate[Add Fill Size to<br/>PendingVolumeMap]
+    Accumulate --> IsFillLast{Flg == 128?}
+    IsFillLast -->|Yes| CheckStaged
+    IsFillLast -->|No| End([State Updated])
 
     %% CANCEL BRANCH
-    Action -->|Cancel| StagingLookup{sequence_id in<br/>Staging Map?}
+    Action -->|Cancel| IsCancelLast{Flg == 128?}
     
-    StagingLookup -->|Yes| ProcessFill[Reconcile:<br/>Update Order Map Volume]
-    StagingLookup -->|No| PureCancel[Reduce Order Map Size<br/>Using Order ID]
+    IsCancelLast -->|No| PureCancel[Reduce OrderMap Size<br/>Directly via OrderID]
+    IsCancelLast -->|Yes| CheckStaged{Pending Vol<br/>for OrderID?}
+    
+    %% RECONCILIATION
+    CheckStaged -->|Yes| Reconcile[OrderMap.Vol -=<br/>Staged + Msg.Size]
+    CheckStaged -->|No| Reconcile[OrderMap.Vol -=<br/>Msg.Size]
+    
+    Reconcile --> ClearStaged[Erase from<br/>PendingVolumeMap]
+    ClearStaged --> VolCheck
 
-    %% EAGER CLEANUP CHECK
-    ProcessFill --> VolCheck{Volume <= 0?}
-    PureCancel --> VolCheck
-
+    %% POST-RECONCILE & ADD
+    Action -->|Add| NewOrder[Insert to Order Map<br/>& Expiry Queue]
+    NewOrder --> End
+    
+    VolCheck{Volume <= 0?}
     VolCheck -->|Yes| EraseOrder[Erase from Order Map]
-    VolCheck -->|No| UpdateState[Keep in Order Map]
-
-    %% MODIFY BRANCH
-    Action -->|Modify| ModStep[Kill Program <br> Should not exist in ITCH]
-
-    %% CLEAR BRANCH
-    Action -->|Clear| ClearBook[Erase: Order Map, Staging Map, Expiry Queue]
-
-
-
-    %% DATA STORES
-    subgraph Storage [Memory Management]
-        OrderMap[(Order Map<br/>unordered_map<br/>Key: order_id)]
-        StagingMap[(Staging Map<br/>unordered_map<br/>Key: sequence_id)]
-        ExpiryQueue[(Expiry Queue<br/>deque<br/>Value: id + ts)]
-    end
-
-    %% FINAL STATES
-    NewOrder --> End([State Updated])
-    IncrementVol --> End
-    StageFill --> End
+    VolCheck -->|No| UpdateState[Update Order Map State]
+    
     EraseOrder --> End
     UpdateState --> End
+    PureCancel --> End
+
+    %% OTHER BRANCHES
+    Action -->|Trade/Modify| End
+
+    subgraph Storage [Memory Management]
+        OrderMap[(Order Map<br/>Key: order_id)]
+        PendingVolumeMap[(Pending Volume<br/>Key: order_id)]
+        ExpiryQueue[(Expiry Queue<br/>std::deque)]
+    end
 
     %% --- CLASS DEFINITIONS ---
-    classDef decision fill:#8e44ad,stroke:#9b59b6
-    classDef destructive fill:#d63031,stroke:#ff7675
-    classDef success fill:#1b4d3e,stroke:#2ecc71
-    classDef staging fill:#6c5ce7,stroke:#a29bfe
-    classDef alert fill:#c0392b,stroke:#ff0000,color:#fff,stroke-width:4px
-    classDef storage fill:#2d3436,stroke:#00cec9,stroke-dasharray: 5 5
+    classDef decision fill:#8e44ad,stroke:#9b59b6,color:#fff
+    classDef storage fill:#2d3436,stroke:#00cec9,color:#00cec9
+    classDef staging fill:#6c5ce7,stroke:#a29bfe,color:#a29bfe
+    classDef expiry fill:#e67e22,stroke:#d35400,color:#fff
+    classDef destructive fill:#c0392b,stroke:#ff0000,color:#fff
 
     %% --- APPLYING CLASSES ---
-    class PersistentLookupAdd,StagingLookup,VolCheck,Action decision
-    class EraseOrder,ModStep,ClearBook destructive
-    class NewOrder success
-    class StageFill,StagingLookup,StagingMap staging
-    class Storage,OrderMap,ExpiryQueue storage
+    class Action,IsFillLast,IsCancelLast,CheckStaged,VolCheck decision
     
-    %% Specific overrides
-    style Prune fill:#e67e22,stroke:#d35400
-    style IncrementVol fill:#2980b9,stroke:#3498db
-    style PureCancel fill:#e17055,stroke:#fab1a0
-    style ProcessFill fill:#e17055,stroke:#fab1a0
-
-    %% Link Styling
-    linkStyle 15 stroke:#ff4757,color:#ff4757
-    linkStyle 4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20 stroke:#2ed573,color:#2ed573
+    %% Storage & Linked Logic
+    class OrderMap,NewOrder,EraseOrder,UpdateState,Reconcile,PureCancel storage
+    class PendingVolumeMap,Accumulate,ClearStaged staging
+    class ExpiryQueue,Prune expiry
+    class EraseOrder destructive
 ```

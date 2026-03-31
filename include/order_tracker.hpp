@@ -39,7 +39,7 @@ struct Order {
 class OrderTracker {
 public:
   using OrderMap = std::unordered_map<uint64_t, Order>;
-  using StagingMap = std::unordered_map<uint64_t, db::MboMsg>;
+  using PendingVolumeMap = std::unordered_map<uint64_t, int64_t>;
   using ExpiryQueue =
       std::deque<std::pair<uint64_t, std::chrono::steady_clock::time_point>>;
 
@@ -59,8 +59,8 @@ private:
   uint32_t instrument_id_;
   FeedType feed_type_;
 
-  // Staging Map (Key: Sequence ID)
-  StagingMap staging_map_{};
+  // Pending Volume Map (Key: Order ID)
+  PendingVolumeMap pending_volume_map_{};
 
   // TTL Tracker pair<order_id, ts>
   ExpiryQueue expiry_queue_{};
@@ -71,4 +71,7 @@ private:
   void Cancel(const db::MboMsg &mbo);
   void Clear(const db::MboMsg &mbo);
   void PruneZombies();
+  
+  // Internal reconciliation logic for both Fills and Cancels
+  void Reconcile(const db::MboMsg &mbo);
 };
