@@ -54,16 +54,16 @@ public:
   // Persistent Map (Key: OrderID)
   OrderMap order_map{};
 
-private:
-  // Data for which instrument and feed we are tracking
-  uint32_t instrument_id_;
-  FeedType feed_type_;
-
   // Pending Volume Map (Key: Order ID)
   PendingVolumeMap pending_volume_map_{};
 
   // TTL Tracker pair<order_id, ts>
   ExpiryQueue expiry_queue_{};
+
+private:
+  // Data for which instrument and feed we are tracking
+  uint32_t instrument_id_;
+  FeedType feed_type_;
 
   void Add(const db::MboMsg &mbo);
   void Modify(const db::MboMsg &mbo);
