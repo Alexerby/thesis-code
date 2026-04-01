@@ -25,20 +25,21 @@ public:
 
     // Set the 1MB buffer before opening
     m_file.rdbuf()->pubsetbuf(m_buffer, sizeof(m_buffer));
-    
+
     auto mode = std::ios::out | std::ios::binary;
     if (append) {
       mode |= std::ios::app;
     } else {
       mode |= std::ios::trunc;
     }
-    
+
     m_file.open(full_path, mode);
 
     return m_file.is_open();
   }
 
-  bool Exists(const std::string &filename, const std::string &dir = "features") {
+  bool Exists(const std::string &filename,
+              const std::string &dir = "features") {
     return fs::exists(dir + "/" + filename);
   }
 

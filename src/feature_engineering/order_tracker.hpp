@@ -56,7 +56,8 @@ public:
 
   /**
    * @brief Exports the current state of the order map to a CSV file.
-   * @param filename The name of the file to export to (saved in "features/" dir).
+   * @param filename The name of the file to export to (saved in "features/"
+   * dir).
    */
   void DumpOrders(const std::string &filename) const;
 
@@ -68,7 +69,7 @@ public:
    * @param size_after The size of the order after the action.
    */
   void LogLifecycle(uint64_t order_id, const db::MboMsg &mbo,
-                   const std::string &action, int64_t size_after) const;
+                    const std::string &action, int64_t size_after) const;
 
   // Persistent Map (Key: OrderID)
   OrderMap order_map{};
@@ -91,7 +92,7 @@ private:
   void Cancel(const db::MboMsg &mbo);
   void Clear(const db::MboMsg &mbo);
   void PruneZombies();
-  
+
   // Internal reconciliation logic for both Fills and Cancels
   void Reconcile(const db::MboMsg &mbo);
 };

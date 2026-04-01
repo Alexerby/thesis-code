@@ -1,7 +1,7 @@
-#include "book.hpp"
+#include "core/book.hpp"
+#include "core/logging.hpp"
 #include "databento/pretty.hpp"
 #include "databento/record.hpp"
-#include "logging.hpp"
 
 std::ostream &operator<<(std::ostream &stream, const PriceLevel &level) {
   if (level.IsEmpty()) {

@@ -1,4 +1,4 @@
-#include "market.hpp"
+#include "core/market.hpp"
 #include "databento/datetime.hpp"
 
 #include <algorithm>
@@ -123,6 +123,25 @@ double Market::AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
   return side_vol;
 }
 
+double Market::AggregatedLevelVolume(uint32_t instrument_id, std::size_t depth,
+                                     bool is_bid) {
+  double level_vol = 0;
+  if (depth == 0)
+    return 0.0;
+
+  for (const auto &pub_book : GetBooksByPub(instrument_id)) {
+    if (is_bid) {
+      level_vol +=
+          static_cast<double>(pub_book.book.GetBidLevel(depth - 1).size);
+    } else {
+      level_vol +=
+          static_cast<double>(pub_book.book.GetAskLevel(depth - 1).size);
+    }
+  }
+
+  return level_vol;
+}
+
 double Market::Imbalance(uint32_t instrument_id, uint16_t publisher_id) {
   const auto &book = GetBook(instrument_id, publisher_id);
   return book.CalculateImbalance();
@@ -177,11 +196,34 @@ void Market::Apply(const db::MboMsg &mbo_msg) {
   it->book.Apply(mbo_msg);
 }
 
+MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
+                                   std::size_t depth) {
+  MarketSnapshot snap;
+  snap.symbol = symbol;
+  snap.imbalance = AggregatedDeepImbalance(inst_id, 5);
+
+  TradeExecution last_trade = GetLastTrade(inst_id);
+  snap.last_price = static_cast<double>(last_trade.price) / 1e9;
+
+  snap.bid_volumes.resize(depth);
+  snap.ask_volumes.resize(depth);
+  snap.bid_volumes_cum.resize(depth);
+  snap.ask_volumes_cum.resize(depth);
+
+  for (std::size_t d = 1; d <= depth; ++d) {
+    snap.bid_volumes[d - 1] = static_cast<float>(AggregatedLevelVolume(inst_id, d, true));
+    snap.ask_volumes[d - 1] = static_cast<float>(AggregatedLevelVolume(inst_id, d, false));
+    snap.bid_volumes_cum[d - 1] = static_cast<float>(AggregatedSideVolume(inst_id, d, true));
+    snap.ask_volumes_cum[d - 1] = static_cast<float>(AggregatedSideVolume(inst_id, d, false));
+  }
+
+  return snap;
+}
+
 MarketState Market::CaptureState(uint32_t inst_id,
                                  const std::vector<size_t> &depths,
                                  const std::string &symbol,
-                                 const std::string &ts,
-                                 uint64_t ts_nanos) {
+                                 const std::string &ts, uint64_t ts_nanos) {
   MarketState state;
   state.symbol = symbol;
   state.timestamp = ts;

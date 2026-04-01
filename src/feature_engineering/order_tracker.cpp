@@ -1,11 +1,11 @@
-#include "order_tracker.hpp"
+#include "feature_engineering/order_tracker.hpp"
+#include "core/logging.hpp"
 #include "databento/record.hpp"
-#include "logging.hpp"
-#include "csv.hpp"
+#include "feature_engineering/csv.hpp"
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <unordered_map>
-#include <cassert>
 
 namespace db = databento;
 
@@ -16,7 +16,7 @@ void OrderTracker::Router(const db::MboMsg &mbo) {
   }
 
   PruneZombies();
-  
+
   switch (mbo.action) {
   case db::Action::Clear: {
     Clear(mbo);
@@ -37,7 +37,7 @@ void OrderTracker::Router(const db::MboMsg &mbo) {
   case db::Action::Modify:
   case db::Action::Trade:
   case db::Action::None: {
-    // These actions are ignored or not expected in 
+    // These actions are ignored or not expected in
     // XNAS.ITCH for order tracking
     break;
   }
@@ -75,12 +75,13 @@ void OrderTracker::DumpOrders(const std::string &filename) const {
   }
 
   writer.Flush();
-  std::cout << "Dumped " << order_map.size() << " orders to features/" << filename << std::endl;
+  std::cout << "Dumped " << order_map.size() << " orders to features/"
+            << filename << std::endl;
 }
 
 void OrderTracker::LogLifecycle(uint64_t order_id, const db::MboMsg &mbo,
-                               const std::string &action,
-                               int64_t size_after) const {
+                                const std::string &action,
+                                int64_t size_after) const {
   CSVWriter writer;
   std::string filename = std::to_string(order_id) + ".csv";
 
@@ -110,10 +111,12 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
 
   if (it == order_map.end()) {
     // New Order: Insert to Order Map & Expiry Queue
-    order_map[mbo.order_id] =
-        Order{mbo.order_id, static_cast<int64_t>(mbo.size), mbo.price, mbo.side,
-              std::chrono::steady_clock::now(),
-              mbo.ts_recv.time_since_epoch().count()};
+    order_map[mbo.order_id] = Order{mbo.order_id,
+                                    static_cast<int64_t>(mbo.size),
+                                    mbo.price,
+                                    mbo.side,
+                                    std::chrono::steady_clock::now(),
+                                    mbo.ts_recv.time_since_epoch().count()};
 
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
     LogLifecycle(mbo.order_id, mbo, "ADD", mbo.size);

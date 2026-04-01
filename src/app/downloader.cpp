@@ -1,32 +1,34 @@
 /**
  * @file downloader.cpp
  * @brief Utility for downloading historical market data from Databento.
- * 
- * This module uses the Databento Historical API to fetch MBO data for a specified
- * range of symbols and time, performing cost analysis and safety checks before 
- * execution to avoid unexpected billing.
+ *
+ * This module uses the Databento Historical API to fetch MBO data for a
+ * specified range of symbols and time, performing cost analysis and safety
+ * checks before execution to avoid unexpected billing.
  */
 
 #include <databento/enums.hpp>
 #include <databento/historical.hpp>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <filesystem>
 
 namespace fs = std::filesystem;
 
 // --- Configuration Constants ---
 const std::string DATASET = "XNAS.ITCH";
-const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA", "GOOGL"};
+const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA",
+                                          "GOOGL"};
 const std::string START_TIME = "2026-03-18T00:00:00Z";
 const std::string END_TIME = "2026-03-19T00:00:00Z";
 const std::string OUTPUT_PATH = "./data/multi_instrument.dbn.zst";
 
 /**
- * @brief Hard limit to abort automatically if estimated cost exceeds this value.
+ * @brief Hard limit to abort automatically if estimated cost exceeds this
+ * value.
  */
 const double MAX_COST_USD = 5.00;
 
@@ -41,7 +43,7 @@ const std::string RESET = "\033[0m";
 
 int main(int argc, char *argv[]) {
   std::string api_key;
-  
+
   // API Key resolution (Arg > Env)
   if (argc >= 2) {
     api_key = argv[1];
@@ -91,8 +93,12 @@ int main(int argc, char *argv[]) {
     );
 
     std::cout << std::fixed << std::setprecision(2);
-    std::cout << "\n" << BOLD << "Estimated Cost:  " << GRN << "$" << estimated_cost << " USD" << RESET << std::endl;
-    std::cout << BOLD << "Billable Size:   " << (billable_size / (1024.0 * 1024.0)) << " MB (uncompressed)" << RESET << std::endl;
+    std::cout << "\n"
+              << BOLD << "Estimated Cost:  " << GRN << "$" << estimated_cost
+              << " USD" << RESET << std::endl;
+    std::cout << BOLD
+              << "Billable Size:   " << (billable_size / (1024.0 * 1024.0))
+              << " MB (uncompressed)" << RESET << std::endl;
 
     // Safety Boundary Check
     if (estimated_cost > MAX_COST_USD) {
@@ -121,11 +127,12 @@ int main(int argc, char *argv[]) {
     // Ensure data directory exists
     fs::path out_path(OUTPUT_PATH);
     if (out_path.has_parent_path()) {
-        std::error_code ec;
-        if (!fs::create_directories(out_path.parent_path(), ec) && ec) {
-            std::cerr << RED << "Error creating directory: " << ec.message() << RESET << std::endl;
-            return 3;
-        }
+      std::error_code ec;
+      if (!fs::create_directories(out_path.parent_path(), ec) && ec) {
+        std::cerr << RED << "Error creating directory: " << ec.message()
+                  << RESET << std::endl;
+        return 3;
+      }
     }
 
     // Fetch data and stream to file
