@@ -10,9 +10,8 @@ class CSVWriter {
 public:
   CSVWriter() = default;
 
-  bool Open(const std::string &filename) {
-    std::string dir = "features";
-
+  bool Open(const std::string &filename, const std::string &dir = "features",
+            bool append = false) {
     // Ensure the directory exists
     try {
       if (!fs::exists(dir)) {
@@ -26,9 +25,21 @@ public:
 
     // Set the 1MB buffer before opening
     m_file.rdbuf()->pubsetbuf(m_buffer, sizeof(m_buffer));
-    m_file.open(full_path, std::ios::out | std::ios::trunc | std::ios::binary);
+    
+    auto mode = std::ios::out | std::ios::binary;
+    if (append) {
+      mode |= std::ios::app;
+    } else {
+      mode |= std::ios::trunc;
+    }
+    
+    m_file.open(full_path, mode);
 
     return m_file.is_open();
+  }
+
+  bool Exists(const std::string &filename, const std::string &dir = "features") {
+    return fs::exists(dir + "/" + filename);
   }
 
   template <typename T> void Write(const T &data, bool is_last = false) {

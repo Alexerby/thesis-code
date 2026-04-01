@@ -68,9 +68,25 @@ void test_zombie_pruning_logic() {
   std::cout << "test_zombie_pruning_logic passed!" << std::endl;
 }
 
+void test_csv_dump() {
+  OrderTracker tracker(7152, FeedType::XNAS_ITCH);
+
+  // Add a few orders
+  tracker.Router(create_mock_mbo(1001, 100000, 50, db::Action::Add));
+  tracker.Router(create_mock_mbo(1002, 100100, 100, db::Action::Add));
+  tracker.Router(create_mock_mbo(1003, 99900, 25, db::Action::Add));
+
+  // Modify one
+  tracker.Router(create_mock_mbo(1001, 100000, 25, db::Action::Add)); // Multi-part add
+
+  tracker.DumpOrders("test_orders.csv");
+  std::cout << "test_csv_dump completed! Check features/test_orders.csv" << std::endl;
+}
+
 int main() {
   test_add_logic();
   test_zombie_pruning_logic();
+  test_csv_dump();
   std::cout << "\nAll tests completed successfully!" << std::endl;
   return 0;
 }

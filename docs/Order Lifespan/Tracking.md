@@ -93,7 +93,7 @@ flowchart TB
 
     %% CANCEL BRANCH
     Action -->|Cancel| IsCancelLast{F_LAST?}
-    IsCancelLast -->|No| PureCancel[Reduce OrderMap Size]
+    IsCancelLast -->|No| PureCancel[OrderMap.Vol -= Msg.Size]
     IsCancelLast -->|Yes| CheckStaged{Pending Vol?}
     
     %% CLEAR BRANCH

@@ -151,14 +151,22 @@ void run_order_analyser(const Config &cfg) {
 
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH);
 
-  auto callback = [&](const db::MboMsg &mbo) { tracker.Router(mbo); };
+  uint64_t msg_count = 0;
+  const uint64_t MAX_MSGS = 10000;
+  auto callback = [&](const db::MboMsg &mbo) {
+    if (msg_count < MAX_MSGS) {
+      tracker.Router(mbo);
+      msg_count++;
+    }
+  };
 
-  std::cout << "Starting Order Analysis for ID: " << cfg.focus_instrument
+  std::cout << "Starting Order Analysis (Limit: " << MAX_MSGS << " msgs) for ID: " << cfg.focus_instrument
             << std::endl;
 
   engine.Run(market, callback);
 
   std::cout << "Final Active Orders: " << tracker.order_map.size() << std::endl;
+  tracker.DumpOrders("active_orders.csv");
 }
 
 int main(int argc, char **argv) {
