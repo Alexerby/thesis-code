@@ -87,12 +87,12 @@ flowchart TB
 
     %% FILL BRANCH
     Action -->|Fill| Accumulate[Add Fill Size to<br/>PendingVolumeMap]
-    Accumulate --> IsFillLast{Flg == 128?}
+    Accumulate --> IsFillLast{F_LAST?}
     IsFillLast -->|Yes| CheckStaged
     IsFillLast -->|No| End([State Updated])
 
     %% CANCEL BRANCH
-    Action -->|Cancel| IsCancelLast{Flg == 128?}
+    Action -->|Cancel| IsCancelLast{F_LAST?}
     IsCancelLast -->|No| PureCancel[Reduce OrderMap Size]
     IsCancelLast -->|Yes| CheckStaged{Pending Vol?}
     
