@@ -21,7 +21,7 @@ add_executable(thesis
     src/main.cpp
     src/book.cpp
     src/market.cpp
-    src/visualizer.cpp
+    src/tui_visualizer.cpp
     src/order_tracker.cpp
 )
 

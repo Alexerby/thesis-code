@@ -3,7 +3,7 @@
  * @brief Implementation of the TUI visualization engine.
  */
 
-#include "visualizer.hpp"
+#include "tui_visualizer.hpp"
 #include "databento/constants.hpp"
 #include <algorithm>
 #include <chrono>

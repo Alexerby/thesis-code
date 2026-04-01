@@ -12,7 +12,7 @@
 #include "market.hpp"
 #include "order_tracker.hpp"
 #include "replay_engine.hpp"
-#include "visualizer.hpp"
+#include "tui_visualizer.hpp"
 
 struct Config {
   std::string command;
