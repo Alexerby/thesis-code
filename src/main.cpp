@@ -13,6 +13,7 @@
 #include "order_tracker.hpp"
 #include "replay_engine.hpp"
 #include "tui_visualizer.hpp"
+#include "gui_application.hpp"
 
 struct Config {
   std::string command;
@@ -167,6 +168,10 @@ void run_order_analyser(const Config &cfg) {
 
   std::cout << "Final Active Orders: " << tracker.order_map.size() << std::endl;
   tracker.DumpOrders("active_orders.csv");
+}
+
+void run_gui_application() {
+  Application app;
 }
 
 int main(int argc, char **argv) {

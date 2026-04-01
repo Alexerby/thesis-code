@@ -13,7 +13,21 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/databento/databento-cpp
     GIT_TAG v0.51.0
 )
-FetchContent_MakeAvailable(databento)
+
+# Graphics & UI Dependencies
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw
+    GIT_TAG 3.3.9
+)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(databento glfw)
+
+find_package(OpenGL REQUIRED)
 
 # Define the single main executable
 # Include main.cpp and all supporting implementation files
