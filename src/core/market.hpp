@@ -26,28 +26,6 @@ struct MarketSnapshot {
 };
 
 /**
- * @struct MarketState
- * @brief Represents a point-in-time snapshot of the market for a specific
- * symbol.
- */
-struct MarketState {
-  std::string symbol;    ///< Ticker symbol
-  std::string timestamp; ///< ISO-8601 formatted event time
-  uint64_t ts_recv;      ///< Nanoseconds since epoch
-
-  std::pair<PriceLevel, PriceLevel> bbo; ///< Best Bid and Best Offer
-
-  std::vector<std::pair<std::string, double>>
-      imbalance_levels; ///< Multi-level imbalance signals
-  std::vector<std::pair<std::string, double>>
-      volume_levels; ///< Price/Volume levels for visualization
-
-  int64_t last_trade_price;    ///< Price of the most recent execution
-  uint32_t last_trade_volume;  ///< Size of the most recent execution
-  uint64_t total_trade_volume; ///< Cumulative trade volume for the session
-};
-
-/**
  * @class Market
  * @brief Manages multiple order books across different instruments and
  * publishers.
@@ -85,13 +63,8 @@ public:
 
 
 
-  // TODO: These are too similar, should be able to get rid of one of them
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);
-
-  MarketState CaptureState(uint32_t inst_id, const std::vector<size_t> &depths,
-                           const std::string &symbol, const std::string &ts,
-                           uint64_t ts_nanos);
 
 private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;

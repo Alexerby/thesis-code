@@ -220,52 +220,6 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   return snap;
 }
 
-MarketState Market::CaptureState(uint32_t inst_id,
-                                 const std::vector<size_t> &depths,
-                                 const std::string &symbol,
-                                 const std::string &ts, uint64_t ts_nanos) {
-  MarketState state;
-  state.symbol = symbol;
-  state.timestamp = ts;
-  state.ts_recv = ts_nanos;
-  state.bbo = AggregatedBbo(inst_id);
-
-  state.last_trade_price = db::kUndefPrice;
-  state.total_trade_volume = 0;
-  db::UnixNanos latest_ts{};
-
-  if (books_.count(inst_id)) {
-    for (const auto &pub_book : books_.at(inst_id)) {
-      state.total_trade_volume += pub_book.book.GetTotalTradeVolume();
-
-      // publishers
-      const auto &exec = pub_book.book.GetLastExecution();
-      if (exec.ts_recv > latest_ts && exec.price != db::kUndefPrice) {
-        state.last_trade_price = exec.price;
-        latest_ts = exec.ts_recv;
-      }
-    }
-  }
-
-  for (auto d : depths) {
-    state.imbalance_levels.push_back({"L" + std::to_string(d) + " imbalance",
-                                      AggregatedDeepImbalance(inst_id, d)});
-    state.imbalance_levels.push_back({"L" + std::to_string(d) + " velocity",
-                                      AggregatedImbalanceVelocity(inst_id, d)});
-
-    state.volume_levels.push_back({"L" + std::to_string(d) + "_BidVol",
-                                   AggregatedSideVolume(inst_id, d, true)});
-    state.volume_levels.push_back({"L" + std::to_string(d) + "_AskVol",
-                                   AggregatedSideVolume(inst_id, d, false)});
-
-    state.volume_levels.push_back(
-        {"B_P" + std::to_string(d), GetPriceAtDepth(inst_id, d, true)});
-    state.volume_levels.push_back(
-        {"A_P" + std::to_string(d), GetPriceAtDepth(inst_id, d, false)});
-  }
-  return state;
-}
-
 TradeExecution Market::GetLastTrade(uint32_t inst_id) const {
   TradeExecution latest_exec{};
 
