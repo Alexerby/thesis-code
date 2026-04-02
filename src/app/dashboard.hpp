@@ -1,17 +1,17 @@
 #pragma once
 
-#include "core/market.hpp"
+#include "data/market.hpp"
 
 class ReplayController; // Forward declaration
 
 /**
- * @class MarketDashboard
+ * @class Dashboard
  * @brief Responsible for rendering the market visualization using ImGui.
  */
-class MarketDashboard {
+class Dashboard {
 public:
-  MarketDashboard();
-  ~MarketDashboard();
+  Dashboard();
+  ~Dashboard();
 
   void Render(const MarketSnapshot &snapshot, ReplayController &controller);
   bool ShouldQuit() const { return m_request_quit; }

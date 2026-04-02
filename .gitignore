@@ -1,9 +1,18 @@
 .env
-
 build/
 dist/
 .cache/
 compile_commands.json
-data/ 
-logging/
-features/
+
+# Root data/ and features/
+/data/
+/features/
+/logging/
+
+# Local artifacts
+imgui.ini
+active_orders.csv
+*.log
+*.dbn.zst
+*.dbn
+*.zst

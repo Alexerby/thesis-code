@@ -1,53 +1,18 @@
 // Functionality for feature engineering of MBO (L3) orderbook data
 #pragma once
 
-#include "databento/datetime.hpp"
-#include "databento/enums.hpp"
-#include "databento/record.hpp"
+#include "core/types.hpp"
+#include <databento/datetime.hpp>
+#include <databento/enums.hpp>
+#include <databento/record.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <databento/record.hpp>
 #include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace db = databento;
-
-/**
- * @struct TradeExecution
- * @brief Captures the specifics of a completed trade event.
- */
-struct TradeExecution {
-  int64_t price{0};
-  uint32_t volume{0};
-  db::Side side{db::Side::None}; // Aggressor side
-
-  // Timestamp (Nanoseconds)
-  // TODO: This is not the execution time, but rather
-  // Databento capture time. Let be for now.
-  db::UnixNanos ts_recv;
-
-  bool IsValid() const { return price > 0; }
-};
-
-/**
- * @struct PriceLevel
- * @brief Represents an aggregated view of a single price point in the book.
- *
- * In MBO data, a price level is composed of multiple individual orders.
- * This struct provides the total volume and order count for that price.
- */
-struct PriceLevel {
-  int64_t price{db::kUndefPrice};
-  uint32_t size{0};
-  uint32_t count{0};
-
-  bool IsEmpty() const { return price == db::kUndefPrice; }
-  operator bool() const { return !IsEmpty(); }
-};
-
-std::ostream &operator<<(std::ostream &stream, const PriceLevel &level);
 
 /**
  * @class Book
@@ -82,7 +47,6 @@ public:
    * @brief Retrieves the volume and count for an exact price point.
    * @param px The price to look up.
    * @return The PriceLevel at that price.
-   * @throws std::invalid_argument if no liquidity exists at that price.
    */
   PriceLevel GetBidLevelByPx(int64_t px) const;
   PriceLevel GetAskLevelByPx(int64_t px) const;
@@ -141,7 +105,7 @@ private:
   using LevelOrders = std::vector<db::MboMsg>;
   struct PriceAndSide {
     int64_t price;
-    db::Side side;
+    Side side;
   };
   using Orders = std::unordered_map<uint64_t, PriceAndSide>;
   using SideLevels = std::map<int64_t, LevelOrders>;
@@ -150,6 +114,11 @@ private:
   static PriceLevel GetPriceLevel(int64_t price, const LevelOrders &level);
   static LevelOrders::iterator GetLevelOrder(LevelOrders &level,
                                              uint64_t order_id);
+  static Side ConvertSide(db::Side side) {
+    if (side == db::Side::Bid) return Side::Bid;
+    if (side == db::Side::Ask) return Side::Ask;
+    return Side::None;
+  }
 
   // Structural Updates
   void Add(const db::MboMsg &mbo);
@@ -162,10 +131,10 @@ private:
   void Trade(const db::MboMsg &mbo);
 
   // Side Navigation
-  SideLevels &GetSideLevels(db::Side side);
-  LevelOrders &GetLevel(db::Side side, int64_t price);
-  LevelOrders &GetOrInsertLevel(db::Side side, int64_t price);
-  void RemoveLevel(db::Side side, int64_t price);
+  SideLevels &GetSideLevels(Side side);
+  LevelOrders &GetLevel(Side side, int64_t price);
+  LevelOrders &GetOrInsertLevel(Side side, int64_t price);
+  void RemoveLevel(Side side, int64_t price);
 
   // State
   Orders orders_by_id_;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/book.hpp"
+#include "data/book.hpp"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -60,8 +60,6 @@ public:
   double GetPriceAtDepth(uint32_t inst_id, std::size_t depth, bool is_bid);
 
   TradeExecution GetLastTrade(uint32_t inst_id) const;
-
-
 
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);

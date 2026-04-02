@@ -1,17 +1,8 @@
-#include "core/book.hpp"
+#include "data/book.hpp"
 #include "core/logging.hpp"
 #include "databento/pretty.hpp"
 #include "databento/record.hpp"
-
-std::ostream &operator<<(std::ostream &stream, const PriceLevel &level) {
-  if (level.IsEmpty()) {
-    stream << "0 @ kUndefPrice | 0 order(s)";
-  } else {
-    stream << level.size << " @ " << databento::pretty::Px{level.price} << " | "
-           << level.count << " order(s)";
-  }
-  return stream;
-}
+#include <algorithm>
 
 std::pair<PriceLevel, PriceLevel> Book::Bbo() const {
   return {GetBidLevel(), GetAskLevel()};
@@ -129,9 +120,9 @@ void Book::Apply(const db::MboMsg &mbo) {
   case db::Action::Trade: {
     Trade(mbo);
     break;
+  }
   default:
     break;
-  }
   }
 }
 
@@ -186,20 +177,22 @@ void Book::Clear() {
 }
 
 void Book::Add(const db::MboMsg &mbo) {
+  Side side = ConvertSide(mbo.side);
   if (mbo.flags.IsTob()) {
-    SideLevels &levels = GetSideLevels(mbo.side);
+    SideLevels &levels = GetSideLevels(side);
     levels.clear();
     if (mbo.price != db::kUndefPrice)
       levels[mbo.price] = {mbo};
   } else {
-    LevelOrders &level = GetOrInsertLevel(mbo.side, mbo.price);
+    LevelOrders &level = GetOrInsertLevel(side, mbo.price);
     level.emplace_back(mbo);
-    orders_by_id_.emplace(mbo.order_id, PriceAndSide{mbo.price, mbo.side});
+    orders_by_id_.emplace(mbo.order_id, PriceAndSide{mbo.price, side});
   }
 }
 
 void Book::Cancel(const db::MboMsg &mbo) {
-  auto &side_levels = GetSideLevels(mbo.side);
+  Side side = ConvertSide(mbo.side);
+  auto &side_levels = GetSideLevels(side);
   if (side_levels.find(mbo.price) == side_levels.end())
     return;
 
@@ -213,14 +206,15 @@ void Book::Cancel(const db::MboMsg &mbo) {
     orders_by_id_.erase(mbo.order_id);
     level.erase(it);
     if (level.empty())
-      RemoveLevel(mbo.side, mbo.price);
+      RemoveLevel(side, mbo.price);
   } else {
     it->size -= mbo.size;
   }
 }
 
 void Book::Fill(const db::MboMsg &mbo) {
-  auto &side_levels = GetSideLevels(mbo.side);
+  Side side = ConvertSide(mbo.side);
+  auto &side_levels = GetSideLevels(side);
   if (side_levels.find(mbo.price) == side_levels.end())
     return;
 
@@ -234,7 +228,7 @@ void Book::Fill(const db::MboMsg &mbo) {
     orders_by_id_.erase(mbo.order_id);
     level.erase(it);
     if (level.empty())
-      RemoveLevel(mbo.side, mbo.price);
+      RemoveLevel(side, mbo.price);
   } else {
     it->size -= mbo.size;
   }
@@ -244,8 +238,8 @@ void Book::Trade(const db::MboMsg &mbo) {
   if (mbo.price != db::kUndefPrice) {
     last_execution_.price = mbo.price;
     last_execution_.volume = mbo.size;
-    last_execution_.side = mbo.side;
-    last_execution_.ts_recv = mbo.ts_recv;
+    last_execution_.side = ConvertSide(mbo.side);
+    last_execution_.ts_recv = mbo.ts_recv.time_since_epoch().count();
 
     this->total_trade_volume_ += mbo.size;
   }
@@ -253,13 +247,14 @@ void Book::Trade(const db::MboMsg &mbo) {
 
 void Book::Modify(const db::MboMsg &mbo) {
   auto it = orders_by_id_.find(mbo.order_id);
+  Side side = ConvertSide(mbo.side);
   if (it == orders_by_id_.end()) {
     Add(mbo);
     return;
   }
 
   auto prev_price = it->second.price;
-  auto &side_levels = GetSideLevels(mbo.side);
+  auto &side_levels = GetSideLevels(side);
   if (side_levels.find(prev_price) == side_levels.end())
     return;
 
@@ -276,8 +271,8 @@ void Book::Modify(const db::MboMsg &mbo) {
     it->second.price = mbo.price;
     prev_lvl.erase(order_it);
     if (prev_lvl.empty())
-      RemoveLevel(mbo.side, prev_price);
-    GetOrInsertLevel(mbo.side, mbo.price).emplace_back(mbo);
+      RemoveLevel(side, prev_price);
+    GetOrInsertLevel(side, mbo.price).emplace_back(mbo);
   } else if (order_it->size < mbo.size) {
     prev_lvl.erase(order_it);
     prev_lvl.emplace_back(mbo);
@@ -286,11 +281,11 @@ void Book::Modify(const db::MboMsg &mbo) {
   }
 }
 
-Book::SideLevels &Book::GetSideLevels(db::Side side) {
-  return (side == db::Side::Ask) ? offers_ : bids_;
+Book::SideLevels &Book::GetSideLevels(Side side) {
+  return (side == Side::Ask) ? offers_ : bids_;
 }
 
-Book::LevelOrders &Book::GetLevel(db::Side side, int64_t price) {
+Book::LevelOrders &Book::GetLevel(Side side, int64_t price) {
   auto &levels = GetSideLevels(side);
   auto it = levels.find(price);
   if (it == levels.end())
@@ -298,10 +293,10 @@ Book::LevelOrders &Book::GetLevel(db::Side side, int64_t price) {
   return it->second;
 }
 
-Book::LevelOrders &Book::GetOrInsertLevel(db::Side side, int64_t price) {
+Book::LevelOrders &Book::GetOrInsertLevel(Side side, int64_t price) {
   return GetSideLevels(side)[price];
 }
 
-void Book::RemoveLevel(db::Side side, int64_t price) {
+void Book::RemoveLevel(Side side, int64_t price) {
   GetSideLevels(side).erase(price);
 }

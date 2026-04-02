@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app/market_dashboard.hpp"
+#include "app/dashboard.hpp"
 #include "app/replay_controller.hpp"
 #include <memory>
 #include <string>
@@ -38,5 +38,5 @@ private:
   Config m_cfg;
 
   std::unique_ptr<ReplayController> m_controller;
-  std::unique_ptr<MarketDashboard> m_dashboard;
+  std::unique_ptr<Dashboard> m_dashboard;
 };

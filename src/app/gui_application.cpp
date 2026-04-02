@@ -15,7 +15,7 @@ Application::Application(const Config &cfg) : m_cfg(cfg) {
 
   m_controller =
       std::make_unique<ReplayController>(cfg.data_path, cfg.focus_instrument);
-  m_dashboard = std::make_unique<MarketDashboard>();
+  m_dashboard = std::make_unique<Dashboard>();
 
   m_controller->Start();
 }

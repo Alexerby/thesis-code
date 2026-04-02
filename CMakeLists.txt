@@ -31,21 +31,25 @@ FetchContent_Declare(
     GIT_TAG v1.89.9
 )
 
-FetchContent_MakeAvailable(databento glfw imgui)
+FetchContent_Declare(
+    catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.4.0
+)
+
+FetchContent_MakeAvailable(databento glfw imgui catch2)
 
 find_package(OpenGL REQUIRED)
 
-# Define the single main executable
-add_executable(thesis
-    src/app/main.cpp
-    src/core/book.cpp
-    src/core/market.cpp
+# Shared source files (excluding mains)
+set(COMMON_SOURCES
+    src/data/book.cpp
+    src/data/market.cpp
     src/app/gui_application.cpp
-    src/app/market_dashboard.cpp
+    src/app/dashboard.cpp
     src/app/replay_controller.cpp
-    src/feature_engineering/order_tracker.cpp
-    src/feature_engineering/feature_engine.cpp
-    tests/test_order_tracker.cpp
+    src/features/order_tracker.cpp
+    src/model/classifier.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
@@ -54,8 +58,26 @@ add_executable(thesis
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# Define the single main executable
+add_executable(thesis
+    src/app/main.cpp
+    ${COMMON_SOURCES}
+)
+
+# Define the test executable
+add_executable(unit_tests
+    tests/test_order_tracker.cpp
+    ${COMMON_SOURCES}
+)
+
 # Include paths
 target_include_directories(thesis PRIVATE 
+    src
+    .
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+target_include_directories(unit_tests PRIVATE 
     src
     .
     ${imgui_SOURCE_DIR}
@@ -69,6 +91,14 @@ target_link_libraries(thesis
     date::date
     glfw
     OpenGL::GL
+)
+target_link_libraries(unit_tests 
+    PRIVATE 
+    databento::databento 
+    date::date
+    glfw
+    OpenGL::GL
+    Catch2::Catch2WithMain
 )
 
 # Distribution

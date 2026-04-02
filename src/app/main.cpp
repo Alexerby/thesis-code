@@ -11,10 +11,9 @@
 #include <vector>
 
 #include "app/gui_application.hpp"
-#include "core/market.hpp"
-#include "core/replay_engine.hpp"
-#include "feature_engineering/order_tracker.hpp"
-#include "tests/test_order_tracker.hpp"
+#include "data/market.hpp"
+#include "data/replay_engine.hpp"
+#include "features/order_tracker.hpp"
 
 namespace fs = std::filesystem;
 
@@ -33,8 +32,7 @@ void print_usage() {
       << "Commands:\n"
       << "  gui <data_path>      Run high-performance GUI visualiser (OpenGL)\n"
       << "  order_analyser <data_path> Run order tracking analysis\n"
-      << "  download <api_key>   Download historical market data from Databento\n"
-      << "  test                 Run internal test suite\n\n"
+      << "  download <api_key>   Download historical market data from Databento\n\n"
       << "Options:\n"
       << "  --symbol <id>        Set focus instrument ID (optional for GUI)\n";
 }
@@ -49,33 +47,31 @@ Config parse_args(int argc, char **argv) {
   cfg.command = argv[1];
 
   if (cfg.command == "download") {
-      if (argc >= 3) {
-          cfg.api_key = argv[2];
+    if (argc >= 3) {
+      cfg.api_key = argv[2];
+    } else {
+      const char *env_key = std::getenv("DATABENTO_API_KEY");
+      if (env_key) {
+        cfg.api_key = env_key;
       } else {
-          const char *env_key = std::getenv("DATABENTO_API_KEY");
-          if (env_key) {
-              cfg.api_key = env_key;
-          } else {
-              throw std::runtime_error("No API key provided for download. Use 'download <api_key>' or set DATABENTO_API_KEY env var.");
-          }
+        throw std::runtime_error("No API key provided for download. Use 'download <api_key>' or set DATABENTO_API_KEY env var.");
       }
-  } else if (cfg.command == "test") {
-      // No extra args needed
+    }
   } else {
-      if (argc < 3) {
-          print_usage();
-          throw std::runtime_error("Missing data_path for command: " + cfg.command);
-      }
-      cfg.data_path = argv[2];
+    if (argc < 3) {
+      print_usage();
+      throw std::runtime_error("Missing data_path for command: " + cfg.command);
+    }
+    cfg.data_path = argv[2];
 
-      for (int i = 3; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--symbol" && i + 1 < argc) {
-          cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
-        } else {
-          throw std::runtime_error("Unknown or malformed option: " + arg);
-        }
+    for (int i = 3; i < argc; ++i) {
+      std::string arg = argv[i];
+      if (arg == "--symbol" && i + 1 < argc) {
+        cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
+      } else {
+        throw std::runtime_error("Unknown or malformed option: " + arg);
       }
+    }
   }
   return cfg;
 }
@@ -110,55 +106,55 @@ void run_gui_application(const Config &cfg) {
 }
 
 void run_downloader(const Config &cfg) {
-    const std::string DATASET = "XNAS.ITCH";
-    const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA", "GOOGL"};
-    const std::string START_TIME = "2026-03-18T00:00:00Z";
-    const std::string END_TIME = "2026-03-19T00:00:00Z";
-    const std::string OUTPUT_PATH = "./data/multi_instrument.dbn.zst";
-    const double MAX_COST_USD = 5.00;
+  const std::string DATASET = "XNAS.ITCH";
+  const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA", "GOOGL"};
+  const std::string START_TIME = "2026-03-18T00:00:00Z";
+  const std::string END_TIME = "2026-03-19T00:00:00Z";
+  const std::string OUTPUT_PATH = "./data/multi_instrument.dbn.zst";
+  const double MAX_COST_USD = 5.00;
 
-    databento::Historical client =
-        databento::Historical::Builder()
-            .SetKey(cfg.api_key)
-            .SetGateway(databento::HistoricalGateway::Bo1)
-            .Build();
+  databento::Historical client =
+      databento::Historical::Builder()
+          .SetKey(cfg.api_key)
+          .SetGateway(databento::HistoricalGateway::Bo1)
+          .Build();
 
-    std::cout << "\n--- Databento Downloader ---" << std::endl;
-    std::cout << "Dataset: " << DATASET << std::endl;
-    std::cout << "Symbols: ";
-    for (size_t i = 0; i < SYMBOLS.size(); ++i) {
-      std::cout << SYMBOLS[i] << (i == SYMBOLS.size() - 1 ? "" : ", ");
-    }
-    std::cout << "\nRange:   " << START_TIME << " to " << END_TIME << std::endl;
+  std::cout << "\n--- Databento Downloader ---" << std::endl;
+  std::cout << "Dataset: " << DATASET << std::endl;
+  std::cout << "Symbols: ";
+  for (size_t i = 0; i < SYMBOLS.size(); ++i) {
+    std::cout << SYMBOLS[i] << (i == SYMBOLS.size() - 1 ? "" : ", ");
+  }
+  std::cout << "\nRange:   " << START_TIME << " to " << END_TIME << std::endl;
 
-    databento::DateTimeRange<std::string> range{START_TIME, END_TIME};
-    double estimated_cost = client.MetadataGetCost(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
-    uint64_t billable_size = client.MetadataGetBillableSize(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
+  databento::DateTimeRange<std::string> range{START_TIME, END_TIME};
+  double estimated_cost = client.MetadataGetCost(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
+  uint64_t billable_size = client.MetadataGetBillableSize(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
 
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "\nEstimated Cost:  $" << estimated_cost << " USD" << std::endl;
-    std::cout << "Billable Size:   " << (billable_size / (1024.0 * 1024.0)) << " MB (uncompressed)" << std::endl;
+  std::cout << std::fixed << std::setprecision(2);
+  std::cout << "\nEstimated Cost:  $" << estimated_cost << " USD" << std::endl;
+  std::cout << "Billable Size:   " << (billable_size / (1024.0 * 1024.0)) << " MB (uncompressed)" << std::endl;
 
-    if (estimated_cost > MAX_COST_USD) {
-      throw std::runtime_error("Estimated cost exceeds maximum limit.");
-    }
+  if (estimated_cost > MAX_COST_USD) {
+    throw std::runtime_error("Estimated cost exceeds maximum limit.");
+  }
 
-    std::cout << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
-    std::string response;
-    std::getline(std::cin, response);
-    if (response != "y" && response != "Y") {
-      std::cout << "Download aborted." << std::endl;
-      return;
-    }
+  std::cout << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
+  std::string response;
+  std::getline(std::cin, response);
+  if (response != "y" && response != "Y") {
+    std::cout << "Download aborted." << std::endl;
+    return;
+  }
 
-    fs::path out_path(OUTPUT_PATH);
-    if (out_path.has_parent_path()) {
-      fs::create_directories(out_path.parent_path());
-    }
+  fs::path out_path(OUTPUT_PATH);
+  if (out_path.has_parent_path()) {
+    fs::create_directories(out_path.parent_path());
+  }
 
-    std::cout << "\nDownloading to " << OUTPUT_PATH << "..." << std::endl;
-    client.TimeseriesGetRangeToFile(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, databento::SType::InstrumentId, 0, OUTPUT_PATH);
-    std::cout << "\nSuccess!" << std::endl;
+  std::cout << "\nDownloading to " << OUTPUT_PATH << "..." << std::endl;
+  client.TimeseriesGetRangeToFile(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, databento::SType::InstrumentId, 0, OUTPUT_PATH);
+  std::cout << "\nSuccess!" << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -171,8 +167,6 @@ int main(int argc, char **argv) {
       run_order_analyser(cfg);
     } else if (cfg.command == "download") {
       run_downloader(cfg);
-    } else if (cfg.command == "test") {
-      run_order_tracker_tests();
     } else {
       std::cerr << "Error: Unknown command '" << cfg.command << "'\n";
       print_usage();

@@ -14,7 +14,7 @@
 #include <databento/record.hpp>
 #include <databento/symbol_map.hpp>
 
-#include "core/market.hpp"
+#include "data/market.hpp"
 
 namespace db = databento;
 

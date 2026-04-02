@@ -1,4 +1,4 @@
-#include "app/market_dashboard.hpp"
+#include "app/dashboard.hpp"
 #include "app/replay_controller.hpp"
 #include "imgui.h"
 #include <algorithm>
@@ -46,10 +46,10 @@ uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
 }
 } // namespace
 
-MarketDashboard::MarketDashboard() {}
-MarketDashboard::~MarketDashboard() {}
+Dashboard::Dashboard() {}
+Dashboard::~Dashboard() {}
 
-void MarketDashboard::Render(const MarketSnapshot &snapshot,
+void Dashboard::Render(const MarketSnapshot &snapshot,
                              ReplayController &controller) {
   ImGui::SetNextWindowPos(ImVec2(0, 0));
   ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
@@ -74,7 +74,7 @@ void MarketDashboard::Render(const MarketSnapshot &snapshot,
   ImGui::End();
 }
 
-void MarketDashboard::RenderPlaybackControls(ReplayController &controller) {
+void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::BeginChild("Controls", ImVec2(0, CONTROLS_HEIGHT), true);
   SessionStats stats = controller.GetSessionStats();
   PlaybackState state = controller.GetPlaybackState();
@@ -132,7 +132,7 @@ void MarketDashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::EndChild();
 }
 
-void MarketDashboard::RenderHeader(const MarketSnapshot &snapshot,
+void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
                                    ReplayController &controller) {
   ImGui::BeginChild("Header", ImVec2(0, HEADER_HEIGHT), true);
   ImGui::Columns(4, "HeaderColumns", false);
@@ -183,7 +183,7 @@ void MarketDashboard::RenderHeader(const MarketSnapshot &snapshot,
   ImGui::EndChild();
 }
 
-void MarketDashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot) {
+void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot) {
   ImGui::BeginChild("Order book depth", ImVec2(0, ORDERBOOK_DEPTH_HEIGHT), true);
   const std::vector<float> &left_data =
       m_use_cumulative ? snapshot.bid_volumes_cum : snapshot.bid_volumes;
