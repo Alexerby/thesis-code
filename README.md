@@ -9,6 +9,23 @@ C++ tools for analyzing and visualizing limit order book dynamics using Databent
 * **libzstd-dev**: `sudo apt install libzstd-dev`
 * **libxi-dev**: `sudo apt install libxi-dev`
 
+```bash
+sudo apt update
+sudo apt install -y \
+    build-essential \
+    cmake \
+    git \
+    libzstd-dev \
+    libgl1-mesa-dev \
+    mesa-common-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    libxkbcommon-dev
+```
+
 ## Build
 
 ```bash
