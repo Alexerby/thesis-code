@@ -1,3 +1,4 @@
+#include "tests/test_order_tracker.hpp"
 #include "databento/record.hpp"
 #include "feature_engineering/order_tracker.hpp"
 #include <cassert>
@@ -5,6 +6,7 @@
 
 namespace db = databento;
 
+namespace {
 db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
                            db::Action action, uint8_t flags_repr = 128) {
   db::MboMsg mbo{};
@@ -80,13 +82,13 @@ void test_csv_dump() {
   tracker.Router(create_mock_mbo(1001, 100000, 25, db::Action::Add)); // Multi-part add
 
   tracker.DumpOrders("test_orders.csv");
-  std::cout << "test_csv_dump completed! Check features/test_orders.csv" << std::endl;
+  std::cout << "test_csv_dump completed!" << std::endl;
 }
+} // namespace
 
-int main() {
+void run_order_tracker_tests() {
   test_add_logic();
   test_zombie_pruning_logic();
   test_csv_dump();
-  std::cout << "\nAll tests completed successfully!" << std::endl;
-  return 0;
+  std::cout << "All Order Tracker tests passed!" << std::endl;
 }

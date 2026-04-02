@@ -45,6 +45,7 @@ add_executable(thesis
     src/app/replay_controller.cpp
     src/feature_engineering/order_tracker.cpp
     src/feature_engineering/feature_engine.cpp
+    tests/test_order_tracker.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
@@ -56,6 +57,7 @@ add_executable(thesis
 # Include paths
 target_include_directories(thesis PRIVATE 
     src
+    .
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
@@ -69,18 +71,6 @@ target_link_libraries(thesis
     OpenGL::GL
 )
 
-# Downloader Utility
-add_executable(downloader src/app/downloader.cpp)
-target_link_libraries(downloader PRIVATE databento::databento)
-
-# Testing
-add_executable(order_tracker_tests
-    tests/test_order_tracker.cpp
-    src/feature_engineering/order_tracker.cpp
-)
-target_include_directories(order_tracker_tests PRIVATE src)
-target_link_libraries(order_tracker_tests 
-    PRIVATE 
-    databento::databento 
-    date::date
-)
+# Distribution
+install(TARGETS thesis COMPONENT runtime DESTINATION .)
+install(DIRECTORY scripts/ COMPONENT runtime DESTINATION scripts)

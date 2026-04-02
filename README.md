@@ -6,8 +6,6 @@ C++ tools for analyzing and visualizing limit order book dynamics using Databent
 
 * **CMake** (v3.24+)
 * **C++ Compiler** (C++17+)
-* **libzstd-dev**: `sudo apt install libzstd-dev`
-* **libxi-dev**: `sudo apt install libxi-dev`
 
 ```bash
 sudo apt update

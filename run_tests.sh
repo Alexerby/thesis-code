@@ -1,13 +1,12 @@
 #!/usr/bin/bash
 set -e
 
-BUILD_DIR="build"
-TEST_TARGET="order_tracker_tests"
+THESIS_BIN="./dist/thesis"
 
-if [ -f "$BUILD_DIR/$TEST_TARGET" ]; then
-    echo "--- Running Tests: $TEST_TARGET ---"
-    "./$BUILD_DIR/$TEST_TARGET"
+if [ -f "$THESIS_BIN" ]; then
+    echo "--- Running Integrated Tests ---"
+    "$THESIS_BIN" test
 else
-    echo "Error: Test binary not found. Run ./build.sh first."
+    echo "Error: Thesis binary not found in dist/. Run ./build.sh first."
     exit 1
 fi
