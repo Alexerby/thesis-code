@@ -18,6 +18,7 @@ public:
   ;
   // OrderLifetime();
   // RapidCancellation();
+
   // SignificantOrderSize();
 private:
   ;
