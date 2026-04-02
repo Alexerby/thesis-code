@@ -73,14 +73,18 @@ void Application::Run() {
     glClearColor(0.08f, 0.08f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Get data and render
+    // Get an updated snapshot of the market
     MarketSnapshot snap = m_controller->GetLatestSnapshot();
+
+    // Render the updated snapshot
     m_dashboard->Render(snap, *m_controller);
 
+    // Kill condition
     if (m_dashboard->ShouldQuit()) {
       glfwSetWindowShouldClose(m_window, true);
     }
 
+    // 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

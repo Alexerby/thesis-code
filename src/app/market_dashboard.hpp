@@ -19,7 +19,7 @@ public:
 private:
   void RenderHeader(const MarketSnapshot &snapshot, ReplayController &controller);
   void RenderPlaybackControls(ReplayController &controller);
-  void RenderMountainChart(const MarketSnapshot &snapshot);
+  void RenderOrderBookDepth(const MarketSnapshot &snapshot);
 
   bool m_use_cumulative = true;
   bool m_request_quit = false;
