@@ -31,13 +31,21 @@ FetchContent_Declare(
     GIT_TAG v1.89.9
 )
 
+# Testing Framework
 FetchContent_Declare(
     catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG v3.4.0
 )
 
-FetchContent_MakeAvailable(databento glfw imgui catch2)
+# Eigen (Linear Alebgra)
+FetchContent_Declare(
+    eigen
+    GIT_REPOSITORY https://github.com/PX4/eigen
+    GIT_TAG 3.4.0
+)
+
+FetchContent_MakeAvailable(databento glfw imgui catch2 eigen)
 
 find_package(OpenGL REQUIRED)
 
@@ -85,20 +93,22 @@ target_include_directories(unit_tests PRIVATE
 )
 
 # Link targets
-target_link_libraries(thesis 
-    PRIVATE 
-    databento::databento 
+target_link_libraries(thesis
+    PRIVATE
+    databento::databento
     date::date
     glfw
     OpenGL::GL
+    Eigen3::Eigen
 )
-target_link_libraries(unit_tests 
-    PRIVATE 
-    databento::databento 
+target_link_libraries(unit_tests
+    PRIVATE
+    databento::databento
     date::date
     glfw
     OpenGL::GL
     Catch2::Catch2WithMain
+    Eigen3::Eigen
 )
 
 # Distribution
