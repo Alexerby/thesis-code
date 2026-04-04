@@ -79,7 +79,7 @@ Config parse_args(int argc, char **argv) {
 void run_order_analyser(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
   Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH);
+  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
   const uint64_t MAX_MSGS = 10000;

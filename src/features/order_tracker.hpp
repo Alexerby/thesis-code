@@ -13,11 +13,14 @@
 
 #pragma once
 
+#include "data/market.hpp"
 #include "databento/record.hpp"
+#include "model/classifier.hpp"
 #include <chrono>
 #include <cstdint>
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 namespace db = databento;
 
@@ -31,7 +34,15 @@ struct Order {
   int64_t price; // Current price
   db::Side side; // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
-  uint64_t entry_ts_recv; // Message timestamp in nanos
+  uint64_t entry_ts_recv; // ts_recv at add (nanoseconds)
+  uint64_t
+      ts_event_add; // ts_event at add — matching engine clock (nanoseconds)
+  double imbalance_at_add;     // Book imbalance when order was placed
+  double dist_to_touch_at_add; // Distance from best same-side price at add (raw
+                               // price units)
+  int64_t size_at_add;         // Original order size at placement
+  uint32_t queue_pos_at_add;   // Queue position at placement (TODO: update to
+                               // cancel-time)
 };
 
 /* @class OrderTracker
@@ -44,8 +55,9 @@ public:
   using ExpiryQueue =
       std::deque<std::pair<uint64_t, std::chrono::steady_clock::time_point>>;
 
-  explicit OrderTracker(uint32_t instrument_id, FeedType feed_type)
-      : instrument_id_(instrument_id), feed_type_(feed_type) {
+  explicit OrderTracker(uint32_t instrument_id, FeedType feed_type,
+                        Market &market)
+      : instrument_id_(instrument_id), feed_type_(feed_type), market_(market) {
     base_dir_ = "features/" + std::to_string(instrument_id_);
   }
 
@@ -80,11 +92,15 @@ public:
   // TTL Tracker pair<order_id, ts>
   ExpiryQueue expiry_queue_{};
 
+  // Populated on every pure cancellation event
+  std::vector<FeatureRecord> feature_records_{};
+
 private:
   // Data for which instrument and feed we are tracking
   uint32_t instrument_id_;
   FeedType feed_type_;
   std::string base_dir_;
+  Market &market_;
 
   void Add(const db::MboMsg &mbo);
   void Modify(const db::MboMsg &mbo);
@@ -95,4 +111,7 @@ private:
 
   // Internal reconciliation logic for both Fills and Cancels
   void Reconcile(const db::MboMsg &mbo);
+
+  // Builds and appends a FeatureRecord for a completed cancellation
+  void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo);
 };

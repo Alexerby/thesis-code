@@ -24,7 +24,8 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
 } // namespace
 
 TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH);
+  Market market;
+  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
 
   SECTION("Adding a new order") {
     db::MboMsg add_msg = create_mock_mbo(1166, 312100000000, 100, db::Action::Add, 128);
@@ -37,7 +38,8 @@ TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
 }
 
 TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH);
+  Market market;
+  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
 
   SECTION("Pruning expired orders") {
     // Add an order and create a partial fill
@@ -67,7 +69,8 @@ TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
 }
 
 TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH);
+  Market market;
+  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
 
   SECTION("Dumping orders to CSV") {
     tracker.Router(create_mock_mbo(1001, 100000, 50, db::Action::Add));

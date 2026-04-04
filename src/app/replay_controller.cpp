@@ -8,7 +8,7 @@ ReplayController::ReplayController(const std::string &data_path,
     : m_data_path(data_path), m_focus_instrument(focus_instrument) {
   // Initialize engine early to get metadata/symbols
   m_engine = std::make_unique<ReplayEngine>(m_data_path, false);
-  
+
   try {
     const auto &symbol_map = m_engine->GetSymbolMap();
     for (const auto &entry : symbol_map.Map()) {
@@ -16,7 +16,7 @@ ReplayController::ReplayController(const std::string &data_path,
     }
 
     if (m_focus_instrument == 0 && !m_available_instruments.empty()) {
-        m_focus_instrument = m_available_instruments.begin()->first;
+      m_focus_instrument = m_available_instruments.begin()->first;
     }
   } catch (...) {
     // Handle or log error
@@ -55,8 +55,9 @@ SessionStats ReplayController::GetSessionStats() {
   return m_session_stats;
 }
 
-std::map<uint32_t, std::string> ReplayController::GetAvailableInstruments() const {
-    return m_available_instruments;
+std::map<uint32_t, std::string>
+ReplayController::GetAvailableInstruments() const {
+  return m_available_instruments;
 }
 
 void ReplayController::ReplayLoop() {
@@ -65,7 +66,7 @@ void ReplayController::ReplayLoop() {
 
   // Initial metadata setup
   {
-    const auto& meta = m_engine->GetMetadata();
+    const auto &meta = m_engine->GetMetadata();
     std::lock_guard<std::mutex> lock(m_mutex);
     m_session_stats.start_ts = meta.start.time_since_epoch().count();
     m_session_stats.end_ts = meta.end.time_since_epoch().count();
@@ -80,7 +81,7 @@ void ReplayController::ReplayLoop() {
     std::string symbol = "Unknown";
     auto it = m_available_instruments.find(focus_id);
     if (it != m_available_instruments.end()) {
-        symbol = it->second;
+      symbol = it->second;
     }
 
     // Warp Logic (Fast-forward to target time)
@@ -89,8 +90,7 @@ void ReplayController::ReplayLoop() {
         // Throttled UI update during warp so we see the mountain move
         static uint64_t last_warp_ui_update = 0;
         if (is_focus && ++last_warp_ui_update >= 2000) {
-          MarketSnapshot snap =
-              market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
+          MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
           snap.timestamp = db::ToIso8601(mbo.ts_recv);
           snap.msg_count = m_msg_count;
           {
@@ -130,8 +130,7 @@ void ReplayController::ReplayLoop() {
 
     if (is_focus) {
       m_msg_count++;
-      MarketSnapshot snap =
-          market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
+      MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
       snap.msg_count = m_msg_count;
       snap.timestamp = db::ToIso8601(mbo.ts_recv);
 
