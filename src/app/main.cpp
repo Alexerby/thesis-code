@@ -1,9 +1,10 @@
 #include <cstdint>
 #include <databento/datetime.hpp>
 #include <databento/dbn_file_store.hpp>
-#include <databento/symbol_map.hpp>
 #include <databento/historical.hpp>
+#include <databento/symbol_map.hpp>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 #include "data/market.hpp"
 #include "data/replay_engine.hpp"
 #include "features/order_tracker.hpp"
+#include "model/gmm.hpp"
 
 namespace fs = std::filesystem;
 
@@ -32,7 +34,8 @@ void print_usage() {
       << "Commands:\n"
       << "  gui <data_path>      Run high-performance GUI visualiser (OpenGL)\n"
       << "  order_analyser <data_path> Run order tracking analysis\n"
-      << "  download <api_key>   Download historical market data from Databento\n\n"
+      << "  download <api_key>   Download historical market data from "
+         "Databento\n\n"
       << "Options:\n"
       << "  --symbol <id>        Set focus instrument ID (optional for GUI)\n";
 }
@@ -54,7 +57,9 @@ Config parse_args(int argc, char **argv) {
       if (env_key) {
         cfg.api_key = env_key;
       } else {
-        throw std::runtime_error("No API key provided for download. Use 'download <api_key>' or set DATABENTO_API_KEY env var.");
+        throw std::runtime_error(
+            "No API key provided for download. Use 'download <api_key>' or set "
+            "DATABENTO_API_KEY env var.");
       }
     }
   } else {
@@ -94,6 +99,43 @@ void run_order_analyser(const Config &cfg) {
 
   engine.Run(market, callback);
   tracker.DumpOrders("active_orders.csv");
+
+  // --- Fit GMM on collected feature records ---
+  const auto &records = tracker.feature_records_;
+  std::cout << "\nCollected " << records.size()
+            << " cancellation feature records.\n";
+
+  if (records.size() < 10) {
+    std::cout << "Too few records to fit GMM (need >=10). "
+              << "Increase MAX_MSGS or check data.\n";
+    return;
+  }
+
+  // Use features: delta_t (0), delta_imbalance (1), dist_touch (4)
+  auto data = GMM::ToEigen(records, {0, 1, 4});
+
+  GMM gmm;
+  GMMResult result = gmm.Fit(data);
+
+  const std::string out_path = "features/gmm_results.txt";
+  std::ofstream out(out_path);
+  if (!out) {
+    std::cerr << "Failed to open " << out_path << " for writing.\n";
+    return;
+  }
+
+  out << std::fixed << std::setprecision(6);
+  out << "=== GMM Results ===\n"
+      << "Observations:      " << records.size() << "\n"
+      << "Iterations:        " << result.iterations << "\n"
+      << "Log-likelihood:    " << result.log_likelihood << "\n"
+      << "pi_spoof (pi_hat): " << result.pi_spoof << "\n"
+      << "\nComponent 1 (strategic) mean:\n"
+      << result.params.mu1.transpose() << "\n"
+      << "\nComponent 2 (reactive) mean:\n"
+      << result.params.mu2.transpose() << "\n";
+
+  std::cout << "GMM results written to " << out_path << "\n";
 }
 
 void run_gui_application(const Config &cfg) {
@@ -107,7 +149,8 @@ void run_gui_application(const Config &cfg) {
 
 void run_downloader(const Config &cfg) {
   const std::string DATASET = "XNAS.ITCH";
-  const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA", "GOOGL"};
+  const std::vector<std::string> SYMBOLS = {"AAPL", "MSFT", "AMZN", "NVDA",
+                                            "GOOGL"};
   const std::string START_TIME = "2026-03-18T00:00:00Z";
   const std::string END_TIME = "2026-03-19T00:00:00Z";
   const std::string OUTPUT_PATH = "./data/multi_instrument.dbn.zst";
@@ -128,18 +171,24 @@ void run_downloader(const Config &cfg) {
   std::cout << "\nRange:   " << START_TIME << " to " << END_TIME << std::endl;
 
   databento::DateTimeRange<std::string> range{START_TIME, END_TIME};
-  double estimated_cost = client.MetadataGetCost(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
-  uint64_t billable_size = client.MetadataGetBillableSize(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, 0);
+  double estimated_cost =
+      client.MetadataGetCost(DATASET, range, SYMBOLS, databento::Schema::Mbo,
+                             databento::SType::RawSymbol, 0);
+  uint64_t billable_size = client.MetadataGetBillableSize(
+      DATASET, range, SYMBOLS, databento::Schema::Mbo,
+      databento::SType::RawSymbol, 0);
 
   std::cout << std::fixed << std::setprecision(2);
   std::cout << "\nEstimated Cost:  $" << estimated_cost << " USD" << std::endl;
-  std::cout << "Billable Size:   " << (billable_size / (1024.0 * 1024.0)) << " MB (uncompressed)" << std::endl;
+  std::cout << "Billable Size:   " << (billable_size / (1024.0 * 1024.0))
+            << " MB (uncompressed)" << std::endl;
 
   if (estimated_cost > MAX_COST_USD) {
     throw std::runtime_error("Estimated cost exceeds maximum limit.");
   }
 
-  std::cout << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
+  std::cout
+      << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
   std::string response;
   std::getline(std::cin, response);
   if (response != "y" && response != "Y") {
@@ -153,7 +202,10 @@ void run_downloader(const Config &cfg) {
   }
 
   std::cout << "\nDownloading to " << OUTPUT_PATH << "..." << std::endl;
-  client.TimeseriesGetRangeToFile(DATASET, range, SYMBOLS, databento::Schema::Mbo, databento::SType::RawSymbol, databento::SType::InstrumentId, 0, OUTPUT_PATH);
+  client.TimeseriesGetRangeToFile(
+      DATASET, range, SYMBOLS, databento::Schema::Mbo,
+      databento::SType::RawSymbol, databento::SType::InstrumentId, 0,
+      OUTPUT_PATH);
   std::cout << "\nSuccess!" << std::endl;
 }
 

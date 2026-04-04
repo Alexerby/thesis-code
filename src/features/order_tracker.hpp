@@ -15,7 +15,7 @@
 
 #include "data/market.hpp"
 #include "databento/record.hpp"
-#include "model/classifier.hpp"
+#include "model/gmm.hpp"
 #include <chrono>
 #include <cstdint>
 #include <deque>

@@ -57,7 +57,7 @@ set(COMMON_SOURCES
     src/app/dashboard.cpp
     src/app/replay_controller.cpp
     src/features/order_tracker.cpp
-    src/model/classifier.cpp
+    src/model/gmm.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
