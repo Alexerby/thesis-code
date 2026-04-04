@@ -87,7 +87,7 @@ void run_order_analyser(const Config &cfg) {
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
-  const uint64_t MAX_MSGS = 10000;
+  const uint64_t MAX_MSGS = 10'000'000;
   auto callback = [&](const db::MboMsg &mbo) {
     if (msg_count < MAX_MSGS) {
       tracker.Router(mbo);
@@ -112,7 +112,9 @@ void run_order_analyser(const Config &cfg) {
   }
 
   // Use features: delta_t (0), delta_imbalance (1), dist_touch (4)
-  auto data = GMM::ToEigen(records, {0, 1, 4});
+  const std::vector<int> feature_indices = {0, 1, 4};
+  auto data = GMM::ToEigen(records, feature_indices);
+  GMM::Standardize(data);
 
   GMM gmm;
   GMMResult result = gmm.Fit(data);
@@ -124,16 +126,26 @@ void run_order_analyser(const Config &cfg) {
     return;
   }
 
-  out << std::fixed << std::setprecision(6);
+  auto write_mean = [&](const Eigen::VectorXd &mu) {
+    for (int j = 0; j < static_cast<int>(feature_indices.size()); ++j) {
+      out << "    " << std::left << std::setw(20)
+          << GMM::kFeatureNames[feature_indices[j]]
+          << std::right << std::setw(14) << std::fixed << std::setprecision(6)
+          << mu[j] << "\n";
+    }
+  };
+
   out << "=== GMM Results ===\n"
       << "Observations:      " << records.size() << "\n"
       << "Iterations:        " << result.iterations << "\n"
-      << "Log-likelihood:    " << result.log_likelihood << "\n"
-      << "pi_spoof (pi_hat): " << result.pi_spoof << "\n"
-      << "\nComponent 1 (strategic) mean:\n"
-      << result.params.mu1.transpose() << "\n"
-      << "\nComponent 2 (reactive) mean:\n"
-      << result.params.mu2.transpose() << "\n";
+      << "Log-likelihood:    " << std::fixed << std::setprecision(4)
+                               << result.log_likelihood << "\n"
+      << "pi_spoof (pi_hat): " << std::setprecision(6)
+                               << result.pi_spoof << "\n"
+      << "\nComponent 1 — strategic (standardised mean):\n";
+  write_mean(result.params.mu1);
+  out << "\nComponent 2 — reactive (standardised mean):\n";
+  write_mean(result.params.mu2);
 
   std::cout << "GMM results written to " << out_path << "\n";
 }

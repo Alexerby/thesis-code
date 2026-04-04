@@ -103,6 +103,25 @@ public:
   ToEigen(const std::vector<FeatureRecord> &records,
           const std::vector<int> &feature_indices);
 
+  /**
+   * @brief Z-score standardises data in-place (zero mean, unit variance).
+   *
+   * Should be called on the output of ToEigen() before Fit() to prevent
+   * features with large absolute values from dominating the covariance.
+   *
+   * @param data  Data to standardise (modified in-place).
+   * @return      Pair of {mean, std_dev} vectors for each feature dimension,
+   *              which can be used to back-transform the fitted means if needed.
+   */
+  static std::pair<Eigen::VectorXd, Eigen::VectorXd>
+  Standardize(std::vector<Eigen::VectorXd> &data);
+
+  /// Human-readable names for each FeatureRecord field, indexed 0-5.
+  static constexpr const char *kFeatureNames[6] = {
+      "delta_t", "delta_imbalance", "size_ratio",
+      "queue_pos", "dist_touch", "cancel_rate"
+  };
+
 private:
   /**
    * @brief Evaluates log N(x | \mu, \Sigma) using a precomputed inverse and

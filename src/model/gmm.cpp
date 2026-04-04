@@ -73,6 +73,42 @@ GMM::ToEigen(const std::vector<FeatureRecord> &records,
 }
 
 // ---------------------------------------------------------------------------
+// Standardize
+// ---------------------------------------------------------------------------
+
+std::pair<Eigen::VectorXd, Eigen::VectorXd>
+GMM::Standardize(std::vector<Eigen::VectorXd> &data) {
+  if (data.empty()) {
+    throw std::runtime_error("GMM::Standardize: empty dataset.");
+  }
+  int D = static_cast<int>(data[0].size());
+  int N = static_cast<int>(data.size());
+
+  Eigen::VectorXd mean = Eigen::VectorXd::Zero(D);
+  for (const auto &x : data) mean += x;
+  mean /= N;
+
+  Eigen::VectorXd var = Eigen::VectorXd::Zero(D);
+  for (const auto &x : data) {
+    Eigen::VectorXd diff = x - mean;
+    var += diff.cwiseProduct(diff);
+  }
+  var /= N;
+
+  Eigen::VectorXd std_dev = var.cwiseSqrt();
+  // Guard against zero-variance features
+  for (int j = 0; j < D; ++j) {
+    if (std_dev[j] < 1e-12) std_dev[j] = 1.0;
+  }
+
+  for (auto &x : data) {
+    x = (x - mean).cwiseQuotient(std_dev);
+  }
+
+  return {mean, std_dev};
+}
+
+// ---------------------------------------------------------------------------
 // Fit
 // ---------------------------------------------------------------------------
 
