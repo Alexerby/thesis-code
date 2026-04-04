@@ -38,10 +38,10 @@ FetchContent_Declare(
     GIT_TAG v3.4.0
 )
 
-# Eigen (Linear Alebgra)
+# Eigen (Linear Algebra)
 FetchContent_Declare(
     eigen
-    GIT_REPOSITORY https://github.com/PX4/eigen
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
     GIT_TAG 3.4.0
 )
 
