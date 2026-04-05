@@ -38,7 +38,7 @@ void print_usage() {
       << "Usage: ./thesis [command] [args] [options]\n\n"
       << "Commands:\n"
       << "  gui <data_path>            Run high-performance GUI visualiser (OpenGL)\n"
-      << "  order_analyser <data_path> Run order tracking + GMM analysis\n"
+      << "  model <data_path> Run order tracking + GMM analysis\n"
       << "  plot <data_path>           Plot feature distributions (saves PNGs)\n"
       << "  download <api_key>         Download historical market data from Databento\n\n"
       << "Options:\n"
@@ -108,7 +108,7 @@ void run_plot(const Config &cfg) {
   RunVisualizer(tracker.feature_records_);
 }
 
-void run_order_analyser(const Config &cfg) {
+void run_model(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
   Market market;
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
@@ -252,8 +252,8 @@ int main(int argc, char **argv) {
 
     if (cfg.command == "gui") {
       run_gui_application(cfg);
-    } else if (cfg.command == "order_analyser") {
-      run_order_analyser(cfg);
+    } else if (cfg.command == "model") {
+      run_model(cfg);
     } else if (cfg.command == "plot") {
       run_plot(cfg);
     } else if (cfg.command == "download") {
