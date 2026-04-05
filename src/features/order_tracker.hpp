@@ -1,21 +1,24 @@
 /**
  * @file order_tracker.hpp
- * @brief Implements the state of individual orders.
+ * @brief Tracks individual order lifetimes and emits per-order feature records.
  *
- * MBOMessages are very noisy and a single action
- * in the order book is often represented by multiple
- * messages. In order to track the lifetime of orders
- * this module consumes these order messages and constructs
- * the `alive' orders as a single std::unordered_map<uint64_t, Order>.
- * This gives a picture of the `state' (\mathcal{S})) of the order book
- * in the Event-State-Space.
+ * MBO messages are noisy: a single logical order book event is often split
+ * across multiple messages. OrderTracker reconstructs the full lifecycle of
+ * each order — from placement through cancellation or fill, by maintaining a
+ * live map of open orders keyed by order ID.
+ *
+ * When an order is fully cancelled (pure cancellation, no fills), its lifetime
+ * snapshot is used to compute a FeatureRecord x_i and appended to
+ * feature_records_. These records are the primary input to the GMM classifier.
+ *
+ * FeatureRecord is a direct output of the tracking process; it cannot be 
+ * produced without the order state accumulated during the lifetime of an order.
  */
 
 #pragma once
 
 #include "data/market.hpp"
 #include "databento/record.hpp"
-#include "model/gmm.hpp"
 #include <chrono>
 #include <cstdint>
 #include <deque>
@@ -26,6 +29,27 @@ namespace db = databento;
 
 // Supports only XNAS.ITCH for now
 enum class FeedType { XNAS_ITCH };
+
+/**
+ * @struct FeatureRecord
+ * @brief Feature vector x_i for a single order lifecycle.
+ *
+ * Index mapping for use with GMM::ToEigen:
+ *   0 = delta_t          (\Delta t_i,   order age in nanoseconds)
+ *   1 = delta_imbalance  (\Delta I_i,   imbalance change over lifetime)
+ *   2 = size_ratio       (size relative to best-level depth)
+ *   3 = queue_pos        (queue position at placement)
+ *   4 = dist_touch       (distance from same-side best price)
+ *   5 = cancel_rate      (local cancel rate in +-500ms window)
+ */
+struct FeatureRecord {
+  double delta_t;         ///< \Delta t_i
+  double delta_imbalance; ///< \Delta I_i
+  double size_ratio;
+  double queue_pos;
+  double dist_touch;
+  double cancel_rate;
+};
 
 // Represents the tracking of an individual order
 struct Order {

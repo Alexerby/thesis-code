@@ -15,27 +15,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
-
-/**
- * @struct FeatureRecord
- * @brief Feature vector x_i for a single order lifecycle.
- *
- * Index mapping for use with GMM::ToEigen:
- *   0 = delta_t          (\Delta t_i,   order age in nanoseconds)
- *   1 = delta_imbalance  (\Delta I_i,   imbalance change over lifetime)
- *   2 = size_ratio       (size relative to best-level depth)
- *   3 = queue_pos        (queue position at placement)
- *   4 = dist_touch       (distance from same-side best price)
- *   5 = cancel_rate      (local cancel rate in +-500ms window)
- */
-struct FeatureRecord {
-  double delta_t;         ///< \Delta t_i
-  double delta_imbalance; ///< \Delta I_i
-  double size_ratio;
-  double queue_pos;
-  double dist_touch;
-  double cancel_rate;
-};
+#include "features/order_tracker.hpp"
 
 /**
  * @struct GMMParams
