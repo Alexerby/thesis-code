@@ -49,8 +49,7 @@ std::vector<Eigen::VectorXd> GMM::ToEigen(
 
   int D = static_cast<int>(feature_indices.size());
   for (const auto &r : records) {
-    const double all[6] = {r.delta_t,   r.delta_imbalance, r.size_ratio,
-                           r.queue_pos, r.dist_touch,      r.cancel_rate};
+    const double all[1] = {r.delta_t};
     Eigen::VectorXd v(D);
     for (int j = 0; j < D; ++j) {
       v[j] = all[feature_indices[j]];

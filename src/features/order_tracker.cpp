@@ -85,20 +85,6 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
   OrderMap::iterator it = order_map.find(mbo.order_id);
 
   if (it == order_map.end()) {
-    // Snapshot book state at add time (market.Apply() has already run)
-    double imbalance = market_.AggregatedDeepImbalance(instrument_id_, 1);
-    auto bbo = market_.AggregatedBbo(instrument_id_);
-    PriceLevel best_bid = bbo.first;
-    PriceLevel best_ask = bbo.second;
-
-    double dist_to_touch = 0.0;
-    if (mbo.side == db::Side::Bid && !best_bid.IsEmpty()) {
-      dist_to_touch = static_cast<double>(best_bid.price - mbo.price);
-    } else if (mbo.side == db::Side::Ask && !best_ask.IsEmpty()) {
-      dist_to_touch = static_cast<double>(mbo.price - best_ask.price);
-    }
-
-    // New Order: Insert to Order Map & Expiry Queue
     order_map[mbo.order_id] = Order{
         mbo.order_id,
         static_cast<int64_t>(mbo.size),
@@ -107,12 +93,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         std::chrono::steady_clock::now(),
         mbo.ts_recv.time_since_epoch().count(),
         mbo.hd.ts_event.time_since_epoch().count(),
-        imbalance,
-        dist_to_touch,
-        static_cast<int64_t>(mbo.size),
-        0  // queue_pos_at_add: TODO: requires pre-apply book snapshot
     };
-
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
   } else {
     // Existing Order: Update size directly (XNAS.ITCH multi-part add)
@@ -179,35 +160,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order,
                                      const db::MboMsg &mbo) {
   uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
   double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
-
-  double imbalance_at_cancel =
-      market_.AggregatedDeepImbalance(instrument_id_, 1);
-  double delta_imbalance = imbalance_at_cancel - order.imbalance_at_add;
-
-  auto bbo = market_.AggregatedBbo(instrument_id_);
-  PriceLevel best_bid = bbo.first;
-  PriceLevel best_ask = bbo.second;
-
-  double dist_touch = 0.0;
-  if (order.side == db::Side::Bid && !best_bid.IsEmpty()) {
-    dist_touch = static_cast<double>(best_bid.price - order.price);
-  } else if (order.side == db::Side::Ask && !best_ask.IsEmpty()) {
-    dist_touch = static_cast<double>(order.price - best_ask.price);
-  }
-
-  double size_ratio = 0.0;
-  if (order.side == db::Side::Bid && !best_bid.IsEmpty() && best_bid.size > 0) {
-    size_ratio = static_cast<double>(order.size_at_add) / best_bid.size;
-  } else if (order.side == db::Side::Ask && !best_ask.IsEmpty() &&
-             best_ask.size > 0) {
-    size_ratio = static_cast<double>(order.size_at_add) / best_ask.size;
-  }
-
-  feature_records_.push_back(FeatureRecord{
-      delta_t, delta_imbalance, size_ratio,
-      static_cast<double>(order.queue_pos_at_add), dist_touch,
-      0.0  // cancel_rate: TODO: requires \pm 500ms rolling window
-  });
+  feature_records_.push_back(FeatureRecord{delta_t});
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {

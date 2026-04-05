@@ -99,9 +99,7 @@ class GMM {
       std::vector<Eigen::VectorXd> &data);
 
   /// Human-readable names for each FeatureRecord field, indexed 0-5.
-  static constexpr const char *kFeatureNames[6] = {
-      "delta_t",   "delta_imbalance", "size_ratio",
-      "queue_pos", "dist_touch",      "cancel_rate"};
+  static constexpr const char *kFeatureNames[1] = {"delta_t"};
 
  private:
   /**

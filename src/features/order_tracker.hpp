@@ -36,20 +36,10 @@ enum class FeedType { XNAS_ITCH };
  * @brief Feature vector x_i for a single order lifecycle.
  *
  * Index mapping for use with GMM::ToEigen:
- *   0 = delta_t          (\Delta t_i,   order age in nanoseconds)
- *   1 = delta_imbalance  (\Delta I_i,   imbalance change over lifetime)
- *   2 = size_ratio       (size relative to best-level depth)
- *   3 = queue_pos        (queue position at placement)
- *   4 = dist_touch       (distance from same-side best price)
- *   5 = cancel_rate      (local cancel rate in +-500ms window)
+ *   0 = delta_t  (\Delta t_i, order age in nanoseconds)
  */
 struct FeatureRecord {
-  double delta_t;          ///< \Delta t_i
-  double delta_imbalance;  ///< \Delta I_i
-  double size_ratio;
-  double queue_pos;
-  double dist_touch;
-  double cancel_rate;
+  double delta_t; ///< \Delta t_i
 };
 
 // Represents the tracking of an individual order
@@ -59,15 +49,8 @@ struct Order {
   int64_t price;  // Current price
   db::Side side;  // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
-  uint64_t entry_ts_recv;  // ts_recv at add (nanoseconds)
-  uint64_t
-      ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
-  double imbalance_at_add;      // Book imbalance when order was placed
-  double dist_to_touch_at_add;  // Distance from best same-side price at add
-                                // (raw price units)
-  int64_t size_at_add;        // Original order size at placement
-  uint32_t queue_pos_at_add;  // Queue position at placement (TODO: update to
-                              // cancel-time)
+  uint64_t entry_ts_recv; // ts_recv at add (nanoseconds)
+  uint64_t ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
 };
 
 /* @class OrderTracker
@@ -86,32 +69,17 @@ class OrderTracker {
     base_dir_ = "features/" + std::to_string(instrument_id_);
   }
 
-  /* @brief Routes the incoming order message to order map.
-   * @param mbo The incoming MBO message.
-   */
   void Router(const db::MboMsg &mbo);
-
-  /**
-   * @brief Exports the current state of the order map to a CSV file.
-   * @param filename The name of the file to export to (saved in "features/"
-   * dir).
-   */
   void DumpOrders(const std::string &filename) const;
 
-  // Persistent Map (Key: OrderID)
   OrderMap order_map{};
-
-  // Pending Volume Map (Key: Order ID)
   PendingVolumeMap pending_volume_map_{};
-
-  // TTL Tracker pair<order_id, ts>
   ExpiryQueue expiry_queue_{};
 
   // Populated on every pure cancellation event
   std::vector<FeatureRecord> feature_records_{};
 
  private:
-  // Data for which instrument and feed we are tracking
   uint32_t instrument_id_;
   FeedType feed_type_;
   std::string base_dir_;
@@ -123,10 +91,6 @@ class OrderTracker {
   void Cancel(const db::MboMsg &mbo);
   void Clear(const db::MboMsg &mbo);
   void PruneZombies();
-
-  // Internal reconciliation logic for both Fills and Cancels
   void Reconcile(const db::MboMsg &mbo);
-
-  // Builds and appends a FeatureRecord for a completed cancellation
   void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo);
 };

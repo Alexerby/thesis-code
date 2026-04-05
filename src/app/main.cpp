@@ -137,8 +137,7 @@ void run_model(const Config &cfg) {
     return;
   }
 
-  // Use features: delta_t (0), delta_imbalance (1), dist_touch (4)
-  const std::vector<int> feature_indices = {0, 1, 4};
+  const std::vector<int> feature_indices = {0}; // delta_t only
   auto data = GMM::ToEigen(records, feature_indices);
   GMM::Standardize(data);
 
