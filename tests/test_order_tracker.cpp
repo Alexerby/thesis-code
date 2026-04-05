@@ -1,7 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
+
 #include "databento/record.hpp"
 #include "features/order_tracker.hpp"
-#include <chrono>
 
 namespace db = databento;
 
@@ -21,14 +22,15 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
   mbo.ts_recv = db::UnixNanos{std::chrono::nanoseconds{1773820800000000000}};
   return mbo;
 }
-} // namespace
+}  // namespace
 
 TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
   Market market;
   OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
 
   SECTION("Adding a new order") {
-    db::MboMsg add_msg = create_mock_mbo(1166, 312100000000, 100, db::Action::Add, 128);
+    db::MboMsg add_msg =
+        create_mock_mbo(1166, 312100000000, 100, db::Action::Add, 128);
     tracker.Router(add_msg);
 
     REQUIRE(tracker.order_map.count(1166) == 1);
@@ -43,7 +45,8 @@ TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
 
   SECTION("Pruning expired orders") {
     // Add an order and create a partial fill
-    db::MboMsg add_msg = create_mock_mbo(1166, 232000000000, 2540, db::Action::Add, 128);
+    db::MboMsg add_msg =
+        create_mock_mbo(1166, 232000000000, 2540, db::Action::Add, 128);
     tracker.Router(add_msg);
 
     db::MboMsg fill_msg = create_mock_mbo(1166, 12, 5, db::Action::Fill, 0);
@@ -63,7 +66,8 @@ TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
 
     // Verify that the order 1166 was pruned
     CHECK(tracker.order_map.count(1166) == 0);
-    CHECK(tracker.expiry_queue_.size() == 1); // Only the new trigger_msg order should remain
+    CHECK(tracker.expiry_queue_.size() ==
+          1);  // Only the new trigger_msg order should remain
     REQUIRE(tracker.expiry_queue_.front().first == 9999);
   }
 }
@@ -78,7 +82,7 @@ TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
     tracker.Router(create_mock_mbo(1003, 99900, 25, db::Action::Add));
 
     // Multi-part add (Modify logic in tracker adds size if already exists)
-    tracker.Router(create_mock_mbo(1001, 100000, 25, db::Action::Add)); 
+    tracker.Router(create_mock_mbo(1001, 100000, 25, db::Action::Add));
 
     // This should not throw
     REQUIRE_NOTHROW(tracker.DumpOrders("test_orders.csv"));

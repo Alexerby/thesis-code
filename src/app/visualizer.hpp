@@ -9,9 +9,10 @@
 
 #pragma once
 
-#include "model/gmm.hpp"
 #include <string>
 #include <vector>
+
+#include "model/gmm.hpp"
 
 /**
  * @brief Detailed inspection of the order-age feature (\Delta t_i).
@@ -27,10 +28,9 @@
  * @param records    Feature records collected from the order tracker.
  * @param output_dir Directory to write plots into (created if absent).
  */
-void InspectOrderAge(const std::vector<FeatureRecord> &records,
-                     const std::string &output_dir = "features/descriptives/order_age");
-
-void InspectQueuePosition();
+void InspectOrderAge(
+    const std::vector<FeatureRecord> &records,
+    const std::string &output_dir = "features/descriptives/order_age");
 
 /**
  * @brief Runs the full descriptive analysis suite across all features.

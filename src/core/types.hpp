@@ -8,11 +8,7 @@
  * @enum Side
  * @brief Represents the side of the market (Bid or Ask).
  */
-enum class Side : uint8_t {
-  None = 0,
-  Bid = 1,
-  Ask = 2
-};
+enum class Side : uint8_t { None = 0, Bid = 1, Ask = 2 };
 
 /**
  * @brief Undefined price constant.
@@ -27,7 +23,7 @@ struct TradeExecution {
   int64_t price{0};
   uint32_t volume{0};
   Side side{Side::None};
-  uint64_t ts_recv{0}; // Unix nanoseconds
+  uint64_t ts_recv{0};  // Unix nanoseconds
 
   bool IsValid() const { return price > 0 && price != kUndefPrice; }
 };

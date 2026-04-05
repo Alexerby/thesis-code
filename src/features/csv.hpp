@@ -1,13 +1,13 @@
 #pragma once
 
-#include <filesystem> // exists, create_directories
+#include <filesystem>  // exists, create_directories
 #include <fstream>
 #include <string>
 
 namespace fs = std::filesystem;
 
 class CSVWriter {
-public:
+ public:
   CSVWriter() = default;
 
   bool Open(const std::string &filename, const std::string &dir = "features",
@@ -43,13 +43,14 @@ public:
     return fs::exists(dir + "/" + filename);
   }
 
-  template <typename T> void Write(const T &data, bool is_last = false) {
+  template <typename T>
+  void Write(const T &data, bool is_last = false) {
     m_file << data << (is_last ? "\n" : ",");
   }
 
   void Flush() { m_file.flush(); }
 
-private:
+ private:
   std::ofstream m_file;
   char m_buffer[1024 * 1024];
 };

@@ -4,14 +4,17 @@
  */
 
 #include "app/visualizer.hpp"
-#include "core/constants.hpp"
+
+#include <matplot/matplot.h>
+
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
-#include <matplot/matplot.h>
 #include <vector>
+
+#include "core/constants.hpp"
 
 namespace fs = std::filesystem;
 
@@ -36,13 +39,13 @@ void SaveHistogram(const std::vector<double> &values, const std::string &title,
   // color_array is {alpha, r, g, b}. face_color() does not set
   // manual_face_color_, so the axis color cycle (blue) overrides at render
   // time unless we set it explicitly here.
-  h->face_color({1.0f, 0.45f, 0.45f, 0.45f}); // solid mid-grey
+  h->face_color({1.0f, 0.45f, 0.45f, 0.45f});  // solid mid-grey
   h->manual_face_color(true);
 
   // APA: no embedded title (caption belongs in the document)
   matplot::xlabel(xlabel);
   matplot::ylabel("Frequency");
-  matplot::box(false); // L-shaped axes only; no top/right spine
+  matplot::box(false);  // L-shaped axes only; no top/right spine
 
   f->save(path);
   std::cout << "  Saved [" << title << "]: " << path << "\n";
@@ -64,8 +67,8 @@ double Percentile(const std::vector<double> &sorted, double p) {
 /**
  * @brief Clips @p values to [lo, hi] and returns the filtered result.
  */
-std::vector<double> Clip(const std::vector<double> &values,
-                         double lo, double hi) {
+std::vector<double> Clip(const std::vector<double> &values, double lo,
+                         double hi) {
   std::vector<double> out;
   out.reserve(values.size());
   for (double v : values)
@@ -73,7 +76,7 @@ std::vector<double> Clip(const std::vector<double> &values,
   return out;
 }
 
-} // namespace
+}  // namespace
 
 void InspectOrderAge(const std::vector<FeatureRecord> &records,
                      const std::string &output_dir) {
@@ -97,20 +100,20 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
   // --- Percentile summary ---
   // Convert representative percentiles to the most readable unit at each scale
   auto us_to_ms = [](double us) { return us * 1e-3; };
-  auto us_to_s  = [](double us) { return us * 1e-6; };
-  std::cout << std::fixed << std::setprecision(3)
-            << "InspectOrderAge: " << N << " records\n"
+  auto us_to_s = [](double us) { return us * 1e-6; };
+  std::cout << std::fixed << std::setprecision(3) << "InspectOrderAge: " << N
+            << " records\n"
             << "  p1    = " << Percentile(sorted_us, 0.010) * 1e-3 << " ms\n"
             << "  p5    = " << Percentile(sorted_us, 0.050) * 1e-3 << " ms\n"
-            << "  p10   = " << Percentile(sorted_us, 0.10)  * 1e-3 << " ms\n"
-            << "  p25   = " << Percentile(sorted_us, 0.25)  * 1e-3 << " ms\n"
-            << "  p50   = " << Percentile(sorted_us, 0.50)  * 1e-3 << " ms\n"
-            << "  p75   = " << Percentile(sorted_us, 0.75)  * 1e-3 << " ms\n"
-            << "  p90   = " << us_to_s(Percentile(sorted_us, 0.90))  << " s\n"
-            << "  p95   = " << us_to_s(Percentile(sorted_us, 0.95))  << " s\n"
-            << "  p99   = " << us_to_s(Percentile(sorted_us, 0.99))  << " s\n"
+            << "  p10   = " << Percentile(sorted_us, 0.10) * 1e-3 << " ms\n"
+            << "  p25   = " << Percentile(sorted_us, 0.25) * 1e-3 << " ms\n"
+            << "  p50   = " << Percentile(sorted_us, 0.50) * 1e-3 << " ms\n"
+            << "  p75   = " << Percentile(sorted_us, 0.75) * 1e-3 << " ms\n"
+            << "  p90   = " << us_to_s(Percentile(sorted_us, 0.90)) << " s\n"
+            << "  p95   = " << us_to_s(Percentile(sorted_us, 0.95)) << " s\n"
+            << "  p99   = " << us_to_s(Percentile(sorted_us, 0.99)) << " s\n"
             << "  p99.9 = " << us_to_s(Percentile(sorted_us, 0.999)) << " s\n"
-            << "  max   = " << us_to_s(sorted_us.back())              << " s\n"
+            << "  max   = " << us_to_s(sorted_us.back()) << " s\n"
             << std::defaultfloat;
 
   // Raw: clip at p75
@@ -119,9 +122,7 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
     auto clipped = Clip(dt_us, 0.0, p75);
     std::cout << "  raw plot window: 0 - " << p75 << " us  ("
               << (100.0 * clipped.size() / N) << "% of records)\n";
-    SaveHistogram(clipped,
-                  "Order Age - raw",
-                  "\\Delta t_i  (\\mus)",
+    SaveHistogram(clipped, "Order Age - raw", "\\Delta t_i  (\\mus)",
                   output_dir + "/order_age_raw.png");
   }
 
@@ -142,16 +143,12 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
       std::cout << "  ln plot: dropped " << n_dropped
                 << " sub-microsecond observations\n";
 
-    SaveHistogram(ln_us,
-                  "Order Age - natural log",
-                  "ln(\\Delta t_i)  [\\mus]",
+    SaveHistogram(ln_us, "Order Age - natural log", "ln(\\Delta t_i)  [\\mus]",
                   output_dir + "/order_age_ln.png");
   }
 
   std::cout << "InspectOrderAge: 2 plots saved to " << output_dir << "/\n";
 }
-
-void InspectQueuePosition();
 
 void RunVisualizer(const std::vector<FeatureRecord> &records,
                    const std::string &base_dir) {
@@ -160,8 +157,8 @@ void RunVisualizer(const std::vector<FeatureRecord> &records,
     return;
   }
 
-  std::cout << "RunVisualizer: " << records.size() << " records -> "
-            << base_dir << "/\n";
+  std::cout << "RunVisualizer: " << records.size() << " records -> " << base_dir
+            << "/\n";
 
   InspectOrderAge(records, base_dir + "/order_age");
 }

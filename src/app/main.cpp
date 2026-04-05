@@ -18,7 +18,6 @@
 #include "features/order_tracker.hpp"
 #include "model/gmm.hpp"
 
-
 const uint64_t MAX_MSGS = 100'000'000;
 // const uint64_t MAX_MSGS = 100;
 
@@ -33,16 +32,18 @@ struct Config {
 };
 
 void print_usage() {
-  std::cout
-      << "Thesis Research suite\n"
-      << "Usage: ./thesis [command] [args] [options]\n\n"
-      << "Commands:\n"
-      << "  gui <data_path>            Run high-performance GUI visualiser (OpenGL)\n"
-      << "  model <data_path> Run order tracking + GMM analysis\n"
-      << "  plot <data_path>           Plot feature distributions (saves PNGs)\n"
-      << "  download <api_key>         Download historical market data from Databento\n\n"
-      << "Options:\n"
-      << "  --symbol <id>        Set focus instrument ID\n";
+  std::cout << "Thesis Research suite\n"
+            << "Usage: ./thesis [command] [args] [options]\n\n"
+            << "Commands:\n"
+            << "  gui <data_path>            Run high-performance GUI "
+               "visualiser (OpenGL)\n"
+            << "  model <data_path> Run order tracking + GMM analysis\n"
+            << "  plot <data_path>           Plot feature distributions (saves "
+               "PNGs)\n"
+            << "  download <api_key>         Download historical market data "
+               "from Databento\n\n"
+            << "Options:\n"
+            << "  --symbol <id>        Set focus instrument ID\n";
 }
 
 Config parse_args(int argc, char **argv) {
@@ -154,9 +155,9 @@ void run_model(const Config &cfg) {
   auto write_mean = [&](const Eigen::VectorXd &mu) {
     for (int j = 0; j < static_cast<int>(feature_indices.size()); ++j) {
       out << "    " << std::left << std::setw(20)
-          << GMM::kFeatureNames[feature_indices[j]]
-          << std::right << std::setw(14) << std::fixed << std::setprecision(6)
-          << mu[j] << "\n";
+          << GMM::kFeatureNames[feature_indices[j]] << std::right
+          << std::setw(14) << std::fixed << std::setprecision(6) << mu[j]
+          << "\n";
     }
   };
 
@@ -164,9 +165,9 @@ void run_model(const Config &cfg) {
       << "Observations:      " << records.size() << "\n"
       << "Iterations:        " << result.iterations << "\n"
       << "Log-likelihood:    " << std::fixed << std::setprecision(4)
-                               << result.log_likelihood << "\n"
-      << "pi_spoof (pi_hat): " << std::setprecision(6)
-                               << result.pi_spoof << "\n"
+      << result.log_likelihood << "\n"
+      << "pi_spoof (pi_hat): " << std::setprecision(6) << result.pi_spoof
+      << "\n"
       << "\nComponent 1 — strategic (standardised mean):\n";
   write_mean(result.params.mu1);
   out << "\nComponent 2 — reactive (standardised mean):\n";

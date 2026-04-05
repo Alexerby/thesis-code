@@ -1,11 +1,12 @@
 #pragma once
 
-#include "data/book.hpp"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "data/book.hpp"
 
 /**
  * @struct MarketSnapshot
@@ -31,7 +32,7 @@ struct MarketSnapshot {
  * publishers.
  */
 class Market {
-public:
+ public:
   struct PublisherBook {
     uint16_t publisher_id;
     Book book;
@@ -64,7 +65,7 @@ public:
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);
 
-private:
+ private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
   std::unordered_map<uint32_t, std::unordered_map<std::size_t, double>>
       last_imbalances_;

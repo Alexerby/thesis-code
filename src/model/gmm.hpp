@@ -15,6 +15,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
+
 #include "features/order_tracker.hpp"
 
 /**
@@ -24,11 +25,11 @@
  * Component 1 = strategic, Component 2 = reactive.
  */
 struct GMMParams {
-  double pi;              ///< Mixing weight for the strategic component
-  Eigen::VectorXd mu1;    ///< Mean of the strategic component
-  Eigen::VectorXd mu2;    ///< Mean of the reactive component
-  Eigen::MatrixXd sigma1; ///< Covariance of the strategic component
-  Eigen::MatrixXd sigma2; ///< Covariance of the reactive component
+  double pi;               ///< Mixing weight for the strategic component
+  Eigen::VectorXd mu1;     ///< Mean of the strategic component
+  Eigen::VectorXd mu2;     ///< Mean of the reactive component
+  Eigen::MatrixXd sigma1;  ///< Covariance of the strategic component
+  Eigen::MatrixXd sigma2;  ///< Covariance of the reactive component
 };
 
 /**
@@ -37,8 +38,8 @@ struct GMMParams {
  */
 struct GMMResult {
   GMMParams params;
-  std::vector<double> responsibilities; ///< r_i \in [0,1] per observation
-  double pi_spoof;                      ///< \hat{\pi}_spoof = mean(r_i)
+  std::vector<double> responsibilities;  ///< r_i \in [0,1] per observation
+  double pi_spoof;                       ///< \hat{\pi}_spoof = mean(r_i)
   double log_likelihood;
   int iterations;
 };
@@ -49,8 +50,8 @@ struct GMMResult {
  */
 struct FitOptions {
   int max_iter = 300;
-  double tol = 1e-6; ///< Convergence threshold on log-likelihood change
-  double reg = 1e-6; ///< Ridge added to \Sigma diagonal to prevent singularity
+  double tol = 1e-6;  ///< Convergence threshold on log-likelihood change
+  double reg = 1e-6;  ///< Ridge added to \Sigma diagonal to prevent singularity
 };
 
 /**
@@ -58,7 +59,7 @@ struct FitOptions {
  * @brief Fits a two-component Gaussian Mixture Model via the EM algorithm.
  */
 class GMM {
-public:
+ public:
   /**
    * @brief Runs the EM algorithm on a set of D-dimensional observations.
    *
@@ -79,9 +80,9 @@ public:
    * @param feature_indices Indices of features to include (e.g. {0, 1, 4}).
    * @return                Vector of Eigen vectors ready for Fit().
    */
-  static std::vector<Eigen::VectorXd>
-  ToEigen(const std::vector<FeatureRecord> &records,
-          const std::vector<int> &feature_indices);
+  static std::vector<Eigen::VectorXd> ToEigen(
+      const std::vector<FeatureRecord> &records,
+      const std::vector<int> &feature_indices);
 
   /**
    * @brief Z-score standardises data in-place (zero mean, unit variance).
@@ -94,15 +95,15 @@ public:
    *              which can be used to back-transform the fitted means if
    * needed.
    */
-  static std::pair<Eigen::VectorXd, Eigen::VectorXd>
-  Standardize(std::vector<Eigen::VectorXd> &data);
+  static std::pair<Eigen::VectorXd, Eigen::VectorXd> Standardize(
+      std::vector<Eigen::VectorXd> &data);
 
   /// Human-readable names for each FeatureRecord field, indexed 0-5.
   static constexpr const char *kFeatureNames[6] = {
       "delta_t",   "delta_imbalance", "size_ratio",
       "queue_pos", "dist_touch",      "cancel_rate"};
 
-private:
+ private:
   /**
    * @brief Evaluates log N(x | \mu, \Sigma) using a precomputed inverse and
    *        log-determinant.

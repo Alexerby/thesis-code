@@ -1,16 +1,17 @@
 // Functionality for feature engineering of MBO (L3) orderbook data
 #pragma once
 
-#include "core/types.hpp"
+#include <cstddef>
+#include <cstdint>
 #include <databento/datetime.hpp>
 #include <databento/enums.hpp>
 #include <databento/record.hpp>
-#include <cstddef>
-#include <cstdint>
 #include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "core/types.hpp"
 
 namespace db = databento;
 
@@ -25,7 +26,7 @@ namespace db = databento;
  * calculations.
  */
 class Book {
-public:
+ public:
   Book() = default;
 
   /**
@@ -101,7 +102,7 @@ public:
   // Trade
   const TradeExecution &GetLastExecution() const { return last_execution_; }
 
-private:
+ private:
   using LevelOrders = std::vector<db::MboMsg>;
   struct PriceAndSide {
     int64_t price;

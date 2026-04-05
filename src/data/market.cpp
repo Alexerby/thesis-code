@@ -1,11 +1,12 @@
 #include "data/market.hpp"
-#include "databento/datetime.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 
-const std::vector<Market::PublisherBook> &
-Market::GetBooksByPub(uint32_t instrument_id) {
+#include "databento/datetime.hpp"
+
+const std::vector<Market::PublisherBook> &Market::GetBooksByPub(
+    uint32_t instrument_id) {
   return books_[instrument_id];
 }
 
@@ -31,8 +32,8 @@ std::pair<PriceLevel, PriceLevel> Market::Bbo(uint32_t instrument_id,
   return book.Bbo();
 }
 
-std::pair<PriceLevel, PriceLevel>
-Market::AggregatedBbo(uint32_t instrument_id) {
+std::pair<PriceLevel, PriceLevel> Market::AggregatedBbo(
+    uint32_t instrument_id) {
   PriceLevel agg_bid;
   PriceLevel agg_ask;
 
@@ -65,8 +66,7 @@ Market::AggregatedBbo(uint32_t instrument_id) {
 double Market::GetPriceAtDepth(uint32_t inst_id, std::size_t depth,
                                bool is_bid) {
   auto &instr_books = books_[inst_id];
-  if (instr_books.empty())
-    return 0.0;
+  if (instr_books.empty()) return 0.0;
 
   int64_t global_price = is_bid ? 0 : std::numeric_limits<int64_t>::max();
 
@@ -78,11 +78,9 @@ double Market::GetPriceAtDepth(uint32_t inst_id, std::size_t depth,
       continue;
 
     if (is_bid) {
-      if (level.price > global_price)
-        global_price = level.price;
+      if (level.price > global_price) global_price = level.price;
     } else {
-      if (level.price < global_price)
-        global_price = level.price;
+      if (level.price < global_price) global_price = level.price;
     }
   }
 
@@ -126,8 +124,7 @@ double Market::AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
 double Market::AggregatedLevelVolume(uint32_t instrument_id, std::size_t depth,
                                      bool is_bid) {
   double level_vol = 0;
-  if (depth == 0)
-    return 0.0;
+  if (depth == 0) return 0.0;
 
   for (const auto &pub_book : GetBooksByPub(instrument_id)) {
     if (is_bid) {
@@ -211,10 +208,14 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   snap.ask_volumes_cum.resize(depth);
 
   for (std::size_t d = 1; d <= depth; ++d) {
-    snap.bid_volumes[d - 1] = static_cast<float>(AggregatedLevelVolume(inst_id, d, true));
-    snap.ask_volumes[d - 1] = static_cast<float>(AggregatedLevelVolume(inst_id, d, false));
-    snap.bid_volumes_cum[d - 1] = static_cast<float>(AggregatedSideVolume(inst_id, d, true));
-    snap.ask_volumes_cum[d - 1] = static_cast<float>(AggregatedSideVolume(inst_id, d, false));
+    snap.bid_volumes[d - 1] =
+        static_cast<float>(AggregatedLevelVolume(inst_id, d, true));
+    snap.ask_volumes[d - 1] =
+        static_cast<float>(AggregatedLevelVolume(inst_id, d, false));
+    snap.bid_volumes_cum[d - 1] =
+        static_cast<float>(AggregatedSideVolume(inst_id, d, true));
+    snap.ask_volumes_cum[d - 1] =
+        static_cast<float>(AggregatedSideVolume(inst_id, d, false));
   }
 
   return snap;

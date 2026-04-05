@@ -1,9 +1,10 @@
 #pragma once
 
-#include "app/dashboard.hpp"
-#include "app/replay_controller.hpp"
 #include <memory>
 #include <string>
+
+#include "app/dashboard.hpp"
+#include "app/replay_controller.hpp"
 
 struct GLFWwindow;
 
@@ -12,7 +13,7 @@ struct GLFWwindow;
  * @brief Main application shell that manages windowing and orchestration.
  */
 class Application {
-public:
+ public:
   struct Config {
     std::string data_path;
     uint32_t focus_instrument;
@@ -29,7 +30,7 @@ public:
   Application(const Application &) = delete;
   Application &operator=(const Application &) = delete;
 
-private:
+ private:
   void InitGLFW();
   void InitImGui();
   void Shutdown();

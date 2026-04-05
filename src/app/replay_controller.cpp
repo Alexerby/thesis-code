@@ -1,7 +1,9 @@
 #include "app/replay_controller.hpp"
-#include "data/replay_engine.hpp"
+
 #include <chrono>
 #include <iostream>
+
+#include "data/replay_engine.hpp"
 
 ReplayController::ReplayController(const std::string &data_path,
                                    uint32_t focus_instrument)
@@ -26,8 +28,7 @@ ReplayController::ReplayController(const std::string &data_path,
 ReplayController::~ReplayController() { Stop(); }
 
 void ReplayController::Start() {
-  if (m_running)
-    return;
+  if (m_running) return;
   m_running = true;
   m_thread = std::make_unique<std::thread>(&ReplayController::ReplayLoop, this);
 }
@@ -47,7 +48,7 @@ MarketSnapshot ReplayController::GetLatestSnapshot() {
 void ReplayController::SeekToTime(uint64_t target_ts) {
   m_target_ts = target_ts;
   m_is_warping = true;
-  m_playback_state = PlaybackState::Playing; // Ensure we are moving
+  m_playback_state = PlaybackState::Playing;  // Ensure we are moving
 }
 
 SessionStats ReplayController::GetSessionStats() {
@@ -55,8 +56,8 @@ SessionStats ReplayController::GetSessionStats() {
   return m_session_stats;
 }
 
-std::map<uint32_t, std::string>
-ReplayController::GetAvailableInstruments() const {
+std::map<uint32_t, std::string> ReplayController::GetAvailableInstruments()
+    const {
   return m_available_instruments;
 }
 
@@ -103,7 +104,7 @@ void ReplayController::ReplayLoop() {
         return true;
       } else {
         m_is_warping = false;
-        m_playback_state = PlaybackState::Paused; // Pause when reached
+        m_playback_state = PlaybackState::Paused;  // Pause when reached
       }
     }
 
@@ -122,8 +123,7 @@ void ReplayController::ReplayLoop() {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    if (!m_running)
-      return false;
+    if (!m_running) return false;
 
     // Consume step request if present
     bool stepping = m_step_requested.exchange(false);

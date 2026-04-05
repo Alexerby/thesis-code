@@ -11,19 +11,20 @@
  * snapshot is used to compute a FeatureRecord x_i and appended to
  * feature_records_. These records are the primary input to the GMM classifier.
  *
- * FeatureRecord is a direct output of the tracking process; it cannot be 
+ * FeatureRecord is a direct output of the tracking process; it cannot be
  * produced without the order state accumulated during the lifetime of an order.
  */
 
 #pragma once
 
-#include "data/market.hpp"
-#include "databento/record.hpp"
 #include <chrono>
 #include <cstdint>
 #include <deque>
 #include <unordered_map>
 #include <vector>
+
+#include "data/market.hpp"
+#include "databento/record.hpp"
 
 namespace db = databento;
 
@@ -43,8 +44,8 @@ enum class FeedType { XNAS_ITCH };
  *   5 = cancel_rate      (local cancel rate in +-500ms window)
  */
 struct FeatureRecord {
-  double delta_t;         ///< \Delta t_i
-  double delta_imbalance; ///< \Delta I_i
+  double delta_t;          ///< \Delta t_i
+  double delta_imbalance;  ///< \Delta I_i
   double size_ratio;
   double queue_pos;
   double dist_touch;
@@ -54,25 +55,26 @@ struct FeatureRecord {
 // Represents the tracking of an individual order
 struct Order {
   uint64_t order_id;
-  int64_t size;  // Remaining quantity
-  int64_t price; // Current price
-  db::Side side; // Ask or Bid
+  int64_t size;   // Remaining quantity
+  int64_t price;  // Current price
+  db::Side side;  // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
-  uint64_t entry_ts_recv; // ts_recv at add (nanoseconds)
-  uint64_t ts_event_add; // ts_event at add — matching engine clock (nanoseconds)
-  double imbalance_at_add;     // Book imbalance when order was placed
-  double dist_to_touch_at_add; // Distance from best same-side price at add (raw
-                               // price units)
-  int64_t size_at_add;         // Original order size at placement
-  uint32_t queue_pos_at_add;   // Queue position at placement (TODO: update to
-                               // cancel-time)
+  uint64_t entry_ts_recv;  // ts_recv at add (nanoseconds)
+  uint64_t
+      ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
+  double imbalance_at_add;      // Book imbalance when order was placed
+  double dist_to_touch_at_add;  // Distance from best same-side price at add
+                                // (raw price units)
+  int64_t size_at_add;        // Original order size at placement
+  uint32_t queue_pos_at_add;  // Queue position at placement (TODO: update to
+                              // cancel-time)
 };
 
 /* @class OrderTracker
  * @brief Tracks orders for the duration of their lifetime.
  */
 class OrderTracker {
-public:
+ public:
   using OrderMap = std::unordered_map<uint64_t, Order>;
   using PendingVolumeMap = std::unordered_map<uint64_t, int64_t>;
   using ExpiryQueue =
@@ -108,7 +110,7 @@ public:
   // Populated on every pure cancellation event
   std::vector<FeatureRecord> feature_records_{};
 
-private:
+ private:
   // Data for which instrument and feed we are tracking
   uint32_t instrument_id_;
   FeedType feed_type_;

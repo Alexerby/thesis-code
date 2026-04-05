@@ -1,10 +1,5 @@
 #pragma once
 
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <string>
-
 #include <databento/datetime.hpp>
 #include <databento/dbn_decoder.hpp>
 #include <databento/dbn_file_store.hpp>
@@ -13,13 +8,17 @@
 #include <databento/log.hpp>
 #include <databento/record.hpp>
 #include <databento/symbol_map.hpp>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <string>
 
 #include "data/market.hpp"
 
 namespace db = databento;
 
 class ReplayEngine {
-public:
+ public:
   explicit ReplayEngine(const std::string &path, bool print_metadata = true)
       : file_store_{path}, print_metadata_(print_metadata) {
     // Pre-load metadata so it's available for validation before Run()
@@ -31,32 +30,34 @@ public:
 
   void Run(Market &market,
            std::function<bool(const db::MboMsg &)> on_state_update) {
-
     // Metadata callback (1 out of 2 callbacks)
     auto metadata_cb = [this](db::Metadata metadata) {
       if (print_metadata_) {
         // Print a simple metadata summary
-        std::cout
-            << "--- DBN Dataset Summary ---\n"
-            << std::left << std::setw(20)
-            << "DBN Version:" << static_cast<int>(metadata.version) << "\n"
-            << std::left << std::setw(20) << "Dataset:" << metadata.dataset
-            << "\n"
-            << std::left << std::setw(20) << "Schema:"
-            << (metadata.schema ? db::ToString(*metadata.schema) : "Unknown")
-            << "\n"
-            << std::left << std::setw(20)
-            << "Start Time:" << db::ToIso8601(metadata.start) << "\n"
-            << std::left << std::setw(20)
-            << "End Time:" << db::ToIso8601(metadata.end) << "\n"
-            << std::left << std::setw(20) << "SType In/Out:"
-            << (metadata.stype_in ? db::ToString(*metadata.stype_in) : "Unknown")
-            << " -> " << db::ToString(metadata.stype_out) << "\n"
-            << std::left << std::setw(20) << "Record Limit:"
-            << (metadata.limit == 0 ? "None" : std::to_string(metadata.limit))
-            << "\n"
-            << "---------------------------\n"
-            << std::endl;
+        std::cout << "--- DBN Dataset Summary ---\n"
+                  << std::left << std::setw(20)
+                  << "DBN Version:" << static_cast<int>(metadata.version)
+                  << "\n"
+                  << std::left << std::setw(20)
+                  << "Dataset:" << metadata.dataset << "\n"
+                  << std::left << std::setw(20) << "Schema:"
+                  << (metadata.schema ? db::ToString(*metadata.schema)
+                                      : "Unknown")
+                  << "\n"
+                  << std::left << std::setw(20)
+                  << "Start Time:" << db::ToIso8601(metadata.start) << "\n"
+                  << std::left << std::setw(20)
+                  << "End Time:" << db::ToIso8601(metadata.end) << "\n"
+                  << std::left << std::setw(20) << "SType In/Out:"
+                  << (metadata.stype_in ? db::ToString(*metadata.stype_in)
+                                        : "Unknown")
+                  << " -> " << db::ToString(metadata.stype_out) << "\n"
+                  << std::left << std::setw(20) << "Record Limit:"
+                  << (metadata.limit == 0 ? "None"
+                                          : std::to_string(metadata.limit))
+                  << "\n"
+                  << "---------------------------\n"
+                  << std::endl;
       }
 
       // Validate schema
@@ -93,7 +94,7 @@ public:
   const db::TsSymbolMap &GetSymbolMap() const { return symbol_map_; }
   const db::Metadata &GetMetadata() const { return metadata_; }
 
-private:
+ private:
   db::DbnFileStore file_store_;
   db::TsSymbolMap symbol_map_;
   db::Metadata metadata_;

@@ -1,12 +1,13 @@
 #include "features/order_tracker.hpp"
-#include "core/logging.hpp"
-#include "databento/record.hpp"
+
 #include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <unordered_map>
-#include "csv.hpp"
 
+#include "core/logging.hpp"
+#include "csv.hpp"
+#include "databento/record.hpp"
 
 namespace db = databento;
 
@@ -19,29 +20,29 @@ void OrderTracker::Router(const db::MboMsg &mbo) {
   PruneZombies();
 
   switch (mbo.action) {
-  case db::Action::Clear: {
-    Clear(mbo);
-    break;
-  }
-  case db::Action::Add: {
-    Add(mbo);
-    break;
-  }
-  case db::Action::Cancel: {
-    Cancel(mbo);
-    break;
-  }
-  case db::Action::Fill: {
-    Fill(mbo);
-    break;
-  }
-  case db::Action::Modify:
-  case db::Action::Trade:
-  case db::Action::None: {
-    // These actions are ignored or not expected in
-    // XNAS.ITCH for order tracking
-    break;
-  }
+    case db::Action::Clear: {
+      Clear(mbo);
+      break;
+    }
+    case db::Action::Add: {
+      Add(mbo);
+      break;
+    }
+    case db::Action::Cancel: {
+      Cancel(mbo);
+      break;
+    }
+    case db::Action::Fill: {
+      Fill(mbo);
+      break;
+    }
+    case db::Action::Modify:
+    case db::Action::Trade:
+    case db::Action::None: {
+      // These actions are ignored or not expected in
+      // XNAS.ITCH for order tracking
+      break;
+    }
   }
 }
 
@@ -179,7 +180,8 @@ void OrderTracker::EmitFeatureRecord(const Order &order,
   uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
   double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
 
-  double imbalance_at_cancel = market_.AggregatedDeepImbalance(instrument_id_, 1);
+  double imbalance_at_cancel =
+      market_.AggregatedDeepImbalance(instrument_id_, 1);
   double delta_imbalance = imbalance_at_cancel - order.imbalance_at_add;
 
   auto bbo = market_.AggregatedBbo(instrument_id_);
@@ -196,16 +198,14 @@ void OrderTracker::EmitFeatureRecord(const Order &order,
   double size_ratio = 0.0;
   if (order.side == db::Side::Bid && !best_bid.IsEmpty() && best_bid.size > 0) {
     size_ratio = static_cast<double>(order.size_at_add) / best_bid.size;
-  } else if (order.side == db::Side::Ask && !best_ask.IsEmpty() && best_ask.size > 0) {
+  } else if (order.side == db::Side::Ask && !best_ask.IsEmpty() &&
+             best_ask.size > 0) {
     size_ratio = static_cast<double>(order.size_at_add) / best_ask.size;
   }
 
   feature_records_.push_back(FeatureRecord{
-      delta_t,
-      delta_imbalance,
-      size_ratio,
-      static_cast<double>(order.queue_pos_at_add),
-      dist_touch,
+      delta_t, delta_imbalance, size_ratio,
+      static_cast<double>(order.queue_pos_at_add), dist_touch,
       0.0  // cancel_rate: TODO: requires \pm 500ms rolling window
   });
 }

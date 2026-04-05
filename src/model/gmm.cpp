@@ -4,6 +4,7 @@
  */
 
 #include "model/gmm.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -12,13 +13,15 @@
 
 double GMM::LogGaussianPdf(const Eigen::VectorXd &x, const Eigen::VectorXd &mu,
                            const Eigen::MatrixXd &sigma_inv, double log_det) {
-  // log N(x | \mu, \Sigma) = -1/2 [ D log(2\pi) + log|\Sigma| + (x-\mu)^T \Sigma^{-1} (x-\mu) ]
-  int D = static_cast<int>(x.size());         // number of features
-  Eigen::VectorXd diff = x - mu;              // (x_i - \mu): deviation from component mean
-  double mahal = diff.transpose() * sigma_inv * diff; // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
-  return -0.5 * (D * std::log(2.0 * M_PI)    // normalisation constant
-                 + log_det                    // log|\Sigma|: precomputed from LDLT
-                 + mahal);                    // Mahalanobis distance
+  // log N(x | \mu, \Sigma) = -1/2 [ D log(2\pi) + log|\Sigma| + (x-\mu)^T
+  // \Sigma^{-1} (x-\mu) ]
+  int D = static_cast<int>(x.size());  // number of features
+  Eigen::VectorXd diff = x - mu;  // (x_i - \mu): deviation from component mean
+  double mahal = diff.transpose() * sigma_inv *
+                 diff;  // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
+  return -0.5 * (D * std::log(2.0 * M_PI)  // normalisation constant
+                 + log_det                 // log|\Sigma|: precomputed from LDLT
+                 + mahal);                 // Mahalanobis distance
 }
 
 double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
@@ -28,17 +31,19 @@ double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
   double ll = 0.0;
   for (const auto &x : data) {
     double log_p1 = std::log(p.pi) + LogGaussianPdf(x, p.mu1, s1_inv, ld1);
-    double log_p2 = std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
+    double log_p2 =
+        std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
     // log-sum-exp for numerical stability
     double log_max = std::max(log_p1, log_p2);
-    ll += log_max + std::log(std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max));
+    ll += log_max +
+          std::log(std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max));
   }
   return ll;
 }
 
-std::vector<Eigen::VectorXd>
-GMM::ToEigen(const std::vector<FeatureRecord> &records,
-             const std::vector<int> &feature_indices) {
+std::vector<Eigen::VectorXd> GMM::ToEigen(
+    const std::vector<FeatureRecord> &records,
+    const std::vector<int> &feature_indices) {
   std::vector<Eigen::VectorXd> out;
   out.reserve(records.size());
 
@@ -55,8 +60,8 @@ GMM::ToEigen(const std::vector<FeatureRecord> &records,
   return out;
 }
 
-std::pair<Eigen::VectorXd, Eigen::VectorXd>
-GMM::Standardize(std::vector<Eigen::VectorXd> &data) {
+std::pair<Eigen::VectorXd, Eigen::VectorXd> GMM::Standardize(
+    std::vector<Eigen::VectorXd> &data) {
   if (data.empty()) {
     throw std::runtime_error("GMM::Standardize: empty dataset.");
   }
@@ -64,8 +69,7 @@ GMM::Standardize(std::vector<Eigen::VectorXd> &data) {
   int N = static_cast<int>(data.size());
 
   Eigen::VectorXd mean = Eigen::VectorXd::Zero(D);
-  for (const auto &x : data)
-    mean += x;
+  for (const auto &x : data) mean += x;
   mean /= N;
 
   Eigen::VectorXd var = Eigen::VectorXd::Zero(D);
@@ -78,8 +82,7 @@ GMM::Standardize(std::vector<Eigen::VectorXd> &data) {
   Eigen::VectorXd std_dev = var.cwiseSqrt();
   // Guard against zero-variance features
   for (int j = 0; j < D; ++j) {
-    if (std_dev[j] < 1e-12)
-      std_dev[j] = 1.0;
+    if (std_dev[j] < 1e-12) std_dev[j] = 1.0;
   }
 
   for (auto &x : data) {
@@ -114,10 +117,8 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
   p.sigma1 = Eigen::MatrixXd::Identity(D, D);
   p.sigma2 = Eigen::MatrixXd::Identity(D, D);
 
-  for (int i = 0; i < split; ++i)
-    p.mu1 += data[idx[i]];
-  for (int i = split; i < N; ++i)
-    p.mu2 += data[idx[i]];
+  for (int i = 0; i < split; ++i) p.mu1 += data[idx[i]];
+  for (int i = split; i < N; ++i) p.mu2 += data[idx[i]];
   p.mu1 /= split;
   p.mu2 /= (N - split);
 
@@ -159,19 +160,26 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
 
     // E-step: compute r_i^{(p)} = P(z_i = strategic | x_i, \theta^{(p)})
     // Eq. (10): r_i = [ \pi^{(p)} f_strategic(x_i) ] /
-    //                 [ \pi^{(p)} f_strategic(x_i) + (1 - \pi^{(p)}) f_reactive(x_i) ]
+    //                 [ \pi^{(p)} f_strategic(x_i) + (1 - \pi^{(p)})
+    //                 f_reactive(x_i) ]
     // Works in log-space throughout to avoid floating-point underflow;
-    // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the terms themselves.
+    // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the
+    // terms themselves.
     for (int i = 0; i < N; ++i) {
-      // log[ \pi^{(p)} * f_strategic(x_i | \theta^{(p)}) ]  (numerator of Eq. 10)
-      double log_p1 = std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
-      // log[ (1 - \pi^{(p)}) * f_reactive(x_i | \theta^{(p)}) ]  (second denominator term)
-      double log_p2 = std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
+      // log[ \pi^{(p)} * f_strategic(x_i | \theta^{(p)}) ]  (numerator of Eq.
+      // 10)
+      double log_p1 =
+          std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
+      // log[ (1 - \pi^{(p)}) * f_reactive(x_i | \theta^{(p)}) ]  (second
+      // denominator term)
+      double log_p2 =
+          std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
       // log-sum-exp: subtract max before exp() to prevent underflow;
-      // equivalent to p1 / (p1 + p2) from Eq. (10) without ever materialising p1, p2
+      // equivalent to p1 / (p1 + p2) from Eq. (10) without ever materialising
+      // p1, p2
       double log_max = std::max(log_p1, log_p2);
       double sum_exp = std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max);
-      r[i] = std::exp(log_p1 - log_max) / sum_exp; ///< r_i^{(p)} \in [0, 1]
+      r[i] = std::exp(log_p1 - log_max) / sum_exp;  ///< r_i^{(p)} \in [0, 1]
     }
 
     // M-step: update \theta using r_i as soft weights
@@ -221,8 +229,7 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
 
   // --- Build result ---
   double pi_spoof = 0.0;
-  for (double ri : r)
-    pi_spoof += ri;
+  for (double ri : r) pi_spoof += ri;
   pi_spoof /= N;
 
   return GMMResult{p, r, pi_spoof, prev_ll, iter};

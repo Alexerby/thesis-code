@@ -1,4 +1,5 @@
 #include "app/gui_application.hpp"
+
 #include <stdexcept>
 
 // GLFW and OpenGL
@@ -84,7 +85,7 @@ void Application::Run() {
       glfwSetWindowShouldClose(m_window, true);
     }
 
-    // 
+    //
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

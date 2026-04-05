@@ -8,7 +8,7 @@
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, CRITICAL };
 
 class Logger {
-public:
+ public:
   Logger(const std::string &filename) {
     const std::string logDir = "logging";
     std::filesystem::create_directory(logDir);
@@ -34,25 +34,25 @@ public:
 
     if (logFile.is_open()) {
       logFile << logEntry.str();
-      logFile.flush(); // write mem buffer to output
+      logFile.flush();  // write mem buffer to output
     }
   }
 
-private:
-  std::ofstream logFile; // File stream for log file
+ private:
+  std::ofstream logFile;  // File stream for log file
 
   std::string levelToString(LogLevel level) {
     switch (level) {
-    case DEBUG:
-      return "DEBUG";
-    case INFO:
-      return "INFO";
-    case ERROR:
-      return "ERROR";
-    case CRITICAL:
-      return "CRITICAL";
-    default:
-      return "UNKNOWN";
+      case DEBUG:
+        return "DEBUG";
+      case INFO:
+        return "INFO";
+      case ERROR:
+        return "ERROR";
+      case CRITICAL:
+        return "CRITICAL";
+      default:
+        return "UNKNOWN";
     };
   }
 };

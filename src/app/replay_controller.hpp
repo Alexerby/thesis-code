@@ -1,11 +1,12 @@
 #pragma once
 
-#include "data/market.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+
+#include "data/market.hpp"
 
 enum class PlaybackState { Playing, Paused };
 
@@ -23,7 +24,7 @@ class ReplayEngine;
  * @brief Manages the background replay thread and current market state.
  */
 class ReplayController {
-public:
+ public:
   ReplayController(const std::string &data_path, uint32_t focus_instrument);
   ~ReplayController();
 
@@ -36,19 +37,21 @@ public:
   void RequestStep() { m_step_requested = true; }
   void SetSpeed(int sleep_micros) { m_sleep_micros = sleep_micros; }
   int GetSpeed() const { return m_sleep_micros; }
-  
+
   // Navigation
   void SeekToTime(uint64_t target_ts);
   SessionStats GetSessionStats();
 
   // Instrument Management
-  void SetFocusInstrument(uint32_t instrument_id) { m_focus_instrument = instrument_id; }
+  void SetFocusInstrument(uint32_t instrument_id) {
+    m_focus_instrument = instrument_id;
+  }
   uint32_t GetFocusInstrument() const { return m_focus_instrument; }
   std::map<uint32_t, std::string> GetAvailableInstruments() const;
 
   MarketSnapshot GetLatestSnapshot();
 
-private:
+ private:
   void ReplayLoop();
 
   std::string m_data_path;
@@ -63,7 +66,7 @@ private:
   // Navigation state
   std::atomic<uint64_t> m_target_ts{0};
   std::atomic<bool> m_is_warping{false};
-  
+
   std::unique_ptr<std::thread> m_thread;
 
   std::mutex m_mutex;

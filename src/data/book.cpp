@@ -1,8 +1,10 @@
 #include "data/book.hpp"
+
+#include <algorithm>
+
 #include "core/logging.hpp"
 #include "databento/pretty.hpp"
 #include "databento/record.hpp"
-#include <algorithm>
 
 std::pair<PriceLevel, PriceLevel> Book::Bbo() const {
   return {GetBidLevel(), GetAskLevel()};
@@ -62,8 +64,7 @@ uint32_t Book::GetQueuePos(uint64_t order_id) {
       GetLevel(order_it->second.side, order_it->second.price);
   uint32_t prior_size = 0;
   for (const auto &order : level_it) {
-    if (order.order_id == order_id)
-      break;
+    if (order.order_id == order_id) break;
     prior_size += order.size;
   }
   return prior_size;
@@ -92,37 +93,37 @@ std::vector<db::BidAskPair> Book::GetSnapshot(std::size_t level_count) const {
 
 void Book::Apply(const db::MboMsg &mbo) {
   switch (mbo.action) {
-  case db::Action::Clear: {
-    Clear();
-    break;
-  }
-  case db::Action::Add: {
-    Add(mbo);
-    break;
-  }
-  case db::Action::Cancel: {
-    Cancel(mbo);
-    break;
-  }
-  case db::Action::Modify: {
-    Modify(mbo);
+    case db::Action::Clear: {
+      Clear();
+      break;
+    }
+    case db::Action::Add: {
+      Add(mbo);
+      break;
+    }
+    case db::Action::Cancel: {
+      Cancel(mbo);
+      break;
+    }
+    case db::Action::Modify: {
+      Modify(mbo);
 
-    // For me to identify if Action::Modify has been called.
-    // This should not be the case and therefore marked as CRITICAL.
-    Logger logger("action_modification.log");
-    logger.log(CRITICAL, "Book::Apply | Case Action::Modify called.");
-    break;
-  }
-  case db::Action::Fill: {
-    Fill(mbo);
-    break;
-  }
-  case db::Action::Trade: {
-    Trade(mbo);
-    break;
-  }
-  default:
-    break;
+      // For me to identify if Action::Modify has been called.
+      // This should not be the case and therefore marked as CRITICAL.
+      Logger logger("action_modification.log");
+      logger.log(CRITICAL, "Book::Apply | Case Action::Modify called.");
+      break;
+    }
+    case db::Action::Fill: {
+      Fill(mbo);
+      break;
+    }
+    case db::Action::Trade: {
+      Trade(mbo);
+      break;
+    }
+    default:
+      break;
   }
 }
 
@@ -134,8 +135,7 @@ double Book::CalculateImbalance() const {
   double ask_sz = static_cast<double>(ask.size);
 
   double total_vol = bid_sz + ask_sz;
-  if (total_vol == 0)
-    return 0.0;
+  if (total_vol == 0) return 0.0;
 
   return (bid_sz - ask_sz) / total_vol;
 }
@@ -156,8 +156,7 @@ double Book::CalculateDeepImbalance(std::size_t depth) const {
 PriceLevel Book::GetPriceLevel(int64_t price, const LevelOrders &level) {
   PriceLevel res{price};
   for (const auto &order : level) {
-    if (!order.flags.IsTob())
-      ++res.count;
+    if (!order.flags.IsTob()) ++res.count;
     res.size += order.size;
   }
   return res;
@@ -181,8 +180,7 @@ void Book::Add(const db::MboMsg &mbo) {
   if (mbo.flags.IsTob()) {
     SideLevels &levels = GetSideLevels(side);
     levels.clear();
-    if (mbo.price != db::kUndefPrice)
-      levels[mbo.price] = {mbo};
+    if (mbo.price != db::kUndefPrice) levels[mbo.price] = {mbo};
   } else {
     LevelOrders &level = GetOrInsertLevel(side, mbo.price);
     level.emplace_back(mbo);
@@ -193,20 +191,17 @@ void Book::Add(const db::MboMsg &mbo) {
 void Book::Cancel(const db::MboMsg &mbo) {
   Side side = ConvertSide(mbo.side);
   auto &side_levels = GetSideLevels(side);
-  if (side_levels.find(mbo.price) == side_levels.end())
-    return;
+  if (side_levels.find(mbo.price) == side_levels.end()) return;
 
   LevelOrders &level = side_levels[mbo.price];
   auto it = GetLevelOrder(level, mbo.order_id);
 
-  if (it == level.end())
-    return;
+  if (it == level.end()) return;
 
   if (it->size <= mbo.size) {
     orders_by_id_.erase(mbo.order_id);
     level.erase(it);
-    if (level.empty())
-      RemoveLevel(side, mbo.price);
+    if (level.empty()) RemoveLevel(side, mbo.price);
   } else {
     it->size -= mbo.size;
   }
@@ -215,20 +210,17 @@ void Book::Cancel(const db::MboMsg &mbo) {
 void Book::Fill(const db::MboMsg &mbo) {
   Side side = ConvertSide(mbo.side);
   auto &side_levels = GetSideLevels(side);
-  if (side_levels.find(mbo.price) == side_levels.end())
-    return;
+  if (side_levels.find(mbo.price) == side_levels.end()) return;
 
   LevelOrders &level = side_levels[mbo.price];
   auto it = GetLevelOrder(level, mbo.order_id);
 
-  if (it == level.end())
-    return;
+  if (it == level.end()) return;
 
   if (it->size <= mbo.size) {
     orders_by_id_.erase(mbo.order_id);
     level.erase(it);
-    if (level.empty())
-      RemoveLevel(side, mbo.price);
+    if (level.empty()) RemoveLevel(side, mbo.price);
   } else {
     it->size -= mbo.size;
   }
@@ -255,8 +247,7 @@ void Book::Modify(const db::MboMsg &mbo) {
 
   auto prev_price = it->second.price;
   auto &side_levels = GetSideLevels(side);
-  if (side_levels.find(prev_price) == side_levels.end())
-    return;
+  if (side_levels.find(prev_price) == side_levels.end()) return;
 
   LevelOrders &prev_lvl = side_levels[prev_price];
   auto order_it = GetLevelOrder(prev_lvl, mbo.order_id);
@@ -270,8 +261,7 @@ void Book::Modify(const db::MboMsg &mbo) {
   if (prev_price != mbo.price) {
     it->second.price = mbo.price;
     prev_lvl.erase(order_it);
-    if (prev_lvl.empty())
-      RemoveLevel(side, prev_price);
+    if (prev_lvl.empty()) RemoveLevel(side, prev_price);
     GetOrInsertLevel(side, mbo.price).emplace_back(mbo);
   } else if (order_it->size < mbo.size) {
     prev_lvl.erase(order_it);
@@ -288,8 +278,7 @@ Book::SideLevels &Book::GetSideLevels(Side side) {
 Book::LevelOrders &Book::GetLevel(Side side, int64_t price) {
   auto &levels = GetSideLevels(side);
   auto it = levels.find(price);
-  if (it == levels.end())
-    throw std::invalid_argument("Level not found");
+  if (it == levels.end()) throw std::invalid_argument("Level not found");
   return it->second;
 }
 

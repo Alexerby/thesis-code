@@ -1,13 +1,15 @@
 #include "app/dashboard.hpp"
-#include "app/replay_controller.hpp"
-#include "imgui.h"
+
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
-namespace { // make anonymous
+#include "app/replay_controller.hpp"
+#include "imgui.h"
+
+namespace {  // make anonymous
 constexpr uint64_t NANOS_1S = 1'000'000'000ULL;
 constexpr uint64_t NANOS_10S = 10'000'000'000ULL;
 constexpr uint64_t NANOS_1M = 60'000'000'000ULL;
@@ -15,7 +17,6 @@ constexpr uint64_t NANOS_1M = 60'000'000'000ULL;
 constexpr float HEADER_HEIGHT = 50.0f;
 constexpr float CONTROLS_HEIGHT = 80.0f;
 constexpr float ORDERBOOK_DEPTH_HEIGHT = 550.0f;
-
 
 constexpr float CHART_CENTER_WIDTH = 120.0f;
 
@@ -31,8 +32,7 @@ uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
   std::tm t = {};
   std::istringstream ss(time_str);
   ss >> std::get_time(&t, "%H:%M:%S");
-  if (ss.fail())
-    return 0;
+  if (ss.fail()) return 0;
 
   // reference_ts is unix nanos. We need the date part from it.
   std::time_t ref_secs = reference_ts / NANOS_1S;
@@ -44,13 +44,13 @@ uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
 
   return static_cast<uint64_t>(timegm(ref_tm)) * NANOS_1S;
 }
-} // namespace
+}  // namespace
 
 Dashboard::Dashboard() {}
 Dashboard::~Dashboard() {}
 
 void Dashboard::Render(const MarketSnapshot &snapshot,
-                             ReplayController &controller) {
+                       ReplayController &controller) {
   ImGui::SetNextWindowPos(ImVec2(0, 0));
   ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
@@ -84,8 +84,7 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
     if (ImGui::Button(" Play "))
       controller.SetPlaybackState(PlaybackState::Playing);
     ImGui::SameLine();
-    if (ImGui::Button(" Step > "))
-      controller.RequestStep();
+    if (ImGui::Button(" Step > ")) controller.RequestStep();
   } else {
     if (ImGui::Button(" Pause "))
       controller.SetPlaybackState(PlaybackState::Paused);
@@ -93,14 +92,12 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
 
   // Skips
   ImGui::SameLine(0, 20);
-  if (ImGui::Button("+1s"))
-    controller.SeekToTime(stats.current_ts + NANOS_1S);
+  if (ImGui::Button("+1s")) controller.SeekToTime(stats.current_ts + NANOS_1S);
   ImGui::SameLine();
   if (ImGui::Button("+10s"))
     controller.SeekToTime(stats.current_ts + NANOS_10S);
   ImGui::SameLine();
-  if (ImGui::Button("+1m"))
-    controller.SeekToTime(stats.current_ts + NANOS_1M);
+  if (ImGui::Button("+1m")) controller.SeekToTime(stats.current_ts + NANOS_1M);
 
   // Jump to Time
   ImGui::SameLine(0, 40);
@@ -110,8 +107,7 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::SameLine();
   if (ImGui::Button("Jump to Time")) {
     uint64_t target = TimeStringToNanos(jump_time, stats.start_ts);
-    if (target > 0)
-      controller.SeekToTime(target);
+    if (target > 0) controller.SeekToTime(target);
   }
 
   // Delay Slider
@@ -133,7 +129,7 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
 }
 
 void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
-                                   ReplayController &controller) {
+                             ReplayController &controller) {
   ImGui::BeginChild("Header", ImVec2(0, HEADER_HEIGHT), true);
   ImGui::Columns(4, "HeaderColumns", false);
   ImGui::SetColumnWidth(0, 250);
@@ -158,8 +154,7 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
       if (ImGui::Selectable(label.c_str(), is_selected)) {
         controller.SetFocusInstrument(id);
       }
-      if (is_selected)
-        ImGui::SetItemDefaultFocus();
+      if (is_selected) ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
   }
@@ -184,7 +179,8 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
 }
 
 void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot) {
-  ImGui::BeginChild("Order book depth", ImVec2(0, ORDERBOOK_DEPTH_HEIGHT), true);
+  ImGui::BeginChild("Order book depth", ImVec2(0, ORDERBOOK_DEPTH_HEIGHT),
+                    true);
   const std::vector<float> &left_data =
       m_use_cumulative ? snapshot.bid_volumes_cum : snapshot.bid_volumes;
   const std::vector<float> &right_data =
@@ -193,71 +189,69 @@ void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot) {
   if (left_data.empty() || right_data.empty()) {
     ImGui::Text("Waiting for market depth data... (Press Play or Jump)");
   } else {
+    float max_vol = 0.1f;
+    for (float v : left_data)
+      if (v > max_vol) max_vol = v;
+    for (float v : right_data)
+      if (v > max_vol) max_vol = v;
 
+    float available_width = ImGui::GetContentRegionAvail().x;
+    float center_width = CHART_CENTER_WIDTH;
+    float plot_width = (available_width - center_width) * 0.5f;
+    float plot_height = ImGui::GetContentRegionAvail().y - 45.0f;
 
-  float max_vol = 0.1f;
-  for (float v : left_data)
-    if (v > max_vol)
-      max_vol = v;
-  for (float v : right_data)
-    if (v > max_vol)
-      max_vol = v;
+    std::vector<float> rev_bids = left_data;
+    std::reverse(rev_bids.begin(), rev_bids.end());
 
-  float available_width = ImGui::GetContentRegionAvail().x;
-  float center_width = CHART_CENTER_WIDTH;
-  float plot_width = (available_width - center_width) * 0.5f;
-  float plot_height = ImGui::GetContentRegionAvail().y - 45.0f;
+    ImGui::Checkbox("Cumulative Volume (Mountain)", &m_use_cumulative);
+    ImGui::BeginGroup();
+    TextCentered("BIDS (Liquidity)", plot_width);
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                          ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
+    ImGui::PlotHistogram("##Bids", rev_bids.data(), (int)rev_bids.size(), 0,
+                         nullptr, 0.0f, max_vol * 1.1f,
+                         ImVec2(plot_width, plot_height));
+    ImGui::PopStyleColor();
+    ImGui::EndGroup();
 
-  std::vector<float> rev_bids = left_data;
-  std::reverse(rev_bids.begin(), rev_bids.end());
+    ImGui::SameLine();
 
-  ImGui::Checkbox("Cumulative Volume (Mountain)", &m_use_cumulative);
-  ImGui::BeginGroup();
-  TextCentered("BIDS (Liquidity)", plot_width);
-  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
-  ImGui::PlotHistogram("##Bids", rev_bids.data(), (int)rev_bids.size(), 0,
-                       nullptr, 0.0f, max_vol * 1.1f,
-                       ImVec2(plot_width, plot_height));
-  ImGui::PopStyleColor();
-  ImGui::EndGroup();
+    ImGui::BeginGroup();
+    ImGui::Dummy(ImVec2(center_width, plot_height * 0.4f));
+    TextCentered("Last Price", center_width);
+    ImGui::SetWindowFontScale(1.5f);
+    if (snapshot.last_price > 0)
+      TextCentered(std::to_string(snapshot.last_price).substr(0, 10).c_str(),
+                   center_width);
+    else
+      TextCentered("N/A", center_width);
+    ImGui::SetWindowFontScale(1.0f);
 
-  ImGui::SameLine();
+    ImGui::Dummy(ImVec2(center_width, 20));
+    TextCentered("Imbalance", center_width);
+    if (snapshot.imbalance > 0.05f)
+      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.2f, 1.0f));
+    else if (snapshot.imbalance < -0.05f)
+      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+    else
+      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 
-  ImGui::BeginGroup();
-  ImGui::Dummy(ImVec2(center_width, plot_height * 0.4f));
-  TextCentered("Last Price", center_width);
-  ImGui::SetWindowFontScale(1.5f);
-  if (snapshot.last_price > 0)
-    TextCentered(std::to_string(snapshot.last_price).substr(0, 10).c_str(),
+    TextCentered(std::to_string(snapshot.imbalance).substr(0, 6).c_str(),
                  center_width);
-  else
-    TextCentered("N/A", center_width);
-  ImGui::SetWindowFontScale(1.0f);
+    ImGui::PopStyleColor();
+    ImGui::EndGroup();
 
-  ImGui::Dummy(ImVec2(center_width, 20));
-  TextCentered("Imbalance", center_width);
-  if (snapshot.imbalance > 0.05f)
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.2f, 1.0f));
-  else if (snapshot.imbalance < -0.05f)
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
-  else
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+    ImGui::SameLine();
 
-  TextCentered(std::to_string(snapshot.imbalance).substr(0, 6).c_str(),
-               center_width);
-  ImGui::PopStyleColor();
-  ImGui::EndGroup();
-
-  ImGui::SameLine();
-
-  ImGui::BeginGroup();
-  TextCentered("ASKS (Liquidity)", plot_width);
-  ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.5f, 0.0f, 0.0f, 1.0f));
-  ImGui::PlotHistogram("##Asks", right_data.data(), (int)right_data.size(), 0,
-                       nullptr, 0.0f, max_vol * 1.1f,
-                       ImVec2(plot_width, plot_height));
-  ImGui::PopStyleColor();
-  ImGui::EndGroup();
+    ImGui::BeginGroup();
+    TextCentered("ASKS (Liquidity)", plot_width);
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                          ImVec4(0.5f, 0.0f, 0.0f, 1.0f));
+    ImGui::PlotHistogram("##Asks", right_data.data(), (int)right_data.size(), 0,
+                         nullptr, 0.0f, max_vol * 1.1f,
+                         ImVec2(plot_width, plot_height));
+    ImGui::PopStyleColor();
+    ImGui::EndGroup();
   }
   ImGui::EndChild();
 }
