@@ -12,10 +12,13 @@
 
 double GMM::LogGaussianPdf(const Eigen::VectorXd &x, const Eigen::VectorXd &mu,
                            const Eigen::MatrixXd &sigma_inv, double log_det) {
-  int D = static_cast<int>(x.size());
-  Eigen::VectorXd diff = x - mu;
-  double mahal = diff.transpose() * sigma_inv * diff;
-  return -0.5 * (D * std::log(2.0 * M_PI) + log_det + mahal);
+  // log N(x | \mu, \Sigma) = -1/2 [ D log(2\pi) + log|\Sigma| + (x-\mu)^T \Sigma^{-1} (x-\mu) ]
+  int D = static_cast<int>(x.size());         // number of features
+  Eigen::VectorXd diff = x - mu;              // (x_i - \mu): deviation from component mean
+  double mahal = diff.transpose() * sigma_inv * diff; // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
+  return -0.5 * (D * std::log(2.0 * M_PI)    // normalisation constant
+                 + log_det                    // log|\Sigma|: precomputed from LDLT
+                 + mahal);                    // Mahalanobis distance
 }
 
 double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
