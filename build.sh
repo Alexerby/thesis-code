@@ -3,9 +3,14 @@ set -e
 
 BUILD_DIR="build"
 DIST_DIR="dist"
-# Calculate 80% of available cores, or default to 2 for safety
+# Cap jobs by both CPU count and available memory.
+# Debug builds can use ~1.5 GB/job
 TOTAL_CORES=$(nproc 2>/dev/null || echo 2)
-SAFE_CORES=$(( TOTAL_CORES > 1 ? TOTAL_CORES * 80 / 100 : 1 ))
+CPU_JOBS=$(( TOTAL_CORES > 1 ? TOTAL_CORES * 80 / 100 : 1 ))
+AVAIL_MEM_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}' || echo 3000)
+MEM_JOBS=$(( AVAIL_MEM_MB / 1500 ))
+MEM_JOBS=$(( MEM_JOBS < 1 ? 1 : MEM_JOBS ))
+SAFE_CORES=$(( CPU_JOBS < MEM_JOBS ? CPU_JOBS : MEM_JOBS ))
 
 mkdir -p "$BUILD_DIR"
 mkdir -p "$DIST_DIR"
