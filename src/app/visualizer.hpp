@@ -16,11 +16,11 @@
 /**
  * @brief Detailed inspection of the order-age feature (\Delta t_i).
  *
- * Generates four plots, each saved as a PNG:
- *  1. Raw microseconds, clipped at the 99th percentile (bulk view).
- *  2. Raw microseconds, clipped at the 99.9th percentile (tail view).
- *  3. log10(\Delta t_i [us]) — standard HFT analysis scale.
- *  4. log1p(\Delta t_i [us]) — the transform used inside the GMM.
+ * Generates two plots, each saved as a PNG:
+ *  1. Raw microseconds, clipped at the 99th percentile, shows the bulk
+ *     distribution without the heavy tail crushing the x-axis.
+ *  2. ln(\Delta t_i [us]), motivates the two-component GMM by revealing
+ *     the bimodal structure that is invisible on the raw scale.
  *
  * All x-axes are expressed in microseconds.
  *
@@ -29,6 +29,8 @@
  */
 void InspectOrderAge(const std::vector<FeatureRecord> &records,
                      const std::string &output_dir = "features/descriptives/order_age");
+
+void InspectQueuePosition();
 
 /**
  * @brief Runs the full descriptive analysis suite across all features.

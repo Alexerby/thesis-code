@@ -32,13 +32,20 @@ void SaveHistogram(const std::vector<double> &values, const std::string &title,
   auto f = matplot::figure(true);
   f->size(900, 500);
 
-  matplot::hist(values, n_bins);
-  matplot::title(title);
+  auto h = matplot::hist(values, n_bins);
+  // color_array is {alpha, r, g, b}. face_color() does not set
+  // manual_face_color_, so the axis color cycle (blue) overrides at render
+  // time unless we set it explicitly here.
+  h->face_color({1.0f, 0.45f, 0.45f, 0.45f}); // solid mid-grey
+  h->manual_face_color(true);
+
+  // APA: no embedded title (caption belongs in the document)
   matplot::xlabel(xlabel);
-  matplot::ylabel("Count");
+  matplot::ylabel("Frequency");
+  matplot::box(false); // L-shaped axes only; no top/right spine
 
   f->save(path);
-  std::cout << "  Saved: " << path << "\n";
+  std::cout << "  Saved [" << title << "]: " << path << "\n";
 }
 
 /**
@@ -106,73 +113,45 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
             << "  max   = " << us_to_s(sorted_us.back())              << " s\n"
             << std::defaultfloat;
 
-  // --- Raw telescoping views (no log transform) ---
-
-  // Sub-millisecond: show in microseconds
+  // Raw: clip at p75
   {
-    auto sub_ms = Clip(dt_us, 0.0, constants::US_PER_MS);
-    std::cout << "  sub-1ms fraction: "
-              << (100.0 * sub_ms.size() / N) << "%\n";
-    SaveHistogram(sub_ms,
-                  "Order Age - sub-millisecond (raw)",
-                  "\\Delta t_i  (microseconds,  window: 0 - 1 ms)",
-                  output_dir + "/order_age_raw_sub1ms.png");
+    double p75 = Percentile(sorted_us, 0.75);
+    auto clipped = Clip(dt_us, 0.0, p75);
+    std::cout << "  raw plot window: 0 - " << p75 << " us  ("
+              << (100.0 * clipped.size() / N) << "% of records)\n";
+    SaveHistogram(clipped,
+                  "Order Age - raw",
+                  "\\Delta t_i  (\\mus)",
+                  output_dir + "/order_age_raw.png");
   }
 
-  // Sub-second: show in milliseconds
+  // ln(Δt_i): motivates the two-component GMM by revealing bimodality.
+  // Floor at 1 μs: sub-microsecond lifetimes produce negative ln values and
+  // are below the meaningful timestamp resolution of ITCH data.
   {
-    std::vector<double> dt_ms(N);
-    for (int i = 0; i < N; ++i) dt_ms[i] = dt_us[i] * 1e-3;
-    auto sub_s = Clip(dt_ms, 0.0, 1000.0); // 0 - 1000 ms
-    std::cout << "  sub-1s  fraction: "
-              << (100.0 * sub_s.size() / N) << "%\n";
-    SaveHistogram(sub_s,
-                  "Order Age - sub-second (raw)",
-                  "\\Delta t_i  (milliseconds,  window: 0 - 1 s)",
-                  output_dir + "/order_age_raw_sub1s.png");
+    std::vector<double> ln_us;
+    ln_us.reserve(N);
+    int n_dropped = 0;
+    for (int i = 0; i < N; ++i) {
+      if (dt_us[i] >= 1.0)
+        ln_us.push_back(std::log(dt_us[i]));
+      else
+        ++n_dropped;
+    }
+    if (n_dropped > 0)
+      std::cout << "  ln plot: dropped " << n_dropped
+                << " sub-microsecond observations\n";
+
+    SaveHistogram(ln_us,
+                  "Order Age - natural log",
+                  "ln(\\Delta t_i)  [\\mus]",
+                  output_dir + "/order_age_ln.png");
   }
 
-  // Sub-minute: show in seconds
-  {
-    std::vector<double> dt_s(N);
-    for (int i = 0; i < N; ++i) dt_s[i] = dt_us[i] * 1e-6;
-    auto sub_min = Clip(dt_s, 0.0, 60.0); // 0 - 60 s
-    std::cout << "  sub-1min fraction: "
-              << (100.0 * sub_min.size() / N) << "%\n";
-    SaveHistogram(sub_min,
-                  "Order Age - sub-minute (raw)",
-                  "\\Delta t_i  (seconds,  window: 0 - 60 s)",
-                  output_dir + "/order_age_raw_sub1min.png");
-  }
-
-  // --- Log-transformed views ---
-
-  // log10(us) - standard HFT analysis scale
-  {
-    std::vector<double> log10_us(N);
-    for (int i = 0; i < N; ++i)
-      log10_us[i] = std::log10(dt_us[i] + 1.0);
-
-    SaveHistogram(log10_us,
-                  "Order Age - log10 scale",
-                  "log10(\\Delta t_i + 1)  [log-microseconds]",
-                  output_dir + "/order_age_log10.png");
-  }
-
-  // log1p(us) - transform used inside GMM
-  {
-    std::vector<double> log1p_us(N);
-    for (int i = 0; i < N; ++i)
-      log1p_us[i] = std::log1p(dt_us[i]);
-
-    SaveHistogram(log1p_us,
-                  "Order Age - log1p scale (GMM input)",
-                  "log(1 + \\Delta t_i)  [log-microseconds]",
-                  output_dir + "/order_age_log1p.png");
-  }
-
-  std::cout << "InspectOrderAge: 5 plots saved to " << output_dir << "/\n";
+  std::cout << "InspectOrderAge: 2 plots saved to " << output_dir << "/\n";
 }
+
+void InspectQueuePosition();
 
 void RunVisualizer(const std::vector<FeatureRecord> &records,
                    const std::string &base_dir) {
