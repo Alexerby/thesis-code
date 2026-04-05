@@ -16,8 +16,7 @@ The following actions are defined in the [Databento MBO Schema](https://databent
 
 
 ```mermaid
----
-config:
+--- config:
   layout: elk
   look: handDrawn
   theme: dark
