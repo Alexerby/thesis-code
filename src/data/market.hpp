@@ -40,14 +40,22 @@ class Market {
 
   Market() = default;
 
+  void Apply(const db::MboMsg &mbo_msg);
+
+  MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
+                             std::size_t depth);
+
+ private:
+  std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
+  std::unordered_map<uint32_t, std::unordered_map<std::size_t, double>>
+      last_imbalances_;
+
   const Book &GetBook(uint32_t instrument_id, uint16_t publisher_id);
   const std::vector<PublisherBook> &GetBooksByPub(uint32_t instrument_id);
 
   std::pair<PriceLevel, PriceLevel> Bbo(uint32_t instrument_id,
                                         uint16_t publisher_id);
   std::pair<PriceLevel, PriceLevel> AggregatedBbo(uint32_t instrument_id);
-
-  void Apply(const db::MboMsg &mbo_msg);
 
   double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
   double AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth);
@@ -59,14 +67,5 @@ class Market {
                                bool is_bid);
 
   double GetPriceAtDepth(uint32_t inst_id, std::size_t depth, bool is_bid);
-
   TradeExecution GetLastTrade(uint32_t inst_id) const;
-
-  MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
-                             std::size_t depth);
-
- private:
-  std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
-  std::unordered_map<uint32_t, std::unordered_map<std::size_t, double>>
-      last_imbalances_;
 };
