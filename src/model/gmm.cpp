@@ -28,12 +28,10 @@ double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
   double ll = 0.0;
   for (const auto &x : data) {
     double log_p1 = std::log(p.pi) + LogGaussianPdf(x, p.mu1, s1_inv, ld1);
-    double log_p2 =
-        std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
+    double log_p2 = std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
     // log-sum-exp for numerical stability
     double log_max = std::max(log_p1, log_p2);
-    ll += log_max +
-          std::log(std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max));
+    ll += log_max + std::log(std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max));
   }
   return ll;
 }
