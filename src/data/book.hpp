@@ -15,6 +15,8 @@
 
 namespace db = databento;
 
+using Bbo = std::pair<PriceLevel, PriceLevel>;
+
 /**
  * @class Book
  * @brief Represents a Market-By-Order (L3) limit order book for a single
@@ -34,7 +36,7 @@ class Book {
    * @return A pair of PriceLevel objects; check .IsEmpty() if no liquidity
    * exists.
    */
-  std::pair<PriceLevel, PriceLevel> Bbo() const;
+  Bbo Bbo() const;
 
   /**
    * @brief Retrieves the price level at a specific depth index.

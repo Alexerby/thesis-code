@@ -39,7 +39,8 @@ enum class FeedType { XNAS_ITCH };
  *   0 = delta_t  (\Delta t_i, order age in nanoseconds)
  */
 struct FeatureRecord {
-  double delta_t; ///< \Delta t_i
+  double delta_t;            ///< \Delta t_i
+  double induced_imbalance;  ///< \Delta \mathcal{I}_i
 };
 
 // Represents the tracking of an individual order
@@ -49,8 +50,10 @@ struct Order {
   int64_t price;  // Current price
   db::Side side;  // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
-  uint64_t entry_ts_recv; // ts_recv at add (nanoseconds)
-  uint64_t ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
+  uint64_t entry_ts_recv;  // ts_recv at add (nanoseconds)
+  uint64_t
+      ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
+  double induced_imbalance;  ///< \Delta \mathcal{I}_i
 };
 
 /* @class OrderTracker
@@ -92,5 +95,26 @@ class OrderTracker {
   void Clear(const db::MboMsg &mbo);
   void PruneZombies();
   void Reconcile(const db::MboMsg &mbo);
+
+  /**
+   * @brief Calculates feature: Order-Induced Imbalance.
+   *
+   * As the OrderTracker is not aware of the order before
+   * it's added, we can not directly calculate the
+   * difference that this order had on the balance
+   * of the order book. To get around this, we calculate
+   * the order book imbalance per usual (after the ADD)
+   * and backtracks the imbalance level from before by
+   * adjusting the volume at db::Side::Bid.
+   *
+   *
+   * @param The Market-By-Order (MBO) message.
+   */
+  double OrderInducedImbalance(const db::MboMsg &mbo);
+
+  /**
+   * @brief Emits a FeatureRecord. We call this on event
+   * CANCEL and RECONCILE.
+   */
   void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo);
 };

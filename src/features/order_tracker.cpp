@@ -93,6 +93,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         std::chrono::steady_clock::now(),
         mbo.ts_recv.time_since_epoch().count(),
         mbo.hd.ts_event.time_since_epoch().count(),
+        OrderInducedImbalance(mbo),
     };
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
   } else {
@@ -158,9 +159,16 @@ void OrderTracker::Reconcile(const db::MboMsg &mbo) {
 
 void OrderTracker::EmitFeatureRecord(const Order &order,
                                      const db::MboMsg &mbo) {
+  // As this function is only called on CANCEL and RECONCILE events,
+  // the matching engines timestamp here is the timestamp of the cancel
+  // Therefore making delta the tracked diff between ADD and CANCEL.
+
+  // Add feature: 'Order Age'
   uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
   double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
-  feature_records_.push_back(FeatureRecord{delta_t});
+
+  // Add feature: 'Order-Induced Imbalance'
+  feature_records_.push_back(FeatureRecord{delta_t, order.induced_imbalance});
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {
@@ -184,4 +192,38 @@ void OrderTracker::PruneZombies() {
     }
     expiry_queue_.pop_front();
   }
+}
+
+double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
+  Bbo bbo = market_.AggregatedBbo(instrument_id_);
+  PriceLevel best_bid = bbo.first;
+  PriceLevel best_ask = bbo.second;
+
+  if (best_bid.IsEmpty() || best_ask.IsEmpty()) return 0.0;
+
+  double V_b = best_bid.size;
+  double V_a = best_ask.size;
+
+  // I_after: current (post-Add) BBO imbalance
+  double I_after = (V_b - V_a) / (V_b + V_a);
+
+  // Reconstruct pre-Add volumes by removing this order's contribution.
+  // Only valid when the order sits at the current best on its side.
+  // Orders that created a new best level or sit behind the touch
+  // are treated as having no measurable BBO impact.
+  double V_b_pre = V_b;
+  double V_a_pre = V_a;
+
+  if (mbo.side == db::Side::Bid && mbo.price == best_bid.price)
+    V_b_pre = V_b - mbo.size;
+  else if (mbo.side == db::Side::Ask && mbo.price == best_ask.price)
+    V_a_pre = V_a - mbo.size;
+  else
+    return 0.0;  // no BBO impact
+
+  double denom_pre = V_b_pre + V_a_pre;
+  if (denom_pre == 0.0) return 0.0;
+  double I_before = (V_b_pre - V_a_pre) / denom_pre;
+
+  return I_before - I_after;
 }

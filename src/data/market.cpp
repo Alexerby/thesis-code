@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "databento/datetime.hpp"
-
 const std::vector<Market::PublisherBook> &Market::GetBooksByPub(
     uint32_t instrument_id) {
   return books_[instrument_id];
@@ -32,8 +30,7 @@ std::pair<PriceLevel, PriceLevel> Market::Bbo(uint32_t instrument_id,
   return book.Bbo();
 }
 
-std::pair<PriceLevel, PriceLevel> Market::AggregatedBbo(
-    uint32_t instrument_id) {
+Bbo Market::AggregatedBbo(uint32_t instrument_id) {
   PriceLevel agg_bid;
   PriceLevel agg_ask;
 
@@ -144,8 +141,7 @@ double Market::Imbalance(uint32_t instrument_id, uint16_t publisher_id) {
   return book.CalculateImbalance();
 }
 
-double Market::AggregatedDeepImbalance(uint32_t instrument_id,
-                                       std::size_t depth) {
+double Market::AggregatedImbalance(uint32_t instrument_id, std::size_t depth) {
   double total_bid_sz = 0;
   double total_ask_sz = 0;
 
@@ -162,7 +158,7 @@ double Market::AggregatedDeepImbalance(uint32_t instrument_id,
 
 double Market::AggregatedImbalanceVelocity(uint32_t instrument_id,
                                            std::size_t depth) {
-  double current_imb = AggregatedDeepImbalance(instrument_id, depth);
+  double current_imb = AggregatedImbalance(instrument_id, depth);
 
   double prev_imb = current_imb;
   if (last_imbalances_[instrument_id].count(depth)) {
@@ -197,7 +193,7 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
                                    std::size_t depth) {
   MarketSnapshot snap;
   snap.symbol = symbol;
-  snap.imbalance = AggregatedDeepImbalance(inst_id, 5);
+  snap.imbalance = AggregatedImbalance(inst_id, 5);
 
   TradeExecution last_trade = GetLastTrade(inst_id);
   snap.last_price = static_cast<double>(last_trade.price) / 1e9;

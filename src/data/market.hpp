@@ -45,6 +45,8 @@ class Market {
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);
 
+  Bbo AggregatedBbo(uint32_t instrument_id);
+
  private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
   std::unordered_map<uint32_t, std::unordered_map<std::size_t, double>>
@@ -53,12 +55,16 @@ class Market {
   const Book &GetBook(uint32_t instrument_id, uint16_t publisher_id);
   const std::vector<PublisherBook> &GetBooksByPub(uint32_t instrument_id);
 
-  std::pair<PriceLevel, PriceLevel> Bbo(uint32_t instrument_id,
-                                        uint16_t publisher_id);
-  std::pair<PriceLevel, PriceLevel> AggregatedBbo(uint32_t instrument_id);
-
+  Bbo Bbo(uint32_t instrument_id, uint16_t publisher_id);
   double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
-  double AggregatedDeepImbalance(uint32_t instrument_id, std::size_t depth);
+
+  /**
+   * @brief Calculates the imbalance up to 'depth'.
+   *
+   * @param instrument_id The instrument ID provided by the venue.
+   * @return Imbalance \in [-1, 1]
+   */
+  double AggregatedImbalance(uint32_t instrument_id, std::size_t depth);
   double AggregatedImbalanceVelocity(uint32_t instrument_id, std::size_t depth);
   double AggregatedTotalVolume(uint32_t instrument_id, std::size_t depth);
   double AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
