@@ -46,6 +46,7 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 | C++ compiler | C++17+ |
 | zstd | system package |
 | OpenGL | system package |
+| GnuPlot | system package |
 
 ```bash
 sudo apt update

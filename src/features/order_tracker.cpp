@@ -1,11 +1,12 @@
 #include "features/order_tracker.hpp"
 #include "core/logging.hpp"
 #include "databento/record.hpp"
-#include "features/csv.hpp"
 #include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <unordered_map>
+#include "csv.hpp"
+
 
 namespace db = databento;
 
@@ -79,33 +80,6 @@ void OrderTracker::DumpOrders(const std::string &filename) const {
             << filename << std::endl;
 }
 
-void OrderTracker::LogLifecycle(uint64_t order_id, const db::MboMsg &mbo,
-                                const std::string &action,
-                                int64_t size_after) const {
-  CSVWriter writer;
-  std::string filename = std::to_string(order_id) + ".csv";
-
-  bool is_new = !writer.Exists(filename, base_dir_);
-  if (!writer.Open(filename, base_dir_, true)) {
-    return;
-  }
-
-  if (is_new) {
-    writer.Write("ts_recv");
-    writer.Write("action");
-    writer.Write("price");
-    writer.Write("size_delta");
-    writer.Write("remaining_size", true);
-  }
-
-  writer.Write(mbo.ts_recv.time_since_epoch().count());
-  writer.Write(action);
-  writer.Write(mbo.price);
-  writer.Write(mbo.size);
-  writer.Write(size_after, true);
-  writer.Flush();
-}
-
 void OrderTracker::Add(const db::MboMsg &mbo) {
   OrderMap::iterator it = order_map.find(mbo.order_id);
 
@@ -139,18 +113,15 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
     };
 
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
-    LogLifecycle(mbo.order_id, mbo, "ADD", mbo.size);
   } else {
     // Existing Order: Update size directly (XNAS.ITCH multi-part add)
     it->second.size += mbo.size;
-    LogLifecycle(mbo.order_id, mbo, "ADD_PART", it->second.size);
   }
 }
 
 void OrderTracker::Fill(const db::MboMsg &mbo) {
   // Accumulate: Add Fill size to PendingVolumeMap
   pending_volume_map_[mbo.order_id] += mbo.size;
-  LogLifecycle(mbo.order_id, mbo, "FILL_STAGED", -1);
   // If this is the last message in the event, reconcile immediately
   // I don't think this should ever be the case.
   // This is just me quadrupel-checking.
@@ -164,7 +135,6 @@ void OrderTracker::Cancel(const db::MboMsg &mbo) {
     OrderMap::iterator it = order_map.find(mbo.order_id);
     if (it != order_map.end()) {
       it->second.size -= mbo.size;
-      LogLifecycle(mbo.order_id, mbo, "CANCEL_PART", it->second.size);
       if (it->second.size <= 0) {
         EmitFeatureRecord(it->second, mbo);
         order_map.erase(it);
@@ -193,7 +163,6 @@ void OrderTracker::Reconcile(const db::MboMsg &mbo) {
 
   // Reconcile: OrderMap.Vol -= Staged + Msg.Size
   it->second.size -= (staged_vol + static_cast<int64_t>(mbo.size));
-  LogLifecycle(mbo.order_id, mbo, "RECONCILE", it->second.size);
 
   // VolCheck: Erase if gone, otherwise update state
   if (it->second.size <= 0) {
@@ -258,11 +227,6 @@ void OrderTracker::PruneZombies() {
     uint64_t order_id = expiry_queue_.front().first;
     auto it = order_map.find(order_id);
     if (it != order_map.end()) {
-      // Mock a message for pruning log
-      db::MboMsg mock_mbo{};
-      mock_mbo.order_id = order_id;
-      mock_mbo.ts_recv = db::UnixNanos{std::chrono::nanoseconds{0}};
-      LogLifecycle(order_id, mock_mbo, "PRUNED", 0);
       order_map.erase(it);
     }
     expiry_queue_.pop_front();

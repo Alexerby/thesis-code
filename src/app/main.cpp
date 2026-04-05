@@ -12,10 +12,15 @@
 #include <vector>
 
 #include "app/gui_application.hpp"
+#include "app/visualizer.hpp"
 #include "data/market.hpp"
 #include "data/replay_engine.hpp"
 #include "features/order_tracker.hpp"
 #include "model/gmm.hpp"
+
+
+const uint64_t MAX_MSGS = 100'000'000;
+// const uint64_t MAX_MSGS = 100;
 
 namespace fs = std::filesystem;
 
@@ -32,12 +37,12 @@ void print_usage() {
       << "Thesis Research suite\n"
       << "Usage: ./thesis [command] [args] [options]\n\n"
       << "Commands:\n"
-      << "  gui <data_path>      Run high-performance GUI visualiser (OpenGL)\n"
-      << "  order_analyser <data_path> Run order tracking analysis\n"
-      << "  download <api_key>   Download historical market data from "
-         "Databento\n\n"
+      << "  gui <data_path>            Run high-performance GUI visualiser (OpenGL)\n"
+      << "  order_analyser <data_path> Run order tracking + GMM analysis\n"
+      << "  plot <data_path>           Plot feature distributions (saves PNGs)\n"
+      << "  download <api_key>         Download historical market data from Databento\n\n"
       << "Options:\n"
-      << "  --symbol <id>        Set focus instrument ID (optional for GUI)\n";
+      << "  --symbol <id>        Set focus instrument ID\n";
 }
 
 Config parse_args(int argc, char **argv) {
@@ -81,13 +86,12 @@ Config parse_args(int argc, char **argv) {
   return cfg;
 }
 
-void run_order_analyser(const Config &cfg) {
+void run_plot(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
   Market market;
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
-  const uint64_t MAX_MSGS = 10'000'000;
   auto callback = [&](const db::MboMsg &mbo) {
     if (msg_count < MAX_MSGS) {
       tracker.Router(mbo);
@@ -98,7 +102,28 @@ void run_order_analyser(const Config &cfg) {
   };
 
   engine.Run(market, callback);
-  tracker.DumpOrders("active_orders.csv");
+
+  std::cout << "Collected " << tracker.feature_records_.size()
+            << " feature records.\n";
+  RunVisualizer(tracker.feature_records_);
+}
+
+void run_order_analyser(const Config &cfg) {
+  ReplayEngine engine(cfg.data_path);
+  Market market;
+  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
+
+  uint64_t msg_count = 0;
+  auto callback = [&](const db::MboMsg &mbo) {
+    if (msg_count < MAX_MSGS) {
+      tracker.Router(mbo);
+      msg_count++;
+      return true;
+    }
+    return false;
+  };
+
+  engine.Run(market, callback);
 
   // --- Fit GMM on collected feature records ---
   const auto &records = tracker.feature_records_;
@@ -229,6 +254,8 @@ int main(int argc, char **argv) {
       run_gui_application(cfg);
     } else if (cfg.command == "order_analyser") {
       run_order_analyser(cfg);
+    } else if (cfg.command == "plot") {
+      run_plot(cfg);
     } else if (cfg.command == "download") {
       run_downloader(cfg);
     } else {

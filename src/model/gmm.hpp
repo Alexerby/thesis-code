@@ -45,8 +45,8 @@ struct FeatureRecord {
  */
 struct GMMParams {
   double pi;              ///< Mixing weight for the strategic component
-  Eigen::VectorXd mu1;   ///< Mean of the strategic component
-  Eigen::VectorXd mu2;   ///< Mean of the reactive component
+  Eigen::VectorXd mu1;    ///< Mean of the strategic component
+  Eigen::VectorXd mu2;    ///< Mean of the reactive component
   Eigen::MatrixXd sigma1; ///< Covariance of the strategic component
   Eigen::MatrixXd sigma2; ///< Covariance of the reactive component
 };
@@ -58,7 +58,7 @@ struct GMMParams {
 struct GMMResult {
   GMMParams params;
   std::vector<double> responsibilities; ///< r_i \in [0,1] per observation
-  double pi_spoof;      ///< \hat{\pi}_spoof = mean(r_i)
+  double pi_spoof;                      ///< \hat{\pi}_spoof = mean(r_i)
   double log_likelihood;
   int iterations;
 };
@@ -69,8 +69,8 @@ struct GMMResult {
  */
 struct FitOptions {
   int max_iter = 300;
-  double tol   = 1e-6;  ///< Convergence threshold on log-likelihood change
-  double reg   = 1e-6;  ///< Ridge added to \Sigma diagonal to prevent singularity
+  double tol = 1e-6; ///< Convergence threshold on log-likelihood change
+  double reg = 1e-6; ///< Ridge added to \Sigma diagonal to prevent singularity
 };
 
 /**
@@ -111,16 +111,16 @@ public:
    *
    * @param data  Data to standardise (modified in-place).
    * @return      Pair of {mean, std_dev} vectors for each feature dimension,
-   *              which can be used to back-transform the fitted means if needed.
+   *              which can be used to back-transform the fitted means if
+   * needed.
    */
   static std::pair<Eigen::VectorXd, Eigen::VectorXd>
   Standardize(std::vector<Eigen::VectorXd> &data);
 
   /// Human-readable names for each FeatureRecord field, indexed 0-5.
   static constexpr const char *kFeatureNames[6] = {
-      "delta_t", "delta_imbalance", "size_ratio",
-      "queue_pos", "dist_touch", "cancel_rate"
-  };
+      "delta_t",   "delta_imbalance", "size_ratio",
+      "queue_pos", "dist_touch",      "cancel_rate"};
 
 private:
   /**
@@ -128,16 +128,16 @@ private:
    *        log-determinant.
    */
   static double LogGaussianPdf(const Eigen::VectorXd &x,
-                                const Eigen::VectorXd &mu,
-                                const Eigen::MatrixXd &sigma_inv,
-                                double log_det);
+                               const Eigen::VectorXd &mu,
+                               const Eigen::MatrixXd &sigma_inv,
+                               double log_det);
 
   /**
    * @brief Evaluates the observed-data log-likelihood log L(\theta) using
    *        precomputed inverses and log-determinants for both components.
    */
   static double LogLikelihood(const std::vector<Eigen::VectorXd> &data,
-                               const GMMParams &p,
-                               const Eigen::MatrixXd &s1_inv, double ld1,
-                               const Eigen::MatrixXd &s2_inv, double ld2);
+                              const GMMParams &p, const Eigen::MatrixXd &s1_inv,
+                              double ld1, const Eigen::MatrixXd &s2_inv,
+                              double ld2);
 };

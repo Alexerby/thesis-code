@@ -35,8 +35,7 @@ struct Order {
   db::Side side; // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
   uint64_t entry_ts_recv; // ts_recv at add (nanoseconds)
-  uint64_t
-      ts_event_add; // ts_event at add — matching engine clock (nanoseconds)
+  uint64_t ts_event_add; // ts_event at add — matching engine clock (nanoseconds)
   double imbalance_at_add;     // Book imbalance when order was placed
   double dist_to_touch_at_add; // Distance from best same-side price at add (raw
                                // price units)
@@ -72,16 +71,6 @@ public:
    * dir).
    */
   void DumpOrders(const std::string &filename) const;
-
-  /**
-   * @brief Logs the details of a single event for an order to its own CSV file.
-   * @param order_id The ID of the order being logged.
-   * @param mbo The message triggering the log.
-   * @param action A string description of the action (e.g., "ADD", "FILL").
-   * @param size_after The size of the order after the action.
-   */
-  void LogLifecycle(uint64_t order_id, const db::MboMsg &mbo,
-                    const std::string &action, int64_t size_after) const;
 
   // Persistent Map (Key: OrderID)
   OrderMap order_map{};
