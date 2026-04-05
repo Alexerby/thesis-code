@@ -156,15 +156,21 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
     double ld1 = ldlt1.vectorD().array().log().sum();
     double ld2 = ldlt2.vectorD().array().log().sum();
 
-    // E-step: r_i = P(strategic | x_i, \theta^{(p)})
+    // E-step: compute r_i^{(p)} = P(z_i = strategic | x_i, \theta^{(p)})
+    // Eq. (10): r_i = [ \pi^{(p)} f_strategic(x_i) ] /
+    //                 [ \pi^{(p)} f_strategic(x_i) + (1 - \pi^{(p)}) f_reactive(x_i) ]
+    // Works in log-space throughout to avoid floating-point underflow;
+    // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the terms themselves.
     for (int i = 0; i < N; ++i) {
-      double log_p1 =
-          std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
-      double log_p2 =
-          std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
+      // log[ \pi^{(p)} * f_strategic(x_i | \theta^{(p)}) ]  (numerator of Eq. 10)
+      double log_p1 = std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
+      // log[ (1 - \pi^{(p)}) * f_reactive(x_i | \theta^{(p)}) ]  (second denominator term)
+      double log_p2 = std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
+      // log-sum-exp: subtract max before exp() to prevent underflow;
+      // equivalent to p1 / (p1 + p2) from Eq. (10) without ever materialising p1, p2
       double log_max = std::max(log_p1, log_p2);
       double sum_exp = std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max);
-      r[i] = std::exp(log_p1 - log_max) / sum_exp;
+      r[i] = std::exp(log_p1 - log_max) / sum_exp; ///< r_i^{(p)} \in [0, 1]
     }
 
     // M-step: update \theta using r_i as soft weights
