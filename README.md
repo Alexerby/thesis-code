@@ -3,7 +3,7 @@
 
 *Second thesis (15 ECTS) submitted to the Department of Economics, Lund University, in candidacy for the degree of Master of Science in Economics.*
 
-C++ implementation of an unsupervised spoofing detection framework for limit order book markets. The approach reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategically-cancelled orders from genuine liquidity withdrawals — without requiring labelled training data.
+C++ implementation of an unsupervised spoofing detection framework for limit order book markets. The approach reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategically-cancelled orders from genuine liquidity withdrawals, without requiring labelled training data.
 
 ---
 
@@ -23,8 +23,8 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 
 | | Feature |
 |---|---|
-| ☑️ | Order Age (Δt) |
-| ☑️ | Imbalance Change (\|ΔI\|) |
+| ✅ | Order Age (Δt) |
+| ✅ | Imbalance Change (\|ΔI\|) |
 | ❌ | Order-Size Ratio |
 | ❌ | Queue Position |
 | ❌ | Distance from Touch |
@@ -34,7 +34,7 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 
 | | Component |
 |---|---|
-| ☑️ | Gaussian Mixture Model (EM algorithm) |
+| ❌ | Gaussian Mixture Model (EM algorithm) |
 
 
 Note: Initialisation of EM-algo not complete, [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
@@ -120,7 +120,7 @@ Set your API key via environment variable (recommended):
 export DATABENTO_API_KEY=db-your-key-here
 ```
 
-Then run the fetcher. It prints estimated cost and billable size before asking for confirmation — type `N` to do a dry-run cost check without downloading anything.
+Then run the fetcher. It prints estimated cost and billable size before asking for confirmation, type `N` to do a dry-run cost check without downloading anything.
 
 ```bash
 ./dist/thesis databento-fetch \
