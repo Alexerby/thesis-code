@@ -1,3 +1,4 @@
+#include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 
@@ -8,10 +9,11 @@ namespace db = databento;
 
 namespace {
 db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
-                           db::Action action, uint8_t flags_repr = 128) {
+                           db::Action action, uint8_t flags_repr = 128,
+                           uint32_t instrument_id = 1234) {
   db::MboMsg mbo{};
   mbo.hd.rtype = db::RType::Mbo;
-  mbo.hd.instrument_id = 1234;
+  mbo.hd.instrument_id = instrument_id;
 
   mbo.order_id = order_id;
   mbo.price = price;
@@ -23,6 +25,39 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
   return mbo;
 }
 }  // namespace
+
+TEST_CASE("OrderTracker Clear Logic", "[order_tracker]") {
+  Market market;
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+
+  // Add five orders and route them
+  for (int i = 1; i <= 5; ++i) {
+    tracker.Router(create_mock_mbo(i, 100, 1'000, db::Action::Add));
+  }
+  REQUIRE(tracker.order_map.size() == 5);
+
+  // Real Clear messages always carry flag=8 (F_BAD_TS_RECV), order_id=0,
+  // size=0, price=INT64_MAX. We intentionally do not filter on this flag —
+  // the Clear semantic is correct regardless of the bad timestamp.
+  tracker.Router(
+      create_mock_mbo(0, std::numeric_limits<int64_t>::max(), 0,
+                      db::Action::Clear, /*flags=*/8));
+
+  REQUIRE(tracker.order_map.empty());
+  REQUIRE(tracker.pending_volume_map_.empty());
+  REQUIRE(tracker.expiry_queue_.empty());
+}
+
+TEST_CASE("OrderTracker ignores wrong instrument", "[order_tracker]") {
+  Market market;
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+
+  // Message for a different instrument should be silently dropped
+  tracker.Router(
+      create_mock_mbo(1, 100, 500, db::Action::Add, 128, /*instrument_id=*/9999));
+
+  REQUIRE(tracker.order_map.empty());
+}
 
 TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
   Market market;
@@ -95,7 +130,8 @@ TEST_CASE("CancelType classification", "[order_tracker]") {
 
   SECTION("Pure cancel emits CancelType::Pure") {
     tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
-    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Cancel, 128));  // IsLast
+    tracker.Router(
+        create_mock_mbo(1, 100, 1000, db::Action::Cancel, 128));  // IsLast
 
     REQUIRE(tracker.feature_records_.size() == 1);
     REQUIRE(tracker.feature_records_[0].cancel_type == CancelType::Pure);
@@ -103,8 +139,10 @@ TEST_CASE("CancelType classification", "[order_tracker]") {
 
   SECTION("Fill + cancel in same event emits CancelType::Fill") {
     tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
-    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Fill, 0));   // not last
-    tracker.Router(create_mock_mbo(1, 100, 0, db::Action::Cancel, 128));  // IsLast -> Reconcile
+    tracker.Router(
+        create_mock_mbo(1, 100, 1000, db::Action::Fill, 0));  // not last
+    tracker.Router(create_mock_mbo(1, 100, 0, db::Action::Cancel,
+                                   128));  // IsLast -> Reconcile
 
     REQUIRE(tracker.feature_records_.size() == 1);
     REQUIRE(tracker.feature_records_[0].cancel_type == CancelType::Fill);
@@ -114,8 +152,11 @@ TEST_CASE("CancelType classification", "[order_tracker]") {
     tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
 
     // Event 1: partial fill (400), order survives with 600 remaining
-    tracker.Router(create_mock_mbo(1, 100, 400, db::Action::Fill, 0));   // not last
-    tracker.Router(create_mock_mbo(1, 100, 0, db::Action::Cancel, 128)); // IsLast, size not exhausted → no emit
+    tracker.Router(
+        create_mock_mbo(1, 100, 400, db::Action::Fill, 0));  // not last
+    tracker.Router(
+        create_mock_mbo(1, 100, 0, db::Action::Cancel,
+                        128));  // IsLast, size not exhausted -> no emit
 
     // Event 2: pure-looking cancel finishes the order
     tracker.Router(create_mock_mbo(1, 100, 600, db::Action::Cancel, 128));
