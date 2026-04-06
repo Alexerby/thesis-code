@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include "data/book.hpp"
 
 const std::vector<Market::PublisherBook> &Market::GetBooksByPub(
     uint32_t instrument_id) {
@@ -30,7 +31,7 @@ std::pair<PriceLevel, PriceLevel> Market::Bbo(uint32_t instrument_id,
   return book.Bbo();
 }
 
-Bbo Market::AggregatedBbo(uint32_t instrument_id) {
+BestBidOffer Market::AggregatedBbo(uint32_t instrument_id) {
   PriceLevel agg_bid;
   PriceLevel agg_ask;
 

@@ -15,7 +15,7 @@
 
 namespace db = databento;
 
-using Bbo = std::pair<PriceLevel, PriceLevel>;
+using BestBidOffer = std::pair<PriceLevel, PriceLevel>;
 
 /**
  * @class Book
@@ -36,7 +36,7 @@ class Book {
    * @return A pair of PriceLevel objects; check .IsEmpty() if no liquidity
    * exists.
    */
-  Bbo Bbo() const;
+  BestBidOffer Bbo() const;
 
   /**
    * @brief Retrieves the price level at a specific depth index.

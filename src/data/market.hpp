@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "data/book.hpp"
@@ -45,7 +44,7 @@ class Market {
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);
 
-  Bbo AggregatedBbo(uint32_t instrument_id);
+  BestBidOffer AggregatedBbo(uint32_t instrument_id);
 
  private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;
@@ -55,7 +54,7 @@ class Market {
   const Book &GetBook(uint32_t instrument_id, uint16_t publisher_id);
   const std::vector<PublisherBook> &GetBooksByPub(uint32_t instrument_id);
 
-  Bbo Bbo(uint32_t instrument_id, uint16_t publisher_id);
+  BestBidOffer Bbo(uint32_t instrument_id, uint16_t publisher_id);
   double Imbalance(uint32_t instrument_id, uint16_t publisher_id);
 
   /**

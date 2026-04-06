@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "model/gmm.hpp"
+#include "features/order_tracker.hpp"
 
 /**
  * @brief Detailed inspection of the order-age feature (\Delta t_i).
@@ -31,6 +31,21 @@
 void InspectOrderAge(
     const std::vector<FeatureRecord> &records,
     const std::string &output_dir = "features/descriptives/order_age");
+
+/**
+ * @brief Detailed inspection of feature: Order-Induced Imbalance (\delta
+ * \mathcal I_i).
+ *
+ * Generates plots.
+ *
+ * @param records    Feature records collected from the order tracker.
+ * @param output_dir Directory to write plots into (created if absent).
+ */
+
+void InspectOrderInducedImbalance(
+    const std::vector<FeatureRecord> &records,
+    const std::string &output_dir =
+        "features/descriptives/order_induced_imbalance");
 
 /**
  * @brief Runs the full descriptive analysis suite across all features.

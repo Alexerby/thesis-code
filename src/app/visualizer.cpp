@@ -81,13 +81,13 @@ std::vector<double> Clip(const std::vector<double> &values, double lo,
 void InspectOrderAge(const std::vector<FeatureRecord> &records,
                      const std::string &output_dir) {
   if (records.empty()) {
-    std::cerr << "InspectOrderAge: no records.\n";
+    std::cerr << "Feature Vector empty, i.e. no records.\n";
     return;
   }
 
   fs::create_directories(output_dir);
 
-  const int N = static_cast<int>(records.size());
+  const int N = records.size();
 
   // Convert delta_t from nanoseconds to microseconds
   std::vector<double> dt_us(N);
@@ -126,7 +126,7 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
                   output_dir + "/order_age_raw.png");
   }
 
-  // ln(Δt_i): motivates the two-component GMM by revealing bimodality.
+  // ln(\Delta t_i): motivates the two-component GMM by revealing bimodality.
   // Floor at 1 μs: sub-microsecond lifetimes produce negative ln values and
   // are below the meaningful timestamp resolution of ITCH data.
   {
@@ -150,6 +150,34 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
   std::cout << "InspectOrderAge: 2 plots saved to " << output_dir << "/\n";
 }
 
+void InspectOrderInducedImbalance(const std::vector<FeatureRecord> &records,
+                                  const std::string &output_dir) {
+  if (records.empty()) {
+    std::cerr << "Feature Vector empty, i.e. no records.\n";
+    return;
+  };
+
+  fs::create_directories(output_dir);
+
+  const int N = records.size();
+  std::vector<double> imbalance(N);
+
+  for (int i = 0; i < N; ++i) 
+    imbalance[i] = records[i].induced_imbalance;
+
+  std::sort(imbalance.begin(), imbalance.end());
+
+  // Histogram 
+  {
+    SaveHistogram(
+        imbalance, 
+        "Order-Induced Imbalance", 
+        "Imbalance", 
+        output_dir + "/order_induced_imbalance.png"
+    );
+  }
+}
+
 void RunVisualizer(const std::vector<FeatureRecord> &records,
                    const std::string &base_dir) {
   if (records.empty()) {
@@ -161,4 +189,5 @@ void RunVisualizer(const std::vector<FeatureRecord> &records,
             << "/\n";
 
   InspectOrderAge(records, base_dir + "/order_age");
+  InspectOrderInducedImbalance(records, base_dir + "/order_induced_imbalance");
 }

@@ -7,6 +7,7 @@
 
 #include "core/logging.hpp"
 #include "csv.hpp"
+#include "data/book.hpp"
 #include "databento/record.hpp"
 
 namespace db = databento;
@@ -195,7 +196,7 @@ void OrderTracker::PruneZombies() {
 }
 
 double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
-  Bbo bbo = market_.AggregatedBbo(instrument_id_);
+  BestBidOffer bbo = market_.AggregatedBbo(instrument_id_);
   PriceLevel best_bid = bbo.first;
   PriceLevel best_ask = bbo.second;
 
