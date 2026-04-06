@@ -62,10 +62,18 @@ All other dependencies (Databento SDK, ImGui, GLFW, Eigen3, Catch2) are fetched 
 ## Build
 
 ```bash
-mkdir build && cd build
-cmake ..
-make -j4
+chmod +x ./build.sh \
+./build.sh
 ```
+
+Debug mode:
+```bash
+chmod +x ./build.sh \
+./build.sh -DCMAKE_BUILD_TYPE=Debug
+```
+Building in Debug mode will add symbol flags for tools like GDB.
+
+
 
 ## Usage
 
