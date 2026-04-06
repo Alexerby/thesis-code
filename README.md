@@ -24,7 +24,7 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 | | Feature |
 |---|---|
 | ☑️ | Order Age (Δt) |
-| ❌ | Imbalance Change (ΔI) |
+| ☑️ | Imbalance Change (\|ΔI\|) |
 | ❌ | Order-Size Ratio |
 | ❌ | Queue Position |
 | ❌ | Distance from Touch |
@@ -34,7 +34,10 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 
 | | Component |
 |---|---|
-| ❌ | Gaussian Mixture Model (EM algorithm) |
+| ☑️ | Gaussian Mixture Model (EM algorithm) |
+
+
+Note: Initialisation of EM-algo not complete, [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
 
 ---
 
@@ -78,28 +81,55 @@ Building in Debug mode will add symbol flags for tools like GDB.
 ## Usage
 
 ```bash
-./build/thesis <command> <data_path> --symbol <id>
+./dist/thesis <command> [args] [options]
 ```
-
-If an invalid symbol ID is provided, the CLI lists all available IDs found in the data file.
 
 ### Commands
 
 | Command | Description |
 |---|---|
-| `viz` | Real-time order book visualizer |
-| `order_analyser` | Extract and analyse order lifecycles |
+| `gui <data_path>` | Real-time order book visualizer (OpenGL) |
+| `plot <data_path>` | Plot feature distributions (saves PNGs) |
+| `model <data_path>` | Run order tracking + GMM analysis |
+| `databento-fetch` | Fetch historical MBO data from Databento |
+
+Pass `--symbol <id>` to `gui`, `plot`, and `model` to focus on a specific instrument ID. If omitted, the first instrument in the file is used.
 
 ### Examples
 
 ```bash
 # Launch the market visualizer
-./build/thesis viz data/multi_instrument.dbn.zst --symbol 38
+./dist/thesis gui data/multi_instrument.dbn.zst --symbol 38
 
-# Run order lifecycle analysis
-./build/thesis order_analyser data/multi_instrument.dbn.zst --symbol 38
+# Plot feature distributions
+./dist/thesis plot data/multi_instrument.dbn.zst --symbol 38
+
+# Run GMM analysis
+./dist/thesis model data/multi_instrument.dbn.zst --symbol 38
 ```
 
 ## Data
 
-Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in DBN format. The expected schema is `XNAS.ITCH` (NASDAQ TotalView). Data files are *not* included in this repository.
+Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in DBN format. The expected schema is `XNAS.ITCH` (NASDAQ TotalView-ITCH). Data files are *not* included in this repository.
+
+### Downloading data
+
+Set your API key via environment variable (recommended):
+
+```bash
+export DATABENTO_API_KEY=db-your-key-here
+```
+
+Then run the fetcher. It prints estimated cost and billable size before asking for confirmation — type `N` to do a dry-run cost check without downloading anything.
+
+```bash
+./dist/thesis databento-fetch \
+    --dataset XNAS.ITCH \
+    --symbols AAPL,MSFT,AMZN,NVDA,GOOGL \
+    --start 2026-03-18T00:00:00Z \
+    --end   2026-03-19T00:00:00Z \
+    --output ./data/march18.dbn.zst
+```
+
+The API key can also be passed directly with `--key <key>`. All flags except `--key` are required; `--dataset` defaults to `XNAS.ITCH` if omitted.
+
