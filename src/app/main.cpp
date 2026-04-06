@@ -19,8 +19,9 @@
 #include "features/order_tracker.hpp"
 #include "model/gmm.hpp"
 
-const uint64_t MAX_MSGS = 100'000'000;
-// const uint64_t MAX_MSGS = 100;
+// const uint64_t MAX_MSGS = 100'000'000;
+// const uint64_t MAX_MSGS = 100'000;
+const uint64_t MAX_MSGS = 2'000'000;
 
 namespace fs = std::filesystem;
 
@@ -160,23 +161,36 @@ void run_model(const Config &cfg) {
 
   engine.Run(market, callback);
 
-  // --- Fit GMM on collected feature records ---
-  const auto &records = tracker.feature_records_;
-  std::cout << "\nCollected " << records.size()
-            << " cancellation feature records.\n";
+  // --- Semi-supervised GMM ---
+  // All records enter the model so fill-cancelled orders anchor the reactive
+  // component. Their responsibilities are pinned to 0 in every E-step via the
+  // fixed_reactive mask, they can never be assigned to the strategic component.
+  const auto &all_records = tracker.feature_records_;
 
-  if (records.size() < 10) {
-    std::cout << "Too few records to fit GMM (need >=10). "
-              << "Increase MAX_MSGS or check data.\n";
+  std::vector<bool> fixed_reactive(all_records.size());
+  int n_pure = 0, n_fill = 0;
+  for (std::size_t i = 0; i < all_records.size(); ++i) {
+    fixed_reactive[i] = (all_records[i].cancel_type == CancelType::Fill);
+    fixed_reactive[i] ? ++n_fill : ++n_pure;
+  }
+
+  std::cout << "\nCollected " << all_records.size() << " total records  ("
+            << n_pure << " pure, " << n_fill << " fill-anchored).\n";
+
+  if (n_pure < 1000) {
+    std::cout << "Too few pure cancellations to fit GMM (need >=10).\n";
     return;
   }
 
-  const std::vector<int> feature_indices = {0}; // delta_t only
-  auto data = GMM::ToEigen(records, feature_indices);
+  const std::vector<int> feature_indices = {0, 1};  // delta_t, induced_imbalance
+  auto data = GMM::ToEigen(all_records, feature_indices);
   GMM::Standardize(data);
 
+  FitOptions opts;
+  opts.fixed_reactive = fixed_reactive;
+
   GMM gmm;
-  GMMResult result = gmm.Fit(data);
+  GMMResult result = gmm.Fit(data, opts);
 
   const std::string out_path = "features/gmm_results.txt";
   std::ofstream out(out_path);
@@ -195,7 +209,7 @@ void run_model(const Config &cfg) {
   };
 
   out << "=== GMM Results ===\n"
-      << "Observations:      " << records.size() << "\n"
+      << "Observations:      " << all_records.size() << "\n"
       << "Iterations:        " << result.iterations << "\n"
       << "Log-likelihood:    " << std::fixed << std::setprecision(4)
       << result.log_likelihood << "\n"

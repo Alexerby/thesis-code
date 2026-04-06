@@ -52,6 +52,11 @@ struct FitOptions {
   int max_iter = 300;
   double tol = 1e-6;  ///< Convergence threshold on log-likelihood change
   double reg = 1e-6;  ///< Ridge added to \Sigma diagonal to prevent singularity
+
+  /// Optional per-observation constraint. If fixed_reactive[i] == true,
+  /// r_i is forced to 0 in every E-step (observation is known-reactive).
+  /// Must be empty or the same length as the data passed to Fit().
+  std::vector<bool> fixed_reactive;
 };
 
 /**

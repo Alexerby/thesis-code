@@ -165,6 +165,13 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
     // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the
     // terms themselves.
     for (int i = 0; i < N; ++i) {
+      // Known-reactive observations (e.g. fill-cancelled orders) are pinned
+      // to r_i = 0, they inform the reactive component but can never be
+      // assigned to the strategic component.
+      if (!opts.fixed_reactive.empty() && opts.fixed_reactive[i]) {
+        r[i] = 0.0;
+        continue;
+      }
       // log[ \pi^{(p)} * f_strategic(x_i | \theta^{(p)}) ]  (numerator of Eq.
       // 10)
       double log_p1 =
