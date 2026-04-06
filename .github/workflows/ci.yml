@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get install -y lcov libgl-dev libglu1-mesa-dev xorg-dev
+
+      - name: Build (coverage)
+        run: ./build.sh -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Run tests
+        run: ./build/unit_tests
+
+      - name: Capture lcov
+        run: |
+          lcov --capture \
+               --directory build \
+               --output-file coverage.info \
+               --ignore-errors mismatch \
+               --quiet
+          lcov --remove coverage.info \
+               '/usr/*' '*/build/_deps/*' '*/tests/*' \
+               --output-file coverage.info \
+               --ignore-errors unused \
+               --quiet
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          verbose: true
