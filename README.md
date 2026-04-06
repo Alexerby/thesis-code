@@ -1,6 +1,9 @@
 # On Detection of Spoofing in High Frequency Trading
 ### Unsupervised Classification of Strategic Order Placement
 
+[![CI](https://github.com/Alexerby/thesis-code/actions/workflows/ci.yml/badge.svg)](https://github.com/Alexerby/thesis-code/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Alexerby/thesis-code/branch/main/graph/badge.svg)](https://codecov.io/gh/Alexerby/thesis-code)
+
 *Second thesis (15 ECTS) submitted to the Department of Economics, Lund University, in candidacy for the degree of Master of Science in Economics.*
 
 C++ implementation of an unsupervised spoofing detection framework for limit order book markets. The approach reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategically-cancelled orders from genuine liquidity withdrawals, without requiring labelled training data.
