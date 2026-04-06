@@ -49,7 +49,7 @@ std::vector<Eigen::VectorXd> GMM::ToEigen(
 
   int D = static_cast<int>(feature_indices.size());
   for (const auto &r : records) {
-    const double all[1] = {r.delta_t};
+    const double all[2] = {r.delta_t, r.induced_imbalance};
     Eigen::VectorXd v(D);
     for (int j = 0; j < D; ++j) {
       v[j] = all[feature_indices[j]];
