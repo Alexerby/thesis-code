@@ -216,6 +216,39 @@ void InspectOrderInducedImbalance(const std::vector<FeatureRecord> &records,
                 output_dir + "/order_induced_imbalance.png");
 }
 
+void InspectCancelType(const std::vector<FeatureRecord> &records,
+                       const std::string &output_dir) {
+  if (records.empty()) {
+    std::cerr << "Feature Vector empty, i.e. no records.\n";
+    return;
+  }
+
+  fs::create_directories(output_dir);
+
+  int n_pure = 0, n_fill = 0;
+  std::vector<double> values;
+  values.reserve(records.size());
+  for (const auto &r : records) {
+    if (r.cancel_type == CancelType::Pure) {
+      ++n_pure;
+      values.push_back(0.0);
+    } else {
+      ++n_fill;
+      values.push_back(1.0);
+    }
+  }
+
+  const int N = static_cast<int>(records.size());
+  std::cout << "InspectCancelType: " << N << " records\n"
+            << "  Pure (0): " << n_pure << " (" << (100.0 * n_pure / N)
+            << "%)\n"
+            << "  Fill (1): " << n_fill << " (" << (100.0 * n_fill / N)
+            << "%)\n";
+
+  SaveHistogram(values, "Cancel Type", "Cancel Type  [0 = Pure, 1 = Fill]",
+                output_dir + "/cancel_type.png", 2);
+}
+
 void RunVisualizer(const std::vector<FeatureRecord> &records,
                    const std::string &base_dir) {
   if (records.empty()) {
@@ -228,4 +261,5 @@ void RunVisualizer(const std::vector<FeatureRecord> &records,
 
   InspectOrderAge(records, base_dir + "/order_age");
   InspectOrderInducedImbalance(records, base_dir + "/order_induced_imbalance");
+  InspectCancelType(records, base_dir + "/cancel_type");
 }

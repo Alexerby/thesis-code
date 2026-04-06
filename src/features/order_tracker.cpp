@@ -3,14 +3,13 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <unordered_map>
 
 #include "core/logging.hpp"
 #include "csv.hpp"
 #include "data/book.hpp"
 #include "databento/record.hpp"
-
-#include <cstdlib>
 
 namespace db = databento;
 
@@ -106,7 +105,11 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
 }
 
 void OrderTracker::Fill(const db::MboMsg &mbo) {
-  // Accumulate: Add Fill size to PendingVolumeMap
+  // Accumulate fill volume on the Order itself (persists across events)
+  auto it = order_map.find(mbo.order_id);
+  if (it != order_map.end()) it->second.total_filled += mbo.size;
+
+  // Also stage in pending_volume_map_ for same-event reconciliation
   pending_volume_map_[mbo.order_id] += mbo.size;
   // If this is the last message in the event, reconcile immediately
   // I don't think this should ever be the case.
@@ -116,13 +119,13 @@ void OrderTracker::Fill(const db::MboMsg &mbo) {
   }
 }
 void OrderTracker::Cancel(const db::MboMsg &mbo) {
-  if (!mbo.flags.IsLast()) {
+  if (!mbo.flags.IsLast()) {  // More messages expected for this OrderID
     // Pure Cancel: Reduce OrderMap size directly via OrderID
     OrderMap::iterator it = order_map.find(mbo.order_id);
     if (it != order_map.end()) {
       it->second.size -= mbo.size;
       if (it->second.size <= 0) {
-        EmitFeatureRecord(it->second, mbo);
+        EmitFeatureRecord(it->second, mbo, CancelType::Pure);
         order_map.erase(it);
       }
     }
@@ -153,25 +156,27 @@ void OrderTracker::Reconcile(const db::MboMsg &mbo) {
   // VolCheck: Erase if gone, otherwise update state
   if (it->second.size <= 0) {
     if (staged_vol == 0) {
-      // Pure cancellation — no fill component, emit feature record
-      EmitFeatureRecord(it->second, mbo);
+      EmitFeatureRecord(it->second, mbo, CancelType::Pure);
+    } else {
+      EmitFeatureRecord(it->second, mbo, CancelType::Fill);
     }
     order_map.erase(it);
   }
 }
 
-void OrderTracker::EmitFeatureRecord(const Order &order,
-                                     const db::MboMsg &mbo) {
-  // As this function is only called on CANCEL and RECONCILE events,
-  // the matching engines timestamp here is the timestamp of the cancel
-  // Therefore making delta the tracked diff between ADD and CANCEL.
-
-  // Add feature: 'Order Age'
+void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
+                                     CancelType cancel_type) {
   uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
   double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
 
-  // Add feature: 'Order-Induced Imbalance'
-  feature_records_.push_back(FeatureRecord{delta_t, order.induced_imbalance});
+  // Override using cross-event fill history. staged_vol (pending_volume_map_)
+  // only covers fills within the current event; total_filled persists across
+  // all events for this order's lifetime.
+  CancelType resolved =
+      (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
+
+  feature_records_.push_back(
+      FeatureRecord{delta_t, order.induced_imbalance, resolved});
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {

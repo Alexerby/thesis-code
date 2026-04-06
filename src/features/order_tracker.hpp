@@ -32,6 +32,15 @@ namespace db = databento;
 enum class FeedType { XNAS_ITCH };
 
 /**
+ * @enum CancelType
+ * @brief Whether the order lifecycle ended in a pure cancellation or a fill.
+ *
+ * Pure: order was withdrawn before any execution (candidate for spoofing).
+ * Fill: order was fully or partially filled before the cancel message.
+ */
+enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
+
+/**
  * @struct FeatureRecord
  * @brief Feature vector x_i for a single order lifecycle.
  *
@@ -41,19 +50,20 @@ enum class FeedType { XNAS_ITCH };
 struct FeatureRecord {
   double delta_t;            ///< \Delta t_i
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
+  CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
 };
 
 // Represents the tracking of an individual order
 struct Order {
   uint64_t order_id;
-  int64_t size;   // Remaining quantity
-  int64_t price;  // Current price
-  db::Side side;  // Ask or Bid
+  int64_t size;          // Remaining quantity
+  int64_t price;         // Current price
+  db::Side side;         // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
   uint64_t entry_ts_recv;  // ts_recv at add (nanoseconds)
-  uint64_t
-      ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
+  uint64_t ts_event_add;   // ts_event at add — matching engine clock (nanoseconds)
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
+  int64_t total_filled{0};   // Cumulative filled volume across all events
 };
 
 /* @class OrderTracker
@@ -88,12 +98,38 @@ class OrderTracker {
   std::string base_dir_;
   Market &market_;
 
+  // Handlers for all teh event types
   void Add(const db::MboMsg &mbo);
   void Modify(const db::MboMsg &mbo);
   void Fill(const db::MboMsg &mbo);
   void Cancel(const db::MboMsg &mbo);
   void Clear(const db::MboMsg &mbo);
   void PruneZombies();
+
+  /**
+   * @brief Reconciles the final state of an order at the end of a multi-message
+   * event.
+   *
+   * In XNAS.ITCH, a single logical order book event (e.g. a partial fill
+   * followed by a cancel of the remainder) is split across several MBO messages
+   * that share a common event boundary. Only the last message in the sequence
+   * carries @c flags.IsLast() == true. Reconcile is called on that final
+   * message to settle the order's net position.
+   *
+   * The reconciliation logic is:
+   *   1. Drain any volume that was accumulated in @c pending_volume_map_ by
+   *      preceding Fill messages in the same event (@c staged_vol).
+   *   2. Subtract @c staged_vol + @c mbo.size from the order's remaining size.
+   *   3. If the order is fully consumed:
+   *      - @c staged_vol == 0: the event contained only cancel messages
+   *        → pure cancellation, emits CancelType::Pure.
+   *      - @c staged_vol  > 0: at least one Fill preceded the final cancel
+   *        → the order was partially or fully executed before withdrawal,
+   *        emits CancelType::Fill.
+   *   4. If residual size remains the order stays live in @c order_map.
+   *
+   * @param mbo The last MBO message in the event (flags.IsLast() == true).
+   */
   void Reconcile(const db::MboMsg &mbo);
 
   /**
@@ -116,5 +152,6 @@ class OrderTracker {
    * @brief Emits a FeatureRecord. We call this on event
    * CANCEL and RECONCILE.
    */
-  void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo);
+  void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
+                         CancelType cancel_type);
 };
