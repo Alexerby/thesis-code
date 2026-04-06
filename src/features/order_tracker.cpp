@@ -10,6 +10,8 @@
 #include "data/book.hpp"
 #include "databento/record.hpp"
 
+#include <cstdlib>
+
 namespace db = databento;
 
 void OrderTracker::Router(const db::MboMsg &mbo) {
@@ -205,6 +207,8 @@ double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
   double V_b = best_bid.size;
   double V_a = best_ask.size;
 
+  if (V_b + V_a == 0.0) return 0.0;
+
   // I_after: current (post-Add) BBO imbalance
   double I_after = (V_b - V_a) / (V_b + V_a);
 
@@ -226,5 +230,5 @@ double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
   if (denom_pre == 0.0) return 0.0;
   double I_before = (V_b_pre - V_a_pre) / denom_pre;
 
-  return I_before - I_after;
+  return abs(I_before - I_after);
 }

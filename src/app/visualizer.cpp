@@ -122,7 +122,7 @@ void InspectOrderAge(const std::vector<FeatureRecord> &records,
     auto clipped = Clip(dt_us, 0.0, p75);
     std::cout << "  raw plot window: 0 - " << p75 << " us  ("
               << (100.0 * clipped.size() / N) << "% of records)\n";
-    SaveHistogram(clipped, "Order Age - raw", "\\Delta t_i  (\\mus)",
+    SaveHistogram(clipped, "Order Age - raw", "ln(Delta t_i) [mus]",
                   output_dir + "/order_age_raw.png");
   }
 
@@ -162,20 +162,58 @@ void InspectOrderInducedImbalance(const std::vector<FeatureRecord> &records,
   const int N = records.size();
   std::vector<double> imbalance(N);
 
-  for (int i = 0; i < N; ++i) 
+  for (int i = 0; i < N; ++i)
     imbalance[i] = records[i].induced_imbalance;
 
-  std::sort(imbalance.begin(), imbalance.end());
+  auto sorted = imbalance;
+  std::sort(sorted.begin(), sorted.end());
 
-  // Histogram 
-  {
-    SaveHistogram(
-        imbalance, 
-        "Order-Induced Imbalance", 
-        "Imbalance", 
-        output_dir + "/order_induced_imbalance.png"
-    );
+  int n_zero = static_cast<int>(
+      std::count_if(imbalance.begin(), imbalance.end(),
+                    [](double v) { return v == 0.0; }));
+
+  std::cout << std::fixed << std::setprecision(6)
+            << "InspectOrderInducedImbalance: " << N << " records\n"
+            << "  zeros   = " << n_zero << " (" << (100.0 * n_zero / N)
+            << "%)\n"
+            << "  p5      = " << Percentile(sorted, 0.05) << "\n"
+            << "  p10     = " << Percentile(sorted, 0.10) << "\n"
+            << "  p25     = " << Percentile(sorted, 0.25) << "\n"
+            << "  p50     = " << Percentile(sorted, 0.50) << "\n"
+            << "  p75     = " << Percentile(sorted, 0.75) << "\n"
+            << "  p90     = " << Percentile(sorted, 0.90) << "\n"
+            << "  p95     = " << Percentile(sorted, 0.95) << "\n"
+            << std::defaultfloat;
+
+  // Filter to non-zero values only before clipping — the zero mass comes from
+  // orders placed away from the touch and dominates the histogram otherwise.
+  std::vector<double> nonzero;
+  nonzero.reserve(N - n_zero);
+  for (double v : imbalance)
+    if (v != 0.0) nonzero.push_back(v);
+
+  if (nonzero.empty()) {
+    std::cerr << "  all induced-imbalance values are zero — skipping plot.\n";
+    return;
   }
+
+  auto sorted_nz = nonzero;
+  std::sort(sorted_nz.begin(), sorted_nz.end());
+  double p10 = Percentile(sorted_nz, 0.10);
+  double p90 = Percentile(sorted_nz, 0.90);
+
+  if (p10 == p90) {
+    std::cerr << "  p10 == p90 (" << p10
+              << "); distribution is degenerate — skipping plot.\n";
+    return;
+  }
+
+  auto clipped = Clip(nonzero, p10, p90);
+  std::cout << "  non-zero plot window: " << p10 << " - " << p90
+            << "  (" << (100.0 * clipped.size() / N) << "% of all records)\n";
+
+  SaveHistogram(clipped, "Order-Induced Imbalance", "Order-Induced Imbalance",
+                output_dir + "/order_induced_imbalance.png");
 }
 
 void RunVisualizer(const std::vector<FeatureRecord> &records,
