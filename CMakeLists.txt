@@ -55,6 +55,7 @@ FetchContent_Declare(
     GIT_TAG v1.2.1
 )
 
+set(MATPLOTPP_BUILD_WITH_PEDANTIC_WARNINGS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(databento glfw imgui catch2 eigen matplotplusplus)
 
 find_package(OpenGL REQUIRED)
@@ -131,3 +132,12 @@ target_link_libraries(unit_tests
 # Distribution
 install(TARGETS thesis COMPONENT runtime DESTINATION .)
 install(DIRECTORY scripts/ COMPONENT runtime DESTINATION scripts)
+
+# Coverage (Enable with -DENABLE_COVERAGE=ON)
+option(ENABLE_COVERAGE "Build with gcov coverage instrumentation" OFF)
+if(ENABLE_COVERAGE)
+  target_compile_options(unit_tests PRIVATE --coverage)
+  target_link_options(unit_tests PRIVATE --coverage)
+  target_compile_options(thesis PRIVATE --coverage)
+  target_link_options(thesis PRIVATE --coverage)
+endif()

@@ -16,3 +16,7 @@ active_orders.csv
 *.dbn.zst
 *.dbn
 *.zst
+
+# Coverage report
+coverage.info
+coverage_report/*

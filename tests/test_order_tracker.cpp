@@ -11,7 +11,7 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
                            db::Action action, uint8_t flags_repr = 128) {
   db::MboMsg mbo{};
   mbo.hd.rtype = db::RType::Mbo;
-  mbo.hd.instrument_id = 7152;
+  mbo.hd.instrument_id = 1234;
 
   mbo.order_id = order_id;
   mbo.price = price;
@@ -26,7 +26,7 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
 
 TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
 
   SECTION("Adding a new order") {
     db::MboMsg add_msg =
@@ -41,7 +41,7 @@ TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
 
 TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
 
   SECTION("Pruning expired orders") {
     // Add an order and create a partial fill
@@ -74,7 +74,7 @@ TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
 
 TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
   Market market;
-  OrderTracker tracker(7152, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
 
   SECTION("Dumping orders to CSV") {
     tracker.Router(create_mock_mbo(1001, 100000, 50, db::Action::Add));
@@ -86,5 +86,42 @@ TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
 
     // This should not throw
     REQUIRE_NOTHROW(tracker.DumpOrders("test_orders.csv"));
+  }
+}
+
+TEST_CASE("CancelType classification", "[order_tracker]") {
+  Market market;
+  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+
+  SECTION("Pure cancel emits CancelType::Pure") {
+    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
+    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Cancel, 128));  // IsLast
+
+    REQUIRE(tracker.feature_records_.size() == 1);
+    REQUIRE(tracker.feature_records_[0].cancel_type == CancelType::Pure);
+  }
+
+  SECTION("Fill + cancel in same event emits CancelType::Fill") {
+    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
+    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Fill, 0));   // not last
+    tracker.Router(create_mock_mbo(1, 100, 0, db::Action::Cancel, 128));  // IsLast -> Reconcile
+
+    REQUIRE(tracker.feature_records_.size() == 1);
+    REQUIRE(tracker.feature_records_[0].cancel_type == CancelType::Fill);
+  }
+
+  SECTION("Fill in event 1, cancel in event 2 emits CancelType::Fill") {
+    tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));
+
+    // Event 1: partial fill (400), order survives with 600 remaining
+    tracker.Router(create_mock_mbo(1, 100, 400, db::Action::Fill, 0));   // not last
+    tracker.Router(create_mock_mbo(1, 100, 0, db::Action::Cancel, 128)); // IsLast, size not exhausted → no emit
+
+    // Event 2: pure-looking cancel finishes the order
+    tracker.Router(create_mock_mbo(1, 100, 600, db::Action::Cancel, 128));
+
+    REQUIRE(tracker.feature_records_.size() == 1);
+    // total_filled > 0 → Fill despite no staged_vol in event 2
+    REQUIRE(tracker.feature_records_[0].cancel_type == CancelType::Fill);
   }
 }
