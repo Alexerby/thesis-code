@@ -48,6 +48,20 @@ void InspectOrderInducedImbalance(
         "features/descriptives/order_induced_imbalance");
 
 /**
+ * @brief Inspection of the cancel-type feature (Pure vs Fill).
+ *
+ * Generates a two-bin histogram: bin 0 = pure cancellations, bin 1 =
+ * fill-induced cancellations. The console output reports the count and
+ * percentage of each type.
+ *
+ * @param records    Feature records collected from the order tracker.
+ * @param output_dir Directory to write plots into (created if absent).
+ */
+void InspectCancelType(
+    const std::vector<FeatureRecord> &records,
+    const std::string &output_dir = "features/descriptives/cancel_type");
+
+/**
  * @brief Runs the full descriptive analysis suite across all features.
  *
  * Dispatches to one InspectXxx() function per feature, each of which
