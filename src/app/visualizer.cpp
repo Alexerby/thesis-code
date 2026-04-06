@@ -208,11 +208,11 @@ void InspectOrderInducedImbalance(const std::vector<FeatureRecord> &records,
     return;
   }
 
-  auto clipped = Clip(nonzero, p10, p90);
-  std::cout << "  non-zero plot window: " << p10 << " - " << p90
-            << "  (" << (100.0 * clipped.size() / N) << "% of all records)\n";
+  // auto clipped = Clip(nonzero, p10, p90);
+  // std::cout << "  non-zero plot window: " << p10 << " - " << p90
+  //           << "  (" << (100.0 * clipped.size() / N) << "% of all records)\n";
 
-  SaveHistogram(clipped, "Order-Induced Imbalance", "Order-Induced Imbalance",
+  SaveHistogram(nonzero, "Order-Induced Imbalance", "Order-Induced Imbalance",
                 output_dir + "/order_induced_imbalance.png");
 }
 
