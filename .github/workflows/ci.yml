@@ -3,8 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - .github/**
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - .github/**
 
 jobs:
   test:
@@ -15,6 +23,14 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get install -y lcov libgl-dev libglu1-mesa-dev xorg-dev
+
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-
+
 
       - name: Build (coverage)
         run: ./build.sh -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
