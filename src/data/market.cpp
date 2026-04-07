@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+
 #include "data/book.hpp"
 
 const std::vector<Market::PublisherBook> &Market::GetBooksByPub(
@@ -25,8 +26,7 @@ const Book &Market::GetBook(uint32_t instrument_id, uint16_t publisher_id) {
   return it->book;
 }
 
-BestBidOffer Market::Bbo(uint32_t instrument_id,
-                                              uint16_t publisher_id) {
+BestBidOffer Market::Bbo(uint32_t instrument_id, uint16_t publisher_id) {
   const auto &book = GetBook(instrument_id, publisher_id);
   return book.Bbo();
 }
@@ -155,21 +155,6 @@ double Market::AggregatedImbalance(uint32_t instrument_id, std::size_t depth) {
 
   double total_vol = total_bid_sz + total_ask_sz;
   return (total_vol == 0) ? 0.0 : (total_bid_sz - total_ask_sz) / total_vol;
-}
-
-double Market::AggregatedImbalanceVelocity(uint32_t instrument_id,
-                                           std::size_t depth) {
-  double current_imb = AggregatedImbalance(instrument_id, depth);
-
-  double prev_imb = current_imb;
-  if (last_imbalances_[instrument_id].count(depth)) {
-    prev_imb = last_imbalances_[instrument_id][depth];
-  }
-
-  double vel = current_imb - prev_imb;
-  last_imbalances_[instrument_id][depth] = current_imb;
-
-  return vel;
 }
 
 void Market::Apply(const db::MboMsg &mbo_msg) {

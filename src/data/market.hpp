@@ -64,7 +64,6 @@ class Market {
    * @return Imbalance \in [-1, 1]
    */
   double AggregatedImbalance(uint32_t instrument_id, std::size_t depth);
-  double AggregatedImbalanceVelocity(uint32_t instrument_id, std::size_t depth);
   double AggregatedTotalVolume(uint32_t instrument_id, std::size_t depth);
   double AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
                               bool is_bid);
