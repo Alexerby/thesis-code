@@ -25,7 +25,7 @@ const Book &Market::GetBook(uint32_t instrument_id, uint16_t publisher_id) {
   return it->book;
 }
 
-std::pair<PriceLevel, PriceLevel> Market::Bbo(uint32_t instrument_id,
+BestBidOffer Market::Bbo(uint32_t instrument_id,
                                               uint16_t publisher_id) {
   const auto &book = GetBook(instrument_id, publisher_id);
   return book.Bbo();
