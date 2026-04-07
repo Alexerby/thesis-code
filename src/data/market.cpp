@@ -61,33 +61,6 @@ BestBidOffer Market::AggregatedBbo(uint32_t instrument_id) {
   return {agg_bid, agg_ask};
 }
 
-double Market::GetPriceAtDepth(uint32_t inst_id, std::size_t depth,
-                               bool is_bid) {
-  auto &instr_books = books_[inst_id];
-  if (instr_books.empty()) return 0.0;
-
-  int64_t global_price = is_bid ? 0 : std::numeric_limits<int64_t>::max();
-
-  for (const auto &pub_book : instr_books) {
-    const auto level = is_bid ? pub_book.book.GetBidLevel(depth - 1)
-                              : pub_book.book.GetAskLevel(depth - 1);
-
-    if (level.price == 0 || level.price == std::numeric_limits<int64_t>::max())
-      continue;
-
-    if (is_bid) {
-      if (level.price > global_price) global_price = level.price;
-    } else {
-      if (level.price < global_price) global_price = level.price;
-    }
-  }
-
-  if (global_price == 0 || global_price == std::numeric_limits<int64_t>::max())
-    return 0.0;
-
-  return static_cast<double>(global_price) / 1e9;
-}
-
 double Market::AggregatedTotalVolume(uint32_t instrument_id,
                                      std::size_t depth) {
   double total_vol = 0;
@@ -203,7 +176,7 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   return snap;
 }
 
-TradeExecution Market::GetLastTrade(uint32_t inst_id) const {
+TradeExecution Market::GetLastTrade(uint32_t instrument_id) const {
   TradeExecution latest_exec{};
 
   auto it = books_.find(inst_id);

@@ -64,12 +64,41 @@ class Market {
    * @return Imbalance \in [-1, 1]
    */
   double AggregatedImbalance(uint32_t instrument_id, std::size_t depth);
+
+  /**
+   * @brief Aggregates the volume for a given instrument over all publisher
+   * books.
+   *
+   * @param param instrument_id The venues ID of the instrument
+   * @return double The aggregated volume for the instrument_id
+   */
   double AggregatedTotalVolume(uint32_t instrument_id, std::size_t depth);
+
+  /**
+   * @brief Get the aggregated volume un until depth for db::Side::Bid|Ask.
+   *
+   * @param instrument_id The venues ID of the instrument
+   * @param depth The depth at which we are looking for the volume.
+   * @return double Aggregated volume at side 'Side' at depth 'depth'
+   */
   double AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
                               bool is_bid);
+
+  /**
+   * @brief Same as AggregateSideVolume but in this function we aggregate at one
+   * specific level, while AggregatedSideVolume aggregates *up until a certain
+   * level*.
+   */
   double AggregatedLevelVolume(uint32_t instrument_id, std::size_t depth,
                                bool is_bid);
 
-  double GetPriceAtDepth(uint32_t inst_id, std::size_t depth, bool is_bid);
-  TradeExecution GetLastTrade(uint32_t inst_id) const;
+  /**
+   * @brief Returns the most recent Trade for a given instrument_id by comparing
+   * ts_recv.
+   *
+   * @param instrument_id The venues ID of the instrument.
+   * @return TradeExecution Latest trade.
+   */
+
+  TradeExecution GetLastTrade(uint32_t instrument_id) const;
 };

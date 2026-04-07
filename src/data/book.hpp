@@ -101,7 +101,7 @@ class Book {
   uint64_t GetTotalTradeVolume() const { return total_trade_volume_; }
   ///@}
 
-  // Trade
+  // To make last_execution_ public to class Market
   const TradeExecution &GetLastExecution() const { return last_execution_; }
 
  private:
