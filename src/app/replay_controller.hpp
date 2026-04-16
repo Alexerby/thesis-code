@@ -1,12 +1,35 @@
 #pragma once
 
 #include <atomic>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "data/market.hpp"
+
+struct SpreadPoint {
+  double ts;      // Unix seconds
+  double bid;     // Best bid price
+  double ask;     // Best ask price
+  double pre_bid; // BBO state BEFORE the event
+  double pre_ask; // BBO state BEFORE the event
+  char action;    // 'A', 'C', 'F', 'T'
+  char side;      // 'B', 'S'
+  double price;   // Price of the event itself
+  uint32_t size;  // Size of the event
+};
+
+struct OrderEvent {
+  uint64_t ts_ns;  // Nanosecond timestamp for seeking
+  double ts;       // Unix seconds for display
+  char action;     // 'A'=Add, 'C'=Cancel, 'F'=Fill, 'X'=Clear
+  char side;       // 'B'=Bid, 'S'=Ask, '-'=None
+  double price;
+  uint32_t size;
+};
 
 enum class PlaybackState { Playing, Paused };
 
@@ -50,9 +73,13 @@ class ReplayController {
   std::map<uint32_t, std::string> GetAvailableInstruments() const;
 
   MarketSnapshot GetLatestSnapshot();
+  std::vector<SpreadPoint> GetSpreadHistory();
+  std::vector<OrderEvent> GetOrderEvents();
 
  private:
   void ReplayLoop();
+  void RecordEvent(const db::MboMsg &mbo, const MarketSnapshot &snap);
+
 
   std::string m_data_path;
   std::unique_ptr<ReplayEngine> m_engine;
@@ -71,6 +98,21 @@ class ReplayController {
 
   std::mutex m_mutex;
   MarketSnapshot m_latest_snapshot;
+  MarketSnapshot m_last_snap; // State BEFORE current message
   SessionStats m_session_stats;
   uint64_t m_msg_count = 0;
+
+  static constexpr size_t kMaxSpreadHistory = 100000;
+  std::deque<SpreadPoint> m_spread_history;
+  std::atomic<uint64_t> m_last_spread_sample_ts{0};
+
+  static constexpr size_t kMaxOrderEvents = 500;
+  std::deque<OrderEvent> m_order_events;
+
+  // Event buffering for high-signal reconciliation
+  struct {
+    uint64_t ts_recv = 0;
+    bool has_fill = false;
+    bool has_trade = false;
+  } m_current_event;
 };

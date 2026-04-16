@@ -16,6 +16,8 @@ struct MarketSnapshot {
   std::string timestamp;
   uint64_t msg_count = 0;
   double last_price = 0.0;
+  double best_bid = 0.0;
+  double best_ask = 0.0;
   double imbalance = 0.0;
 
   // Depth data

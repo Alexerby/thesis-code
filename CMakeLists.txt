@@ -31,6 +31,12 @@ FetchContent_Declare(
     GIT_TAG v1.89.9
 )
 
+FetchContent_Declare(
+    implot
+    GIT_REPOSITORY https://github.com/epezent/implot.git
+    GIT_TAG v0.16
+)
+
 # Testing Framework
 FetchContent_Declare(
     catch2
@@ -56,7 +62,7 @@ FetchContent_Declare(
 )
 
 set(MATPLOTPP_BUILD_WITH_PEDANTIC_WARNINGS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(databento glfw imgui catch2 eigen matplotplusplus)
+FetchContent_MakeAvailable(databento glfw imgui implot catch2 eigen matplotplusplus)
 
 find_package(OpenGL REQUIRED)
 
@@ -76,6 +82,8 @@ set(COMMON_SOURCES
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    ${implot_SOURCE_DIR}/implot.cpp
+    ${implot_SOURCE_DIR}/implot_items.cpp
 )
 
 # Define the single main executable
@@ -96,6 +104,7 @@ target_include_directories(thesis PRIVATE
     .
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
+    ${implot_SOURCE_DIR}
     ${matplotplusplus_SOURCE_DIR}/source
     ${CMAKE_BINARY_DIR}/_deps/matplotplusplus-src/source
 )
@@ -104,6 +113,7 @@ target_include_directories(unit_tests PRIVATE
     .
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
+    ${implot_SOURCE_DIR}
     ${matplotplusplus_SOURCE_DIR}/source
     ${CMAKE_BINARY_DIR}/_deps/matplotplusplus-src/source
 )

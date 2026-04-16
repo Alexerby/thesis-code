@@ -157,6 +157,10 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   TradeExecution last_trade = GetLastTrade(inst_id);
   snap.last_price = static_cast<double>(last_trade.price) / 1e9;
 
+  auto bbo = AggregatedBbo(inst_id);
+  snap.best_bid = bbo.first.IsEmpty() ? 0.0 : static_cast<double>(bbo.first.price) / 1e9;
+  snap.best_ask = bbo.second.IsEmpty() ? 0.0 : static_cast<double>(bbo.second.price) / 1e9;
+
   snap.bid_volumes.resize(depth);
   snap.ask_volumes.resize(depth);
   snap.bid_volumes_cum.resize(depth);
@@ -179,7 +183,7 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
 TradeExecution Market::GetLastTrade(uint32_t instrument_id) const {
   TradeExecution latest_exec{};
 
-  auto it = books_.find(inst_id);
+  auto it = books_.find(instrument_id);
   if (it != books_.end()) {
     for (const auto &pub_book : it->second) {
       const auto &current_exec = pub_book.book.GetLastExecution();

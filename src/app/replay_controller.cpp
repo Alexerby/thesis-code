@@ -45,10 +45,50 @@ MarketSnapshot ReplayController::GetLatestSnapshot() {
   return m_latest_snapshot;
 }
 
+std::vector<SpreadPoint> ReplayController::GetSpreadHistory() {
+  std::lock_guard<std::mutex> lock(m_mutex);
+  return {m_spread_history.begin(), m_spread_history.end()};
+}
+
+std::vector<OrderEvent> ReplayController::GetOrderEvents() {
+  std::lock_guard<std::mutex> lock(m_mutex);
+  return {m_order_events.begin(), m_order_events.end()};
+}
+
 void ReplayController::SeekToTime(uint64_t target_ts) {
-  m_target_ts = target_ts;
-  m_is_warping = true;
-  m_playback_state = PlaybackState::Playing;  // Ensure we are moving
+  uint64_t current;
+  {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    current = m_session_stats.current_ts;
+  }
+
+  if (current > 0 && target_ts < current) {
+    // Backward seek: stop the replay thread, reinit engine, restart
+    Stop();
+    m_engine = std::make_unique<ReplayEngine>(m_data_path, false);
+    m_msg_count = 0;
+    m_last_spread_sample_ts = 0;
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_spread_history.clear();
+      m_order_events.clear();
+      m_session_stats.current_ts = 0;
+      m_session_stats.msg_count = 0;
+    }
+    m_target_ts = target_ts;
+    m_is_warping = true;
+    m_playback_state = PlaybackState::Playing;
+    Start();
+  } else {
+    // Forward seek: fast-forward in current replay
+    m_last_spread_sample_ts = 0;
+    m_target_ts = target_ts;
+    m_is_warping = true;
+    m_playback_state = PlaybackState::Playing;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_spread_history.clear();
+    m_order_events.clear();
+  }
 }
 
 SessionStats ReplayController::GetSessionStats() {
@@ -134,8 +174,11 @@ void ReplayController::ReplayLoop() {
       snap.msg_count = m_msg_count;
       snap.timestamp = db::ToIso8601(mbo.ts_recv);
 
+      RecordEvent(mbo, snap);
+
       {
         std::lock_guard<std::mutex> lock(m_mutex);
+        m_last_snap = m_latest_snapshot; // This snap becomes "pre" for next msg
         m_latest_snapshot = std::move(snap);
         m_session_stats.current_ts = current_ts;
         m_session_stats.msg_count = m_msg_count;
@@ -155,4 +198,84 @@ void ReplayController::ReplayLoop() {
     std::cerr << "Replay Error: " << e.what() << std::endl;
   }
   m_running = false;
+}
+
+void ReplayController::RecordEvent(const db::MboMsg &mbo,
+                                   const MarketSnapshot &snap) {
+  uint64_t current_ts = mbo.ts_recv.time_since_epoch().count();
+
+  // Buffer state to identify if a Cancel is part of a Trade/Fill event
+  if (current_ts != m_current_event.ts_recv) {
+    m_current_event.ts_recv = current_ts;
+    m_current_event.has_fill = false;
+    m_current_event.has_trade = false;
+  }
+
+  if (mbo.action == db::Action::Fill) m_current_event.has_fill = true;
+  if (mbo.action == db::Action::Trade) m_current_event.has_trade = true;
+
+  bool high_signal = false;
+  char act = '?';
+
+  switch (mbo.action) {
+    case db::Action::Add:
+      act = 'A';
+      high_signal = true;
+      break;
+    case db::Action::Fill:
+    case db::Action::Trade:
+      act = (mbo.action == db::Action::Fill) ? 'F' : 'T';
+      high_signal = true;
+      break;
+    case db::Action::Cancel:
+      // PURE CANCEL: Only if no Fill/Trade in this sequence
+      if (!m_current_event.has_fill && !m_current_event.has_trade) {
+        act = 'C';
+        high_signal = true;
+      }
+      break;
+    case db::Action::Clear:
+      act = 'X';
+      high_signal = true;
+      break;
+    default:
+      break;
+  }
+
+  if (high_signal) {
+    char side = '-';
+    if (mbo.side == db::Side::Bid)
+      side = 'B';
+    else if (mbo.side == db::Side::Ask)
+      side = 'S';
+
+    uint64_t ts_ns = mbo.ts_recv.time_since_epoch().count();
+    double ts_s = static_cast<double>(ts_ns) / 1e9;
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    SpreadPoint pt{
+        ts_s,
+        snap.best_bid,
+        snap.best_ask,
+        m_last_snap.best_bid,
+        m_last_snap.best_ask,
+        act,
+        side,
+        static_cast<double>(mbo.price) / 1e9,
+        mbo.size,
+    };
+    m_spread_history.push_back(pt);
+    if (m_spread_history.size() > kMaxSpreadHistory) {
+      m_spread_history.pop_front();
+    }
+
+    OrderEvent ev{
+        ts_ns, ts_s, act, side, static_cast<double>(mbo.price) / 1e9, mbo.size,
+    };
+    m_order_events.push_back(ev);
+    if (m_order_events.size() > kMaxOrderEvents) {
+      m_order_events.pop_front();
+    }
+  }
 }
