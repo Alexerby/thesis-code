@@ -102,11 +102,11 @@ class ReplayController {
   SessionStats m_session_stats;
   uint64_t m_msg_count = 0;
 
-  static constexpr size_t kMaxSpreadHistory = 100000;
+  static constexpr size_t kMaxSpreadHistory = 1000000;
   std::deque<SpreadPoint> m_spread_history;
   std::atomic<uint64_t> m_last_spread_sample_ts{0};
 
-  static constexpr size_t kMaxOrderEvents = 500;
+  static constexpr size_t kMaxOrderEvents = 100000;
   std::deque<OrderEvent> m_order_events;
 
   // Event buffering for high-signal reconciliation

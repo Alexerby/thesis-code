@@ -20,10 +20,9 @@ class Dashboard {
   void RenderHeader(const MarketSnapshot &snapshot,
                     ReplayController &controller);
   void RenderPlaybackControls(ReplayController &controller);
-  void RenderSpreadGraph(ReplayController &controller, float width);
-  void RenderOrderEventList(ReplayController &controller, float width);
-  void RenderOrderBookDepth(const MarketSnapshot &snapshot);
-
+  void RenderSpreadGraph(ReplayController &controller, float width, float height);
+  void RenderOrderEventList(ReplayController &controller, float width, float height);
+  void RenderOrderBookDepth(const MarketSnapshot &snapshot, float width, float height);
   bool m_use_cumulative = true;
   bool m_request_quit = false;
   bool m_spread_follow = true;  // Keep time-axis locked to latest data

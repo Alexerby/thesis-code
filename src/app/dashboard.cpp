@@ -19,7 +19,7 @@ constexpr uint64_t NANOS_1M = 60'000'000'000ULL;
 constexpr float HEADER_HEIGHT = 50.0f;
 constexpr float CONTROLS_HEIGHT = 80.0f;
 constexpr float SPREAD_GRAPH_HEIGHT = 480.0f;
-constexpr float ORDERBOOK_DEPTH_HEIGHT = 270.0f;
+constexpr float ORDERBOOK_DEPTH_HEIGHT = 160.0f;
 
 constexpr float CHART_CENTER_WIDTH = 120.0f;
 
@@ -70,18 +70,28 @@ void Dashboard::Render(const MarketSnapshot &snapshot,
   // Controls section
   RenderPlaybackControls(controller);
 
-  // Middle row: spread graph + order event list side by side
+  // Bottom section: spread graph (Main) + sidebar (Side-by-side)
   {
-    const float avail = ImGui::GetContentRegionAvail().x;
-    const float event_w = 290.0f;
-    const float graph_w = avail - event_w - ImGui::GetStyle().ItemSpacing.x;
-    RenderSpreadGraph(controller, graph_w);
+    const float avail_x = ImGui::GetContentRegionAvail().x;
+    const float avail_y = ImGui::GetContentRegionAvail().y;
+    const float sidebar_w = 320.0f;
+    const float graph_w = avail_x - sidebar_w - ImGui::GetStyle().ItemSpacing.x;
+    
+    // Main Area: Spread Graph
+    RenderSpreadGraph(controller, graph_w, avail_y);
+    
     ImGui::SameLine();
-    RenderOrderEventList(controller, event_w);
+    
+    // Sidebar Area: Events (Top) and Book (Bottom)
+    ImGui::BeginGroup();
+    const float spacing = ImGui::GetStyle().ItemSpacing.y;
+    const float sidebar_h_top = avail_y * 0.70f;
+    const float sidebar_h_bottom = avail_y - sidebar_h_top - spacing;
+    
+    RenderOrderEventList(controller, sidebar_w, sidebar_h_top);
+    RenderOrderBookDepth(snapshot, sidebar_w, sidebar_h_bottom);
+    ImGui::EndGroup();
   }
-
-  // Order book depth (full width)
-  RenderOrderBookDepth(snapshot);
 
   // Pop window from stack
   ImGui::End();
@@ -191,8 +201,8 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
   ImGui::EndChild();
 }
 
-void Dashboard::RenderSpreadGraph(ReplayController &controller, float width) {
-  ImGui::BeginChild("SpreadGraph", ImVec2(width, SPREAD_GRAPH_HEIGHT), true);
+void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, float height) {
+  ImGui::BeginChild("SpreadGraph", ImVec2(width, height), true);
 
   auto history = controller.GetSpreadHistory();
 
@@ -217,8 +227,12 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width) {
   bids.reserve(history.size());
   asks.reserve(history.size());
 
-  for (const auto &pt : history) {
-    if (pt.ts < t_min_window - 1.0) continue;
+  // Efficient Binary Search for the window start: O(log N) instead of O(N)
+  auto it_start = std::lower_bound(history.begin(), history.end(), t_min_window - 1.0,
+                                   [](const SpreadPoint &pt, double val) { return pt.ts < val; });
+
+  for (auto it = it_start; it != history.end(); ++it) {
+    const auto &pt = *it;
 
     if (pt.bid > 0.0 && pt.ask > 0.0) {
       times.push_back(pt.ts);
@@ -274,7 +288,7 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width) {
   const ImGuiCond y_cond = m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once;
 
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(6, 6));
-  const float plot_h = SPREAD_GRAPH_HEIGHT - 50.0f;
+  const float plot_h = height - 50.0f;
 
   if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus)) {
     ImPlot::SetupAxes("Time", "Price (USD)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
@@ -354,8 +368,8 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width) {
 }
 
 void Dashboard::RenderOrderEventList(ReplayController &controller,
-                                     float width) {
-  ImGui::BeginChild("OrderEvents", ImVec2(width, SPREAD_GRAPH_HEIGHT), true);
+                                     float width, float height) {
+  ImGui::BeginChild("OrderEvents", ImVec2(width, height), true);
   ImGui::Text("Recent Order Events");
   ImGui::Separator();
 
@@ -379,41 +393,47 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
     ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 45.0f);
     ImGui::TableHeadersRow();
 
-    // Show events latest-first
-    for (int i = static_cast<int>(events.size()) - 1; i >= 0; --i) {
-      const auto &e = events[i];
-      ImGui::TableNextRow();
+    // Use Clipper to only render what's visible on screen (prevents O(N) overhead)
+    ImGuiListClipper clipper;
+    clipper.Begin(static_cast<int>(events.size()));
+    while (clipper.Step()) {
+      for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+        // Reverse index to show latest first
+        int idx = static_cast<int>(events.size()) - 1 - i;
+        const auto &e = events[idx];
+        ImGui::TableNextRow();
 
-      // Time (HH:MM:SS)
-      ImGui::TableSetColumnIndex(0);
-      std::time_t secs = static_cast<std::time_t>(e.ts);
-      std::tm *tm_info = std::gmtime(&secs);
-      if (tm_info) {
-        ImGui::Text("%02d:%02d:%02d", tm_info->tm_hour, tm_info->tm_min,
-                    tm_info->tm_sec);
-      } else {
-        ImGui::Text("??:??:??");
+        // Time (HH:MM:SS)
+        ImGui::TableSetColumnIndex(0);
+        std::time_t secs = static_cast<std::time_t>(e.ts);
+        std::tm *tm_info = std::gmtime(&secs);
+        if (tm_info) {
+          ImGui::Text("%02d:%02d:%02d", tm_info->tm_hour, tm_info->tm_min,
+                      tm_info->tm_sec);
+        } else {
+          ImGui::Text("??:??:??");
+        }
+
+        // Action / Side
+        ImGui::TableSetColumnIndex(1);
+        ImVec4 color = ImVec4(1, 1, 1, 1);
+        if (e.side == 'B')
+          color = ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
+        else if (e.side == 'S')
+          color = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
+
+        char act_buf[8];
+        std::snprintf(act_buf, sizeof(act_buf), "%c/%c", e.action, e.side);
+        ImGui::TextColored(color, "%s", act_buf);
+
+        // Price
+        ImGui::TableSetColumnIndex(2);
+        ImGui::Text("%.2f", e.price);
+
+        // Size
+        ImGui::TableSetColumnIndex(3);
+        ImGui::Text("%u", e.size);
       }
-
-      // Action / Side
-      ImGui::TableSetColumnIndex(1);
-      ImVec4 color = ImVec4(1, 1, 1, 1);
-      if (e.side == 'B')
-        color = ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
-      else if (e.side == 'S')
-        color = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
-
-      char act_buf[8];
-      std::snprintf(act_buf, sizeof(act_buf), "%c/%c", e.action, e.side);
-      ImGui::TextColored(color, "%s", act_buf);
-
-      // Price
-      ImGui::TableSetColumnIndex(2);
-      ImGui::Text("%.2f", e.price);
-
-      // Size
-      ImGui::TableSetColumnIndex(3);
-      ImGui::Text("%u", e.size);
     }
     ImGui::EndTable();
   }
@@ -421,80 +441,59 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
   ImGui::EndChild();
 }
 
-void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot) {
-  ImGui::BeginChild("Order book depth", ImVec2(0, ORDERBOOK_DEPTH_HEIGHT),
-                    true);
+void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot, float width, float height) {
+  ImGui::BeginChild("Order book depth", ImVec2(width, height), true);
+
   const std::vector<float> &left_data =
       m_use_cumulative ? snapshot.bid_volumes_cum : snapshot.bid_volumes;
   const std::vector<float> &right_data =
       m_use_cumulative ? snapshot.ask_volumes_cum : snapshot.ask_volumes;
 
   if (left_data.empty() || right_data.empty()) {
-    ImGui::Text("Waiting for market depth data... (Press Play or Jump)");
+    ImGui::TextDisabled("Waiting for depth data...");
   } else {
+    // Stats Header
+    ImGui::Columns(2, "BookStats", false);
+    ImGui::Text("Last Px");
+    ImGui::TextColored(ImVec4(1, 1, 0, 1), "%.2f", snapshot.last_price);
+    ImGui::NextColumn();
+    ImGui::Checkbox("Cumulative", &m_use_cumulative);
+    ImGui::Columns(1);
+    
+    ImVec4 imb_color = ImVec4(1, 1, 1, 1);
+    if (snapshot.imbalance > 0.1f) imb_color = ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
+    else if (snapshot.imbalance < -0.1f) imb_color = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
+    ImGui::Text("Imbalance:"); ImGui::SameLine();
+    ImGui::TextColored(imb_color, "%.3f", snapshot.imbalance);
+    ImGui::Separator();
+
     float max_vol = 0.1f;
-    for (float v : left_data)
-      if (v > max_vol) max_vol = v;
-    for (float v : right_data)
-      if (v > max_vol) max_vol = v;
+    for (float v : left_data) if (v > max_vol) max_vol = v;
+    for (float v : right_data) if (v > max_vol) max_vol = v;
 
-    float available_width = ImGui::GetContentRegionAvail().x;
-    float center_width = CHART_CENTER_WIDTH;
-    float plot_width = (available_width - center_width) * 0.5f;
-    float plot_height = ImGui::GetContentRegionAvail().y - 45.0f;
+    const float bar_h = 10.0f;
+    const float label_w = 30.0f;
+    const float plot_w = width - label_w - 30.0f;
 
-    std::vector<float> rev_bids = left_data;
-    std::reverse(rev_bids.begin(), rev_bids.end());
+    // Asks (Red)
+    for (int i = 4; i >= 0; --i) { // Only show top 5 levels
+        if (i >= (int)right_data.size()) continue;
+        ImGui::Text("L%d", i+1); ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+        ImGui::ProgressBar(right_data[i] / max_vol, ImVec2(plot_w, bar_h), "");
+        ImGui::PopStyleColor();
+    }
 
-    ImGui::Checkbox("Cumulative Volume (Mountain)", &m_use_cumulative);
-    ImGui::BeginGroup();
-    TextCentered("BIDS (Liquidity)", plot_width);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-                          ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
-    ImGui::PlotHistogram("##Bids", rev_bids.data(), (int)rev_bids.size(), 0,
-                         nullptr, 0.0f, max_vol * 1.1f,
-                         ImVec2(plot_width, plot_height));
-    ImGui::PopStyleColor();
-    ImGui::EndGroup();
-
-    ImGui::SameLine();
-
-    ImGui::BeginGroup();
-    ImGui::Dummy(ImVec2(center_width, plot_height * 0.4f));
-    TextCentered("Last Price", center_width);
-    ImGui::SetWindowFontScale(1.5f);
-    if (snapshot.last_price > 0)
-      TextCentered(std::to_string(snapshot.last_price).substr(0, 10).c_str(),
-                   center_width);
-    else
-      TextCentered("N/A", center_width);
-    ImGui::SetWindowFontScale(1.0f);
-
-    ImGui::Dummy(ImVec2(center_width, 20));
-    TextCentered("Imbalance", center_width);
-    if (snapshot.imbalance > 0.05f)
-      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.2f, 1.0f));
-    else if (snapshot.imbalance < -0.05f)
-      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
-    else
-      ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-
-    TextCentered(std::to_string(snapshot.imbalance).substr(0, 6).c_str(),
-                 center_width);
-    ImGui::PopStyleColor();
-    ImGui::EndGroup();
-
-    ImGui::SameLine();
-
-    ImGui::BeginGroup();
-    TextCentered("ASKS (Liquidity)", plot_width);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-                          ImVec4(0.5f, 0.0f, 0.0f, 1.0f));
-    ImGui::PlotHistogram("##Asks", right_data.data(), (int)right_data.size(), 0,
-                         nullptr, 0.0f, max_vol * 1.1f,
-                         ImVec2(plot_width, plot_height));
-    ImGui::PopStyleColor();
-    ImGui::EndGroup();
+    ImGui::Separator();
+    
+    // Bids (Green)
+    for (int i = 0; i < 5; ++i) { // Only show top 5 levels
+        if (i >= (int)left_data.size()) continue;
+        ImGui::Text("L%d", i+1); ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.8f, 0.2f, 0.8f));
+        ImGui::ProgressBar(left_data[i] / max_vol, ImVec2(plot_w, bar_h), "");
+        ImGui::PopStyleColor();
+    }
   }
   ImGui::EndChild();
 }
