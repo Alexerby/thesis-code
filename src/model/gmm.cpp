@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iostream>
 #include <numeric>
+#include <random>
 #include <stdexcept>
 
 using Eigen::VectorXd;
@@ -92,6 +93,55 @@ std::pair<VectorXd, VectorXd> GMM::Standardize(
   return {mean, std_dev};
 }
 
+GMMParams GMM::KMeansInit(const std::vector<VectorXd> &data, int seed,
+                          double reg) const {
+  const int N = static_cast<int>(data.size());
+  const int D = static_cast<int>(data[0].size());
+
+  std::mt19937 rng(static_cast<uint32_t>(seed));
+  std::uniform_int_distribution<int> dist(0, N - 1);
+
+  VectorXd c1 = data[dist(rng)];
+  VectorXd c2 = data[dist(rng)];
+
+  std::vector<int> assignments(N, 0);
+  for (int iter = 0; iter < 100; ++iter) {
+    for (int i = 0; i < N; ++i)
+      assignments[i] = ((data[i] - c1).squaredNorm() <=
+                        (data[i] - c2).squaredNorm()) ? 0 : 1;
+
+    VectorXd new_c1 = VectorXd::Zero(D), new_c2 = VectorXd::Zero(D);
+    int n1 = 0, n2 = 0;
+    for (int i = 0; i < N; ++i) {
+      if (assignments[i] == 0) { new_c1 += data[i]; ++n1; }
+      else                     { new_c2 += data[i]; ++n2; }
+    }
+    if (n1 == 0 || n2 == 0) break;
+    new_c1 /= n1; new_c2 /= n2;
+    if ((new_c1 - c1).norm() < 1e-8 && (new_c2 - c2).norm() < 1e-8) break;
+    c1 = new_c1; c2 = new_c2;
+  }
+
+  int n1 = 0, n2 = 0;
+  for (int a : assignments) a == 0 ? ++n1 : ++n2;
+  if (n1 == 0) n1 = 1;
+  if (n2 == 0) n2 = 1;
+
+  GMMParams p;
+  p.pi     = static_cast<double>(n1) / N;
+  p.mu1    = c1;
+  p.mu2    = c2;
+  p.sigma1 = reg * MatrixXd::Identity(D, D);
+  p.sigma2 = reg * MatrixXd::Identity(D, D);
+  for (int i = 0; i < N; ++i) {
+    if (assignments[i] == 0) { VectorXd d = data[i] - c1; p.sigma1 += d * d.transpose(); }
+    else                     { VectorXd d = data[i] - c2; p.sigma2 += d * d.transpose(); }
+  }
+  p.sigma1 /= n1;
+  p.sigma2 /= n2;
+  return p;
+}
+
 GMMResult GMM::Fit(const std::vector<VectorXd> &data,
                    const FitOptions &opts) const {
   const int N = static_cast<int>(data.size());
@@ -100,144 +150,120 @@ GMMResult GMM::Fit(const std::vector<VectorXd> &data,
   }
   const int D = static_cast<int>(data[0].size());
 
-  // --- Initialisation ---
-  // Sort by first feature and assign the bottom 20% to component 1
-  // (the fast-cancel / anomalous region).
-  std::vector<int> idx(N);
-  std::iota(idx.begin(), idx.end(), 0);
-  std::sort(idx.begin(), idx.end(),
-            [&](int a, int b) { return data[a][0] < data[b][0]; });
+  GMMResult best;
+  best.log_likelihood = -std::numeric_limits<double>::infinity();
+  best.best_restart = 0;
 
-  int split = std::max(1, static_cast<int>(0.2 * N));
+  for (int init = 0; init < opts.n_init; ++init) {
+    GMMParams p = KMeansInit(data, init, opts.reg);
 
-  GMMParams p;
-  p.pi = static_cast<double>(split) / N;
-  p.mu1 = VectorXd::Zero(D);
-  p.mu2 = VectorXd::Zero(D);
-  p.sigma1 = MatrixXd::Identity(D, D);
-  p.sigma2 = MatrixXd::Identity(D, D);
+    // --- EM loop ---
+    std::vector<double> r(N, 0.0);
+    double prev_ll = -std::numeric_limits<double>::infinity();
+    int iter = 0;
 
-  for (int i = 0; i < split; ++i) p.mu1 += data[idx[i]];
-  for (int i = split; i < N; ++i) p.mu2 += data[idx[i]];
-  p.mu1 /= split;
-  p.mu2 /= (N - split);
+    for (; iter < opts.max_iter; ++iter) {
+      // Precompute \Sigma^{-1} and log|\Sigma| via LDLT decomposition
+      LDLT<MatrixXd> ldlt1(p.sigma1);
+      LDLT<MatrixXd> ldlt2(p.sigma2);
 
-  for (int i = 0; i < split; ++i) {
-    VectorXd d = data[idx[i]] - p.mu1;
-    p.sigma1 += d * d.transpose();
-  }
-  for (int i = split; i < N; ++i) {
-    VectorXd d = data[idx[i]] - p.mu2;
-    p.sigma2 += d * d.transpose();
-  }
-  p.sigma1 = p.sigma1 / split + opts.reg * MatrixXd::Identity(D, D);
-  p.sigma2 =
-      p.sigma2 / (N - split) + opts.reg * MatrixXd::Identity(D, D);
-
-  // --- EM loop ---
-  std::vector<double> r(N, 0.0);
-  double prev_ll = -std::numeric_limits<double>::infinity();
-  int iter = 0;
-
-  for (; iter < opts.max_iter; ++iter) {
-    // Precompute \Sigma^{-1} and log|\Sigma| via LDLT decomposition
-    LDLT<MatrixXd> ldlt1(p.sigma1);
-    LDLT<MatrixXd> ldlt2(p.sigma2);
-
-    if (ldlt1.info() != Eigen::Success || ldlt2.info() != Eigen::Success) {
-      std::cerr << "GMM: covariance not positive-definite at iteration " << iter
-                << ". Increasing regularisation.\n";
-      p.sigma1 += opts.reg * MatrixXd::Identity(D, D);
-      p.sigma2 += opts.reg * MatrixXd::Identity(D, D);
-      continue;
-    }
-
-    MatrixXd s1_inv = ldlt1.solve(MatrixXd::Identity(D, D));
-    MatrixXd s2_inv = ldlt2.solve(MatrixXd::Identity(D, D));
-    // log|\Sigma| = sum of logs of the diagonal of D in the LDLT factorisation
-    double ld1 = ldlt1.vectorD().array().log().sum();
-    double ld2 = ldlt2.vectorD().array().log().sum();
-
-    // E-step: compute r_i^{(p)} = P(z_i = anomalous | x_i, \theta^{(p)})
-    // Eq. (10): r_i = [ \pi^{(p)} f_anomalous(x_i) ] /
-    //                 [ \pi^{(p)} f_anomalous(x_i) + (1 - \pi^{(p)})
-    //                 f_lc(x_i) ]
-    // Works in log-space throughout to avoid floating-point underflow;
-    // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the
-    // terms themselves.
-    for (int i = 0; i < N; ++i) {
-      // Known liquidity-consistent observations (e.g. fill-cancelled orders)
-      // are pinned to r_i = 0 — they inform the LC component but can never be
-      // assigned to the anomalous component.
-      if (!opts.fixed_lc.empty() && opts.fixed_lc[i]) {
-        r[i] = 0.0;
+      if (ldlt1.info() != Eigen::Success || ldlt2.info() != Eigen::Success) {
+        p.sigma1 += opts.reg * MatrixXd::Identity(D, D);
+        p.sigma2 += opts.reg * MatrixXd::Identity(D, D);
         continue;
       }
-      // log[ \pi^{(p)} * f_anomalous(x_i | \theta^{(p)}) ]  (numerator of Eq.
-      // 10)
-      double log_p1 =
-          std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
-      // log[ (1 - \pi^{(p)}) * f_lc(x_i | \theta^{(p)}) ]  (second
-      // denominator term)
-      double log_p2 =
-          std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
-      // log-sum-exp: subtract max before exp() to prevent underflow;
-      // equivalent to p1 / (p1 + p2) from Eq. (10) without ever materialising
-      // p1, p2
-      double log_max = std::max(log_p1, log_p2);
-      double sum_exp = std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max);
-      r[i] = std::exp(log_p1 - log_max) / sum_exp;  ///< r_i^{(p)} \in [0, 1]
-    }
 
-    // M-step: update \theta using r_i as soft weights
-    double sum_r1 = 0.0, sum_r2 = 0.0;
-    for (int i = 0; i < N; ++i) {
-      sum_r1 += r[i];
-      sum_r2 += (1.0 - r[i]);
-    }
+      MatrixXd s1_inv = ldlt1.solve(MatrixXd::Identity(D, D));
+      MatrixXd s2_inv = ldlt2.solve(MatrixXd::Identity(D, D));
+      // log|\Sigma| = sum of logs of the diagonal of D in the LDLT factorisation
+      double ld1 = ldlt1.vectorD().array().log().sum();
+      double ld2 = ldlt2.vectorD().array().log().sum();
 
-    p.pi = std::clamp(sum_r1 / N, 1e-6, 1.0 - 1e-6);
+      // E-step: compute r_i^{(p)} = P(z_i = anomalous | x_i, \theta^{(p)})
+      // Eq. (10): r_i = [ \pi^{(p)} f_anomalous(x_i) ] /
+      //                 [ \pi^{(p)} f_anomalous(x_i) + (1 - \pi^{(p)}) f_lc(x_i) ]
+      // Works in log-space to avoid floating-point underflow.
+      for (int i = 0; i < N; ++i) {
+        // Known liquidity-consistent observations are pinned to r_i = 0.
+        if (!opts.fixed_lc.empty() && opts.fixed_lc[i]) {
+          r[i] = 0.0;
+          continue;
+        }
+        double log_p1 =
+            std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
+        double log_p2 =
+            std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);
+        double log_max = std::max(log_p1, log_p2);
+        double sum_exp = std::exp(log_p1 - log_max) + std::exp(log_p2 - log_max);
+        r[i] = std::exp(log_p1 - log_max) / sum_exp;
+      }
 
-    VectorXd mu1_new = VectorXd::Zero(D);
-    VectorXd mu2_new = VectorXd::Zero(D);
-    for (int i = 0; i < N; ++i) {
-      mu1_new += r[i] * data[i];
-      mu2_new += (1.0 - r[i]) * data[i];
-    }
-    p.mu1 = mu1_new / sum_r1;
-    p.mu2 = mu2_new / sum_r2;
+      // M-step: update \theta using r_i as soft weights
+      double sum_r1 = 0.0, sum_r2 = 0.0;
+      for (int i = 0; i < N; ++i) { sum_r1 += r[i]; sum_r2 += (1.0 - r[i]); }
 
-    MatrixXd s1_new = opts.reg * MatrixXd::Identity(D, D);
-    MatrixXd s2_new = opts.reg * MatrixXd::Identity(D, D);
-    for (int i = 0; i < N; ++i) {
-      VectorXd d1 = data[i] - p.mu1;
-      VectorXd d2 = data[i] - p.mu2;
-      s1_new += r[i] * (d1 * d1.transpose());
-      s2_new += (1.0 - r[i]) * (d2 * d2.transpose());
-    }
-    p.sigma1 = s1_new / sum_r1;
-    p.sigma2 = s2_new / sum_r2;
+      p.pi = std::clamp(sum_r1 / N, 1e-6, 1.0 - 1e-6);
 
-    // Convergence check: |log L(\theta^{(p+1)}) - log L(\theta^{(p)})| < tol
-    LDLT<MatrixXd> c1(p.sigma1), c2(p.sigma2);
-    MatrixXd cs1_inv = c1.solve(MatrixXd::Identity(D, D));
-    MatrixXd cs2_inv = c2.solve(MatrixXd::Identity(D, D));
-    double cld1 = c1.vectorD().array().log().sum();
-    double cld2 = c2.vectorD().array().log().sum();
+      VectorXd mu1_new = VectorXd::Zero(D);
+      VectorXd mu2_new = VectorXd::Zero(D);
+      for (int i = 0; i < N; ++i) {
+        mu1_new += r[i] * data[i];
+        mu2_new += (1.0 - r[i]) * data[i];
+      }
+      p.mu1 = mu1_new / sum_r1;
+      p.mu2 = mu2_new / sum_r2;
 
-    double ll = LogLikelihood(data, p, cs1_inv, cld1, cs2_inv, cld2);
-    if (std::abs(ll - prev_ll) < opts.tol) {
+      MatrixXd s1_new = opts.reg * MatrixXd::Identity(D, D);
+      MatrixXd s2_new = opts.reg * MatrixXd::Identity(D, D);
+      for (int i = 0; i < N; ++i) {
+        VectorXd d1 = data[i] - p.mu1;
+        VectorXd d2 = data[i] - p.mu2;
+        s1_new += r[i] * (d1 * d1.transpose());
+        s2_new += (1.0 - r[i]) * (d2 * d2.transpose());
+      }
+      p.sigma1 = s1_new / sum_r1;
+      p.sigma2 = s2_new / sum_r2;
+
+      // Convergence check: |log L(\theta^{(p+1)}) - log L(\theta^{(p)})| < tol
+      LDLT<MatrixXd> c1(p.sigma1), c2(p.sigma2);
+      MatrixXd cs1_inv = c1.solve(MatrixXd::Identity(D, D));
+      MatrixXd cs2_inv = c2.solve(MatrixXd::Identity(D, D));
+      double cld1 = c1.vectorD().array().log().sum();
+      double cld2 = c2.vectorD().array().log().sum();
+
+      double ll = LogLikelihood(data, p, cs1_inv, cld1, cs2_inv, cld2);
+      if (std::abs(ll - prev_ll) < opts.tol) {
+        prev_ll = ll;
+        ++iter;
+        break;
+      }
       prev_ll = ll;
-      ++iter;
-      break;
     }
-    prev_ll = ll;
+
+    // Label consistency: ensure component 1 = anomalous (lower delta_t mean).
+    // K-means may arbitrarily assign the fast-cancel cluster to either component;
+    // swap so the output labelling is always consistent across restarts.
+    if (p.mu1[0] > p.mu2[0]) {
+      std::swap(p.mu1, p.mu2);
+      std::swap(p.sigma1, p.sigma2);
+      p.pi = 1.0 - p.pi;
+      for (double &ri : r) ri = 1.0 - ri;
+    }
+
+    double pi_spoof = 0.0;
+    for (double ri : r) pi_spoof += ri;
+    pi_spoof /= N;
+
+    best.restarts.push_back({init, prev_ll, pi_spoof, iter});
+
+    if (prev_ll > best.log_likelihood) {
+      best.params        = p;
+      best.responsibilities = r;
+      best.pi_spoof      = pi_spoof;
+      best.log_likelihood = prev_ll;
+      best.iterations    = iter;
+      best.best_restart  = init;
+    }
   }
-
-  // --- Build result ---
-  double pi_spoof = 0.0;
-  for (double ri : r) pi_spoof += ri;
-  pi_spoof /= N;
-
-  return GMMResult{p, r, pi_spoof, prev_ll, iter};
+  return best;
 }

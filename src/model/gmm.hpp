@@ -9,8 +9,6 @@
  * estimated by maximum likelihood via Expectation Maximisation (Dempster 1977).
  */
 
-// TODO: Initialization is currently not using K-Means.
-
 #pragma once
 
 #include <Eigen/Dense>
@@ -33,6 +31,17 @@ struct GMMParams {
 };
 
 /**
+ * @struct RestartSummary
+ * @brief Per-restart diagnostics from a GMM::Fit() call.
+ */
+struct RestartSummary {
+  int restart;
+  double log_likelihood;
+  double pi_spoof;
+  int iterations;
+};
+
+/**
  * @struct GMMResult
  * @brief Output of a single GMM::Fit() call.
  */
@@ -42,6 +51,8 @@ struct GMMResult {
   double pi_spoof;                       ///< \hat{\pi}_spoof = mean(r_i)
   double log_likelihood;
   int iterations;
+  int best_restart;                          ///< Which restart index won
+  std::vector<RestartSummary> restarts;      ///< One entry per K-means restart
 };
 
 /**
@@ -52,6 +63,7 @@ struct FitOptions {
   int max_iter = 300;
   double tol = 1e-6;  ///< Convergence threshold on log-likelihood change
   double reg = 1e-6;  ///< Ridge added to \Sigma diagonal to prevent singularity
+  int n_init = 10;    ///< Number of K-means restarts; best log-likelihood is kept
 
   /// Optional per-observation constraint. If fixed_lc[i] == true,
   /// r_i is forced to 0 in every E-step (observation is known liquidity-consistent).
@@ -200,4 +212,21 @@ class GMM {
                               const GMMParams &p, const Eigen::MatrixXd &s1_inv,
                               double ld1, const Eigen::MatrixXd &s2_inv,
                               double ld2);
+
+  /**
+   * @brief Initialises GMM parameters via K-means with a given random seed.
+   *
+   * @details
+   * Runs Lloyd's K-means algorithm (K=2) for up to 100 iterations using two
+   * randomly chosen data points as starting centroids. The resulting hard
+   * cluster assignments are used to compute \f$\pi\f$, \f$\mu_k\f$, and
+   * \f$\Sigma_k\f$ for the subsequent EM run.
+   *
+   * @param data  Standardised observations.
+   * @param seed  RNG seed — each restart passes a different value.
+   * @param reg   Ridge regularisation applied to initial covariances.
+   * @return      Initialised GMMParams ready for the EM loop.
+   */
+  GMMParams KMeansInit(const std::vector<Eigen::VectorXd> &data, int seed,
+                       double reg) const;
 };

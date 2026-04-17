@@ -263,7 +263,27 @@ void run_gmm(const Config &cfg) {
     }
   };
 
-  out << "=== GMM Results ===\n"
+  // --- Restart summary table ---
+  out << "=== GMM Restart Summary (" << opts.n_init << " restarts) ===\n"
+      << std::left  << std::setw(12) << "Restart"
+      << std::right << std::setw(20) << "Log-likelihood"
+      << std::setw(14) << "pi_spoof"
+      << std::setw(12) << "Iterations"
+      << "\n"
+      << std::string(58, '-') << "\n";
+
+  for (const auto &rs : result.restarts) {
+    bool is_best = (rs.restart == result.best_restart);
+    std::string label = std::to_string(rs.restart + 1) + (is_best ? " *" : "");
+    out << std::left  << std::setw(12) << label
+        << std::right << std::setw(20) << std::fixed << std::setprecision(4) << rs.log_likelihood
+        << std::setw(14) << std::setprecision(6) << rs.pi_spoof
+        << std::setw(12) << rs.iterations
+        << "\n";
+  }
+
+  // --- Best result ---
+  out << "\n=== Best Result (restart " << (result.best_restart + 1) << ") ===\n"
       << "Observations:      " << all_records.size() << "\n"
       << "Iterations:        " << result.iterations << "\n"
       << "Log-likelihood:    " << std::fixed << std::setprecision(4)
