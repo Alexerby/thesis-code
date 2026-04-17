@@ -3,19 +3,30 @@
 
 [![CI](https://github.com/Alexerby/thesis-code/actions/workflows/ci.yml/badge.svg)](https://github.com/Alexerby/thesis-code/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Alexerby/thesis-code/branch/main/graph/badge.svg)](https://codecov.io/gh/Alexerby/thesis-code)
+[![Documentation](https://img.shields.io/badge/docs-online-blue.svg)](https://alexerby.github.io/thesis-code/)
 
 *Second thesis (15 ECTS) submitted to the Department of Economics, Lund University, in candidacy for the degree of Master of Science in Economics.*
 
-C++ implementation of an unsupervised spoofing detection framework for limit order book markets. The approach reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategically-cancelled orders from genuine liquidity withdrawals, without requiring labelled training data.
+A C++ implementation of an unsupervised spoofing detection framework for limit order book (LOB) markets. This project reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategic cancellations from genuine liquidity withdrawals without requiring labelled training data.
+
+[**Read the Documentation &raquo;**](https://alexerby.github.io/thesis-code/)
 
 ---
+
+## Key Features
+
+- **Order Life-Cycle Reconstruction**: Efficiently tracks individual orders from `Add` to `Fill` or `Cancel` using raw MBO (Market-By-Order) data.
+- **Unsupervised Learning**: Implements a Expectation-Maximization (EM) based Gaussian Mixture Model to classify order intent.
+- **Real-time Visualization**: OpenGL-based market visualizer for inspecting order book dynamics and liquidity clusters.
+- **L3/MBO Support**: Native support for Databento's DBN format and XNAS.ITCH schema.
+- **Performance-Oriented**: Core logic implemented in C++17 with Eigen3 for numerical stability.
 
 ## Requirements
 
 | Dependency | Version |
 |---|---|
 | CMake | 3.24+ |
-| C++ compiler | C++17+ |
+| C++ compiler | C++17+ (GCC 11+ / Clang 14+) |
 | zstd | system package |
 | OpenGL | system package |
 | GnuPlot | system package |
@@ -29,23 +40,19 @@ sudo apt install -y \
     libxcursor-dev libxi-dev libxkbcommon-dev
 ```
 
-All other dependencies (Databento SDK, ImGui, GLFW, Eigen3, Catch2) are fetched automatically by CMake.
+All other dependencies (Databento SDK, ImGui, GLFW, Eigen3, Catch2) are fetched automatically via CMake's `FetchContent`.
 
 ## Build
 
 ```bash
-chmod +x ./build.sh \
+chmod +x ./build.sh
 ./build.sh
 ```
 
-Debug mode:
+To build with debug symbols:
 ```bash
-chmod +x ./build.sh \
 ./build.sh -DCMAKE_BUILD_TYPE=Debug
 ```
-Building in Debug mode will add symbol flags for tools like GDB.
-
-
 
 ## Usage
 
@@ -57,50 +64,49 @@ Building in Debug mode will add symbol flags for tools like GDB.
 
 | Command | Description |
 |---|---|
-| `gui <data_path>` | Real-time order book visualizer (OpenGL) |
-| `plot <data_path>` | Plot feature distributions (saves PNGs) |
-| `model <data_path>` | Run order tracking + GMM analysis |
-| `databento-fetch` | Fetch historical MBO data from Databento |
-
-Pass `--symbol <id>` to `gui`, `plot`, and `model` to focus on a specific instrument ID. If omitted, the first instrument in the file is used.
+| `gui` | Real-time order book visualizer (OpenGL) |
+| `plot` | Generate PNG plots of feature distributions |
+| `model` | Run full order tracking + GMM analysis |
+| `databento-fetch` | Download historical MBO data from Databento |
 
 ### Examples
 
 ```bash
 # Launch the market visualizer
-./dist/thesis gui data/multi_instrument.dbn.zst --symbol 38
+./dist/thesis gui data/sample.dbn.zst --symbol 38
 
 # Plot feature distributions
-./dist/thesis plot data/multi_instrument.dbn.zst --symbol 38
+./dist/thesis plot data/sample.dbn.zst --symbol 38
 
 # Run GMM analysis
-./dist/thesis model data/multi_instrument.dbn.zst --symbol 38
+./dist/thesis model data/sample.dbn.zst --symbol 38
 ```
 
 ## Data
 
-Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in DBN format. The expected schema is `XNAS.ITCH` (NASDAQ TotalView-ITCH). Data files are *not* included in this repository.
+Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in DBN format. The system is optimized for the `XNAS.ITCH` (NASDAQ TotalView-ITCH) schema.
 
-### Downloading data
+### Downloading Data
 
-Set your API key via environment variable (recommended):
-
-```bash
-export DATABENTO_API_KEY=db-your-key-here
-```
-
-Then run the fetcher. It prints estimated cost and billable size before asking for confirmation, type `N` to do a dry-run cost check without downloading anything.
+1. Set your API key: `export DATABENTO_API_KEY=db-your-key-here`
+2. Fetch data:
 
 ```bash
 ./dist/thesis databento-fetch \
-    --dataset XNAS.ITCH \
-    --symbols AAPL,MSFT,AMZN,NVDA,GOOGL \
+    --symbols AAPL,MSFT \
     --start 2026-03-18T00:00:00Z \
     --end   2026-03-19T00:00:00Z \
-    --output ./data/march18.dbn.zst
+    --output ./data/sample.dbn.zst
 ```
 
-The API key can also be passed directly with `--key <key>`. All flags except `--key` are required; `--dataset` defaults to `XNAS.ITCH` if omitted.
+## Testing
 
-## Known issues
-- Note: Initialisation of EM-algo not complete, [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
+The project uses [Catch2](https://github.com/catchorg/Catch2) for unit testing.
+
+```bash
+chmod +x ./run_tests.sh
+./run_tests.sh
+```
+
+## Known Issues
+- Initialization of the EM algorithm is currently under refinement. See [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
