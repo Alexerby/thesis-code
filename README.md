@@ -107,6 +107,3 @@ The project uses [Catch2](https://github.com/catchorg/Catch2) for unit testing.
 chmod +x ./run_tests.sh
 ./run_tests.sh
 ```
-
-## Known Issues
-- Initialization of the EM algorithm is currently under refinement. See [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
