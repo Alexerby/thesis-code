@@ -95,6 +95,7 @@ add_executable(thesis
 # Define the test executable
 add_executable(unit_tests
     tests/test_order_tracker.cpp
+    tests/test_book.cpp
     ${COMMON_SOURCES}
 )
 

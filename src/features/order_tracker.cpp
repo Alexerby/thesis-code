@@ -172,11 +172,14 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
   // Override using cross-event fill history. staged_vol (pending_volume_map_)
   // only covers fills within the current event; total_filled persists across
   // all events for this order's lifetime.
-  CancelType resolved =
-      (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
+  CancelType resolved = (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
 
   feature_records_.push_back(
-      FeatureRecord{delta_t, order.induced_imbalance, resolved});
+      FeatureRecord{
+          delta_t, 
+          order.induced_imbalance, 
+          resolved
+      });
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {

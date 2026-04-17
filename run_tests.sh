@@ -50,7 +50,6 @@ echo "Generating coverage report..."
 lcov --capture \
      --directory build \
      --output-file "$LCOV_INFO" \
-     --ignore-errors mismatch \
      --quiet
 
 # Strip external headers (system, Eigen, Catch2, matplot, etc.)
@@ -59,7 +58,6 @@ lcov --remove "$LCOV_INFO" \
      '*/build/_deps/*' \
      '*/tests/*' \
      --output-file "$LCOV_INFO" \
-     --ignore-errors unused \
      --quiet
 
 # Generate HTML

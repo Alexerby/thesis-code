@@ -1,6 +1,7 @@
 #include "data/book.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 #include "core/logging.hpp"
 #include "databento/pretty.hpp"
@@ -60,8 +61,7 @@ uint32_t Book::GetQueuePos(uint64_t order_id) {
   if (order_it == orders_by_id_.end()) {
     throw std::invalid_argument{"No order with ID " + std::to_string(order_id)};
   }
-  const auto &level_it =
-      GetLevel(order_it->second.side, order_it->second.price);
+  const auto &level_it = GetLevel(order_it->second.side, order_it->second.price);
   uint32_t prior_size = 0;
   for (const auto &order : level_it) {
     if (order.order_id == order_id) break;
@@ -288,4 +288,38 @@ Book::LevelOrders &Book::GetOrInsertLevel(Side side, int64_t price) {
 
 void Book::RemoveLevel(Side side, int64_t price) {
   GetSideLevels(side).erase(price);
+}
+
+uint32_t Book::GetVolumeAhead(uint64_t order_id) {
+
+  // Find order
+  auto order_it = orders_by_id_.find(order_id);
+  if (order_it == orders_by_id_.end()) {
+    throw std::invalid_argument{"No order with ID " + std::to_string(order_id)};
+  }
+
+  uint32_t volume_ahead = 0;
+  int64_t price = order_it->second.price;
+
+  // Iterator up until upper bound, then add upp cumulative sum
+  // of order up until that point. 
+  if (order_it->second.side == Side::Bid) {
+    auto it = bids_.upper_bound(price);
+    while (it != bids_.end()) {
+      for (const auto &order : it->second)
+        volume_ahead += order.size;
+      ++it;
+    }
+  } else {
+    auto end = offers_.lower_bound(price);
+    for (auto it = offers_.begin(); it != end; ++it) {
+      for (const auto &order : it->second)
+        volume_ahead += order.size;
+    }
+  }
+
+  // Handle orders at same price level as order_id
+  volume_ahead += GetQueuePos(order_id);
+
+  return volume_ahead;
 }

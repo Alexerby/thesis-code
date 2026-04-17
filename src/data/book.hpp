@@ -69,6 +69,33 @@ class Book {
   uint32_t GetQueuePos(uint64_t order_id);
 
   /**
+   * @brief Calculates total volume between this order and the BBO.
+   *
+   * @details
+   * For a bid order at price P, "ahead" means closer to the best bid, i.e.
+   * higher prices. For an ask order at price P, "ahead" means lower prices.
+   *
+   * The result is the sum of two parts:
+   *   1. All volume at price levels strictly between P and the BBO
+   *      (cross-level sum).
+   *   2. Volume at price level P that arrived before this order
+   *      (intra-level queue position via GetQueuePos).
+   *
+   * Example for a bid order at price 100:
+   * @code
+   *   price 103 → [X, Y]      ← BBO
+   *   price 102 → [Z]         ┐
+   *   price 101 → [A, B]      ┘ summed in part 1
+   *   price 100 → [C, D, YOU] ← C and D summed in part 2
+   *   price  99 → [E]         ← ignored (behind your order)
+   * @endcode
+   *
+   * @param order_id The exchange-assigned order identifier.
+   * @return Total volume ahead of this order.
+   */
+  uint32_t GetVolumeAhead(uint64_t order_id);
+
+  /**
    * @brief Generates a flat vector of price-level pairs up to N depth.
    * @param level_count Number of levels to include from each side.
    * @return A vector of BidAskPair objects.
