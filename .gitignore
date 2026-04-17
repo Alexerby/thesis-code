@@ -20,3 +20,4 @@ active_orders.csv
 # Coverage report
 coverage.info
 coverage_report/*
+docs/

@@ -62,18 +62,54 @@ struct FitOptions {
 /**
  * @class GMM
  * @brief Fits a two-component Gaussian Mixture Model via the EM algorithm.
+ *
+ * @details
+ * The model assumes each observation \f$ x_i \f$ is drawn from
+ * \f[
+ *   p(x_i \mid \theta) = \pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)
+ *                      + (1-\pi) \, \mathcal{N}(x_i \mid \mu_2, \Sigma_2),
+ * \f]
+ * where component 1 is the **strategic** (fast-cancel) cluster and
+ * component 2 is the **reactive** cluster.
+ * Parameters \f$ \theta = \{\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2\} \f$ are
+ * estimated by maximum likelihood via the EM algorithm (Dempster et al. 1977).
  */
 class GMM {
  public:
   /**
-   * @brief Runs the EM algorithm on a set of D-dimensional observations.
+   * @brief Runs the EM algorithm on \f$ N \f$ observations of dimension
+   *        \f$ D \f$.
    *
-   * Initialises by sorting on the first feature and assigning the bottom 20%
-   * to component 1 (the fast-cancel / strategic region).
+   * @details
+   * **Initialisation** — observations are sorted on the first feature;
+   * the bottom 20 % are assigned to component 1 (strategic).
    *
-   * @param data  N observations, each a D-dimensional Eigen vector.
-   * @param opts  Tuning parameters (max iterations, tolerance, regularisation).
-   * @return      GMMResult containing fitted parameters and responsibilities.
+   * **E-step** — compute the posterior responsibility of component 1 for
+   * each observation:
+   * \f[
+   *   r_i = \frac{\pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)}
+   *              {\pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)
+   *               + (1-\pi) \, \mathcal{N}(x_i \mid \mu_2, \Sigma_2)}.
+   * \f]
+   * If `opts.fixed_reactive[i]` is true the responsibility is clamped to
+   * \f$ r_i = 0 \f$.
+   *
+   * **M-step** — update parameters using the soft counts
+   * \f$ N_k = \sum_i r_i^{(k)} \f$:
+   * \f[
+   *   \hat\pi = \frac{N_1}{N}, \quad
+   *   \hat\mu_k = \frac{1}{N_k}\sum_i r_i^{(k)} x_i, \quad
+   *   \hat\Sigma_k = \frac{1}{N_k}\sum_i r_i^{(k)}(x_i-\hat\mu_k)(x_i-\hat\mu_k)^\top + \lambda I,
+   * \f]
+   * where \f$ \lambda \f$ = `opts.reg` is a ridge term preventing singularity.
+   *
+   * Iteration stops when \f$ |\ell^{(t)} - \ell^{(t-1)}| < \texttt{tol} \f$
+   * or `max_iter` is reached.
+   *
+   * @param data  \f$ N \f$ observations, each a \f$ D \f$-dimensional vector.
+   * @param opts  Tuning parameters (iterations, tolerance, regularisation).
+   * @return      GMMResult with fitted \f$\theta\f$, responsibilities, and
+   *              \f$\hat\pi_{\text{spoof}} = \frac{1}{N}\sum_i r_i\f$.
    */
   GMMResult Fit(const std::vector<Eigen::VectorXd> &data,
                 const FitOptions &opts = FitOptions{}) const;
@@ -90,15 +126,22 @@ class GMM {
       const std::vector<int> &feature_indices);
 
   /**
-   * @brief Z-score standardises data in-place (zero mean, unit variance).
+   * @brief Z-score standardises data in-place to zero mean and unit variance.
    *
-   * Should be called on the output of ToEigen() before Fit() to prevent
-   * features with large absolute values from dominating the covariance.
+   * @details
+   * For each feature dimension \f$ d \f$:
+   * \f[
+   *   x_i^{(d)} \leftarrow \frac{x_i^{(d)} - \bar{x}^{(d)}}{\sigma^{(d)}},
+   * \f]
+   * where \f$\bar x^{(d)}\f$ and \f$\sigma^{(d)}\f$ are the sample mean and
+   * standard deviation over all \f$N\f$ observations.
+   * This prevents features with large absolute values from dominating the
+   * covariance structure.
    *
    * @param data  Data to standardise (modified in-place).
-   * @return      Pair of {mean, std_dev} vectors for each feature dimension,
-   *              which can be used to back-transform the fitted means if
-   * needed.
+   * @return      \f$(\bar x,\, \sigma)\f$ vectors so fitted means can be
+   *              back-transformed via \f$\hat\mu_k^{(d)} \cdot \sigma^{(d)}
+   *              + \bar x^{(d)}\f$ if needed.
    */
   static std::pair<Eigen::VectorXd, Eigen::VectorXd> Standardize(
       std::vector<Eigen::VectorXd> &data);
@@ -109,8 +152,25 @@ class GMM {
 
  private:
   /**
-   * @brief Evaluates log N(x | \mu, \Sigma) using a precomputed inverse and
-   *        log-determinant.
+   * @brief Evaluates \f$\log \mathcal{N}(x \mid \mu, \Sigma)\f$ using a
+   *        precomputed inverse and log-determinant.
+   *
+   * @details
+   * \f[
+   *   \log \mathcal{N}(x \mid \mu, \Sigma)
+   *     = -\tfrac{1}{2}\bigl[D\log 2\pi
+   *       + \log|\Sigma|
+   *       + (x-\mu)^\top \Sigma^{-1}(x-\mu)\bigr].
+   * \f]
+   * \f$\Sigma^{-1}\f$ and \f$\log|\Sigma|\f$ are passed in pre-computed
+   * (via LDLT decomposition) so the M-step can reuse them across all \f$N\f$
+   * observations without redundant factorisations.
+   *
+   * @param x        Observation vector \f$x \in \mathbb{R}^D\f$.
+   * @param mu       Component mean \f$\mu\f$.
+   * @param sigma_inv Precomputed \f$\Sigma^{-1}\f$.
+   * @param log_det  Precomputed \f$\log|\Sigma|\f$.
+   * @return         Scalar log-density.
    */
   static double LogGaussianPdf(const Eigen::VectorXd &x,
                                const Eigen::VectorXd &mu,
@@ -118,8 +178,27 @@ class GMM {
                                double log_det);
 
   /**
-   * @brief Evaluates the observed-data log-likelihood log L(\theta) using
-   *        precomputed inverses and log-determinants for both components.
+   * @brief Evaluates the observed-data log-likelihood
+   *        \f$\ell(\theta) = \sum_i \log p(x_i \mid \theta)\f$.
+   *
+   * @details
+   * \f[
+   *   \ell(\theta) = \sum_{i=1}^{N}
+   *     \log\!\Bigl[
+   *       \pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)
+   *       + (1-\pi) \, \mathcal{N}(x_i \mid \mu_2, \Sigma_2)
+   *     \Bigr].
+   * \f]
+   * The log-sum-exp is evaluated directly (no further numerical stabilisation
+   * is applied beyond the precomputed LDLT inverses).
+   *
+   * @param data  Observations.
+   * @param p     Current parameter estimates.
+   * @param s1_inv Precomputed \f$\Sigma_1^{-1}\f$.
+   * @param ld1   Precomputed \f$\log|\Sigma_1|\f$.
+   * @param s2_inv Precomputed \f$\Sigma_2^{-1}\f$.
+   * @param ld2   Precomputed \f$\log|\Sigma_2|\f$.
+   * @return      Scalar \f$\ell(\theta)\f$.
    */
   static double LogLikelihood(const std::vector<Eigen::VectorXd> &data,
                               const GMMParams &p, const Eigen::MatrixXd &s1_inv,

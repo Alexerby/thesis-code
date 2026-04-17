@@ -11,28 +11,31 @@
 #include <numeric>
 #include <stdexcept>
 
-double GMM::LogGaussianPdf(const Eigen::VectorXd &x, const Eigen::VectorXd &mu,
-                           const Eigen::MatrixXd &sigma_inv, double log_det) {
-  // log N(x | \mu, \Sigma) = -1/2 [ D log(2\pi) + log|\Sigma| + (x-\mu)^T
+using Eigen::VectorXd;
+using Eigen::MatrixXd;
+using Eigen::LDLT;
+
+double GMM::LogGaussianPdf(const VectorXd &x, const VectorXd &mu,
+                           const MatrixXd &sigma_inv, double log_det) {
+  // log N(x | \mu, \Sigma) = -1/2 [ n log(2\pi) + log|\Sigma| + (x-\mu)^T
   // \Sigma^{-1} (x-\mu) ]
-  int D = static_cast<int>(x.size());  // number of features
-  Eigen::VectorXd diff = x - mu;  // (x_i - \mu): deviation from component mean
-  double mahal = diff.transpose() * sigma_inv *
-                 diff;  // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
-  return -0.5 * (D * std::log(2.0 * M_PI)  // normalisation constant
+  int n = static_cast<int>(x.size());  // number of features
+  VectorXd x_bar = x - mu;  // (x_i - \mu): deviation from component mean
+  double mahal = x_bar.transpose() * sigma_inv *
+                 x_bar;  // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
+  return -0.5 * (n * std::log(2.0 * M_PI)  // normalisation constant
                  + log_det                 // log|\Sigma|: precomputed from LDLT
                  + mahal);                 // Mahalanobis distance
 }
 
-double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
-                          const GMMParams &p, const Eigen::MatrixXd &s1_inv,
-                          double ld1, const Eigen::MatrixXd &s2_inv,
+double GMM::LogLikelihood(const std::vector<VectorXd> &data,
+                          const GMMParams &p, const MatrixXd &s1_inv,
+                          double ld1, const MatrixXd &s2_inv,
                           double ld2) {
   double ll = 0.0;
   for (const auto &x : data) {
     double log_p1 = std::log(p.pi) + LogGaussianPdf(x, p.mu1, s1_inv, ld1);
-    double log_p2 =
-        std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
+    double log_p2 = std::log(1.0 - p.pi) + LogGaussianPdf(x, p.mu2, s2_inv, ld2);
     // log-sum-exp for numerical stability
     double log_max = std::max(log_p1, log_p2);
     ll += log_max +
@@ -41,16 +44,16 @@ double GMM::LogLikelihood(const std::vector<Eigen::VectorXd> &data,
   return ll;
 }
 
-std::vector<Eigen::VectorXd> GMM::ToEigen(
+std::vector<VectorXd> GMM::ToEigen(
     const std::vector<FeatureRecord> &records,
     const std::vector<int> &feature_indices) {
-  std::vector<Eigen::VectorXd> out;
+  std::vector<VectorXd> out;
   out.reserve(records.size());
 
   int D = static_cast<int>(feature_indices.size());
   for (const auto &r : records) {
     const double all[2] = {r.delta_t, r.induced_imbalance};
-    Eigen::VectorXd v(D);
+    VectorXd v(D);
     for (int j = 0; j < D; ++j) {
       v[j] = all[feature_indices[j]];
     }
@@ -59,26 +62,26 @@ std::vector<Eigen::VectorXd> GMM::ToEigen(
   return out;
 }
 
-std::pair<Eigen::VectorXd, Eigen::VectorXd> GMM::Standardize(
-    std::vector<Eigen::VectorXd> &data) {
+std::pair<VectorXd, VectorXd> GMM::Standardize(
+    std::vector<VectorXd> &data) {
   if (data.empty()) {
     throw std::runtime_error("GMM::Standardize: empty dataset.");
   }
   int D = static_cast<int>(data[0].size());
   int N = static_cast<int>(data.size());
 
-  Eigen::VectorXd mean = Eigen::VectorXd::Zero(D);
+  VectorXd mean = VectorXd::Zero(D);
   for (const auto &x : data) mean += x;
   mean /= N;
 
-  Eigen::VectorXd var = Eigen::VectorXd::Zero(D);
+  VectorXd var = VectorXd::Zero(D);
   for (const auto &x : data) {
-    Eigen::VectorXd diff = x - mean;
+    VectorXd diff = x - mean;
     var += diff.cwiseProduct(diff);
   }
   var /= N;
 
-  Eigen::VectorXd std_dev = var.cwiseSqrt();
+  VectorXd std_dev = var.cwiseSqrt();
   // Guard against zero-variance features
   for (int j = 0; j < D; ++j) {
     if (std_dev[j] < 1e-12) std_dev[j] = 1.0;
@@ -91,7 +94,7 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> GMM::Standardize(
   return {mean, std_dev};
 }
 
-GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
+GMMResult GMM::Fit(const std::vector<VectorXd> &data,
                    const FitOptions &opts) const {
   const int N = static_cast<int>(data.size());
   if (N < 2) {
@@ -111,10 +114,10 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
 
   GMMParams p;
   p.pi = static_cast<double>(split) / N;
-  p.mu1 = Eigen::VectorXd::Zero(D);
-  p.mu2 = Eigen::VectorXd::Zero(D);
-  p.sigma1 = Eigen::MatrixXd::Identity(D, D);
-  p.sigma2 = Eigen::MatrixXd::Identity(D, D);
+  p.mu1 = VectorXd::Zero(D);
+  p.mu2 = VectorXd::Zero(D);
+  p.sigma1 = MatrixXd::Identity(D, D);
+  p.sigma2 = MatrixXd::Identity(D, D);
 
   for (int i = 0; i < split; ++i) p.mu1 += data[idx[i]];
   for (int i = split; i < N; ++i) p.mu2 += data[idx[i]];
@@ -122,16 +125,16 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
   p.mu2 /= (N - split);
 
   for (int i = 0; i < split; ++i) {
-    Eigen::VectorXd d = data[idx[i]] - p.mu1;
+    VectorXd d = data[idx[i]] - p.mu1;
     p.sigma1 += d * d.transpose();
   }
   for (int i = split; i < N; ++i) {
-    Eigen::VectorXd d = data[idx[i]] - p.mu2;
+    VectorXd d = data[idx[i]] - p.mu2;
     p.sigma2 += d * d.transpose();
   }
-  p.sigma1 = p.sigma1 / split + opts.reg * Eigen::MatrixXd::Identity(D, D);
+  p.sigma1 = p.sigma1 / split + opts.reg * MatrixXd::Identity(D, D);
   p.sigma2 =
-      p.sigma2 / (N - split) + opts.reg * Eigen::MatrixXd::Identity(D, D);
+      p.sigma2 / (N - split) + opts.reg * MatrixXd::Identity(D, D);
 
   // --- EM loop ---
   std::vector<double> r(N, 0.0);
@@ -140,19 +143,19 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
 
   for (; iter < opts.max_iter; ++iter) {
     // Precompute \Sigma^{-1} and log|\Sigma| via LDLT decomposition
-    Eigen::LDLT<Eigen::MatrixXd> ldlt1(p.sigma1);
-    Eigen::LDLT<Eigen::MatrixXd> ldlt2(p.sigma2);
+    LDLT<MatrixXd> ldlt1(p.sigma1);
+    LDLT<MatrixXd> ldlt2(p.sigma2);
 
     if (ldlt1.info() != Eigen::Success || ldlt2.info() != Eigen::Success) {
       std::cerr << "GMM: covariance not positive-definite at iteration " << iter
                 << ". Increasing regularisation.\n";
-      p.sigma1 += opts.reg * Eigen::MatrixXd::Identity(D, D);
-      p.sigma2 += opts.reg * Eigen::MatrixXd::Identity(D, D);
+      p.sigma1 += opts.reg * MatrixXd::Identity(D, D);
+      p.sigma2 += opts.reg * MatrixXd::Identity(D, D);
       continue;
     }
 
-    Eigen::MatrixXd s1_inv = ldlt1.solve(Eigen::MatrixXd::Identity(D, D));
-    Eigen::MatrixXd s2_inv = ldlt2.solve(Eigen::MatrixXd::Identity(D, D));
+    MatrixXd s1_inv = ldlt1.solve(MatrixXd::Identity(D, D));
+    MatrixXd s2_inv = ldlt2.solve(MatrixXd::Identity(D, D));
     // log|\Sigma| = sum of logs of the diagonal of D in the LDLT factorisation
     double ld1 = ldlt1.vectorD().array().log().sum();
     double ld2 = ldlt2.vectorD().array().log().sum();
@@ -197,8 +200,8 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
 
     p.pi = std::clamp(sum_r1 / N, 1e-6, 1.0 - 1e-6);
 
-    Eigen::VectorXd mu1_new = Eigen::VectorXd::Zero(D);
-    Eigen::VectorXd mu2_new = Eigen::VectorXd::Zero(D);
+    VectorXd mu1_new = VectorXd::Zero(D);
+    VectorXd mu2_new = VectorXd::Zero(D);
     for (int i = 0; i < N; ++i) {
       mu1_new += r[i] * data[i];
       mu2_new += (1.0 - r[i]) * data[i];
@@ -206,11 +209,11 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
     p.mu1 = mu1_new / sum_r1;
     p.mu2 = mu2_new / sum_r2;
 
-    Eigen::MatrixXd s1_new = opts.reg * Eigen::MatrixXd::Identity(D, D);
-    Eigen::MatrixXd s2_new = opts.reg * Eigen::MatrixXd::Identity(D, D);
+    MatrixXd s1_new = opts.reg * MatrixXd::Identity(D, D);
+    MatrixXd s2_new = opts.reg * MatrixXd::Identity(D, D);
     for (int i = 0; i < N; ++i) {
-      Eigen::VectorXd d1 = data[i] - p.mu1;
-      Eigen::VectorXd d2 = data[i] - p.mu2;
+      VectorXd d1 = data[i] - p.mu1;
+      VectorXd d2 = data[i] - p.mu2;
       s1_new += r[i] * (d1 * d1.transpose());
       s2_new += (1.0 - r[i]) * (d2 * d2.transpose());
     }
@@ -218,9 +221,9 @@ GMMResult GMM::Fit(const std::vector<Eigen::VectorXd> &data,
     p.sigma2 = s2_new / sum_r2;
 
     // Convergence check: |log L(\theta^{(p+1)}) - log L(\theta^{(p)})| < tol
-    Eigen::LDLT<Eigen::MatrixXd> c1(p.sigma1), c2(p.sigma2);
-    Eigen::MatrixXd cs1_inv = c1.solve(Eigen::MatrixXd::Identity(D, D));
-    Eigen::MatrixXd cs2_inv = c2.solve(Eigen::MatrixXd::Identity(D, D));
+    LDLT<MatrixXd> c1(p.sigma1), c2(p.sigma2);
+    MatrixXd cs1_inv = c1.solve(MatrixXd::Identity(D, D));
+    MatrixXd cs2_inv = c2.solve(MatrixXd::Identity(D, D));
     double cld1 = c1.vectorD().array().log().sum();
     double cld2 = c2.vectorD().array().log().sum();
 
