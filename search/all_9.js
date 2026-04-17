@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['kfeaturenames_0',['kFeatureNames',['../classGMM.html#a91275168271568598e3d7c1f38d325bb',1,'GMM']]],
+  ['kfeatures_0',['kFeatures',['../order__tracker_8hpp.html#a00619b5125684fcb35deb7cf5c829a82',1,'order_tracker.hpp']]],
   ['kmaxorderevents_1',['kMaxOrderEvents',['../classReplayController.html#a941ff8899e4bbeb169100b2ce8644e0b',1,'ReplayController']]],
-  ['kmaxspreadhistory_2',['kMaxSpreadHistory',['../classReplayController.html#ae024145d609f947d1e4ef73c7ae4bce8',1,'ReplayController']]]
+  ['kmaxspreadhistory_2',['kMaxSpreadHistory',['../classReplayController.html#ae024145d609f947d1e4ef73c7ae4bce8',1,'ReplayController']]],
+  ['kmeansinit_3',['KMeansInit',['../classGMM.html#a80bd9b9a9c8e870716322b7fa4ce117c',1,'GMM']]]
 ];

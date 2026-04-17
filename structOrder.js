@@ -8,5 +8,6 @@ var structOrder =
     [ "side", "structOrder.html#a8ec831878ee418ae726b8894aeebfcdb", null ],
     [ "size", "structOrder.html#afe908a32dd5304486facc73c680fc220", null ],
     [ "total_filled", "structOrder.html#a58e195e86d561597c4b2dcb3e20ca651", null ],
-    [ "ts_event_add", "structOrder.html#ae0f33d1f0e3310a5473b8841335e5c2f", null ]
+    [ "ts_event_add", "structOrder.html#ae0f33d1f0e3310a5473b8841335e5c2f", null ],
+    [ "volume_ahead", "structOrder.html#a73f69ceb32e13e8e131621797392408a", null ]
 ];

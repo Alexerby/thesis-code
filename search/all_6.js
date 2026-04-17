@@ -27,11 +27,12 @@ var searchData=
   ['getspreadhistory_24',['GetSpreadHistory',['../classReplayController.html#ac35dd16ff3af623bc51ff3956dae6f25',1,'ReplayController']]],
   ['getsymbolmap_25',['GetSymbolMap',['../classReplayEngine.html#ab12415a108eb47df7b82f33c0924f33c',1,'ReplayEngine']]],
   ['gettotaltradevolume_26',['GetTotalTradeVolume',['../classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9',1,'Book']]],
-  ['gmm_27',['GMM',['../classGMM.html',1,'']]],
-  ['gmm_2ecpp_28',['gmm.cpp',['../gmm_8cpp.html',1,'']]],
-  ['gmm_2ehpp_29',['gmm.hpp',['../gmm_8hpp.html',1,'']]],
-  ['gmmparams_30',['GMMParams',['../structGMMParams.html',1,'']]],
-  ['gmmresult_31',['GMMResult',['../structGMMResult.html',1,'']]],
-  ['gui_5fapplication_2ecpp_32',['gui_application.cpp',['../gui__application_8cpp.html',1,'']]],
-  ['gui_5fapplication_2ehpp_33',['gui_application.hpp',['../gui__application_8hpp.html',1,'']]]
+  ['getvolumeahead_27',['getvolumeahead',['../classBook.html#aa9ecf1e194bed13a5219a8617da58670',1,'Book::GetVolumeAhead()'],['../classMarket.html#a0885a207097ecceba19f59de0008066c',1,'Market::GetVolumeAhead()']]],
+  ['gmm_28',['GMM',['../classGMM.html',1,'']]],
+  ['gmm_2ecpp_29',['gmm.cpp',['../gmm_8cpp.html',1,'']]],
+  ['gmm_2ehpp_30',['gmm.hpp',['../gmm_8hpp.html',1,'']]],
+  ['gmmparams_31',['GMMParams',['../structGMMParams.html',1,'']]],
+  ['gmmresult_32',['GMMResult',['../structGMMResult.html',1,'']]],
+  ['gui_5fapplication_2ecpp_33',['gui_application.cpp',['../gui__application_8cpp.html',1,'']]],
+  ['gui_5fapplication_2ehpp_34',['gui_application.hpp',['../gui__application_8hpp.html',1,'']]]
 ];

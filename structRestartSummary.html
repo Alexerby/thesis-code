@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Thesis - Alexander Eriksson Byström: FitOptions Struct Reference</title>
+<title>Thesis - Alexander Eriksson Byström: RestartSummary Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -70,7 +70,7 @@ $(function() {
 </div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(document).ready(function(){initNavTree('structFitOptions.html',''); initResizable(); });
+$(document).ready(function(){initNavTree('structRestartSummary.html',''); initResizable(); });
 /* @license-end */
 </script>
 <div id="doc-content">
@@ -98,109 +98,83 @@ $(document).ready(function(){initNavTree('structFitOptions.html',''); initResiza
 <div class="header">
   <div class="summary">
 <a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="structFitOptions-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">FitOptions Struct Reference</div></div>
+<a href="structRestartSummary-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">RestartSummary Struct Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Tuning parameters for the EM algorithm.  
- <a href="structFitOptions.html#details">More...</a></p>
+<p>Per-restart diagnostics from a <a class="el" href="classGMM.html#a992078d78508dd35ab57e2e324ecbe60" title="Runs the EM algorithm on  observations of dimension .">GMM::Fit()</a> call.  
+ <a href="structRestartSummary.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="gmm_8hpp_source.html">gmm.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a8a86a1a809641cf8c14982ade1e8fa40" id="r_a8a86a1a809641cf8c14982ade1e8fa40"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFitOptions.html#a8a86a1a809641cf8c14982ade1e8fa40">max_iter</a> = 300</td></tr>
-<tr class="separator:a8a86a1a809641cf8c14982ade1e8fa40"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e582094e3efbe182797e5918ff85ee6" id="r_a1e582094e3efbe182797e5918ff85ee6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFitOptions.html#a1e582094e3efbe182797e5918ff85ee6">tol</a> = 1e-6</td></tr>
-<tr class="memdesc:a1e582094e3efbe182797e5918ff85ee6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convergence threshold on log-likelihood change.  <br /></td></tr>
-<tr class="separator:a1e582094e3efbe182797e5918ff85ee6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ada001d84416fdfd3107cef833956cc13" id="r_ada001d84416fdfd3107cef833956cc13"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFitOptions.html#ada001d84416fdfd3107cef833956cc13">reg</a> = 1e-6</td></tr>
-<tr class="memdesc:ada001d84416fdfd3107cef833956cc13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ridge added to \Sigma diagonal to prevent singularity.  <br /></td></tr>
-<tr class="separator:ada001d84416fdfd3107cef833956cc13"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d5ee6cfead63c8eb4713f5098c7b910" id="r_a9d5ee6cfead63c8eb4713f5098c7b910"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFitOptions.html#a9d5ee6cfead63c8eb4713f5098c7b910">n_init</a> = 10</td></tr>
-<tr class="memdesc:a9d5ee6cfead63c8eb4713f5098c7b910"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of K-means restarts; best log-likelihood is kept.  <br /></td></tr>
-<tr class="separator:a9d5ee6cfead63c8eb4713f5098c7b910"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a581ecaa6c4d97775e740efb89213cdf8" id="r_a581ecaa6c4d97775e740efb89213cdf8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFitOptions.html#a581ecaa6c4d97775e740efb89213cdf8">fixed_lc</a></td></tr>
-<tr class="separator:a581ecaa6c4d97775e740efb89213cdf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a4fbc67054fa26f9be0ed3ccc8b3c25" id="r_a5a4fbc67054fa26f9be0ed3ccc8b3c25"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structRestartSummary.html#a5a4fbc67054fa26f9be0ed3ccc8b3c25">restart</a></td></tr>
+<tr class="separator:a5a4fbc67054fa26f9be0ed3ccc8b3c25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae41f4584c1d9d8554d9f623b6f2125d9" id="r_ae41f4584c1d9d8554d9f623b6f2125d9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structRestartSummary.html#ae41f4584c1d9d8554d9f623b6f2125d9">log_likelihood</a></td></tr>
+<tr class="separator:ae41f4584c1d9d8554d9f623b6f2125d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba99f9ba7145b1e7c76ff5b1b8201a0d" id="r_aba99f9ba7145b1e7c76ff5b1b8201a0d"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structRestartSummary.html#aba99f9ba7145b1e7c76ff5b1b8201a0d">pi_spoof</a></td></tr>
+<tr class="separator:aba99f9ba7145b1e7c76ff5b1b8201a0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39070d9fd2b18882f6a51fa16071fa4b" id="r_a39070d9fd2b18882f6a51fa16071fa4b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structRestartSummary.html#a39070d9fd2b18882f6a51fa16071fa4b">iterations</a></td></tr>
+<tr class="separator:a39070d9fd2b18882f6a51fa16071fa4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Tuning parameters for the EM algorithm. </p>
+<div class="textblock"><p>Per-restart diagnostics from a <a class="el" href="classGMM.html#a992078d78508dd35ab57e2e324ecbe60" title="Runs the EM algorithm on  observations of dimension .">GMM::Fit()</a> call. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
-<a id="a581ecaa6c4d97775e740efb89213cdf8" name="a581ecaa6c4d97775e740efb89213cdf8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a581ecaa6c4d97775e740efb89213cdf8">&#9670;&#160;</a></span>fixed_lc</h2>
+<a id="a39070d9fd2b18882f6a51fa16071fa4b" name="a39070d9fd2b18882f6a51fa16071fa4b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a39070d9fd2b18882f6a51fa16071fa4b">&#9670;&#160;</a></span>iterations</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;bool&gt; FitOptions::fixed_lc</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Optional per-observation constraint. If fixed_lc[i] == true, r_i is forced to 0 in every E-step (observation is known liquidity-consistent). Must be empty or the same length as the data passed to Fit(). </p>
-
-</div>
-</div>
-<a id="a8a86a1a809641cf8c14982ade1e8fa40" name="a8a86a1a809641cf8c14982ade1e8fa40"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8a86a1a809641cf8c14982ade1e8fa40">&#9670;&#160;</a></span>max_iter</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int FitOptions::max_iter = 300</td>
+          <td class="memname">int RestartSummary::iterations</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a9d5ee6cfead63c8eb4713f5098c7b910" name="a9d5ee6cfead63c8eb4713f5098c7b910"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9d5ee6cfead63c8eb4713f5098c7b910">&#9670;&#160;</a></span>n_init</h2>
+<a id="ae41f4584c1d9d8554d9f623b6f2125d9" name="ae41f4584c1d9d8554d9f623b6f2125d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae41f4584c1d9d8554d9f623b6f2125d9">&#9670;&#160;</a></span>log_likelihood</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int FitOptions::n_init = 10</td>
+          <td class="memname">double RestartSummary::log_likelihood</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Number of K-means restarts; best log-likelihood is kept. </p>
-
 </div>
 </div>
-<a id="ada001d84416fdfd3107cef833956cc13" name="ada001d84416fdfd3107cef833956cc13"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ada001d84416fdfd3107cef833956cc13">&#9670;&#160;</a></span>reg</h2>
+<a id="aba99f9ba7145b1e7c76ff5b1b8201a0d" name="aba99f9ba7145b1e7c76ff5b1b8201a0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba99f9ba7145b1e7c76ff5b1b8201a0d">&#9670;&#160;</a></span>pi_spoof</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">double FitOptions::reg = 1e-6</td>
+          <td class="memname">double RestartSummary::pi_spoof</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Ridge added to \Sigma diagonal to prevent singularity. </p>
-
 </div>
 </div>
-<a id="a1e582094e3efbe182797e5918ff85ee6" name="a1e582094e3efbe182797e5918ff85ee6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1e582094e3efbe182797e5918ff85ee6">&#9670;&#160;</a></span>tol</h2>
+<a id="a5a4fbc67054fa26f9be0ed3ccc8b3c25" name="a5a4fbc67054fa26f9be0ed3ccc8b3c25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a4fbc67054fa26f9be0ed3ccc8b3c25">&#9670;&#160;</a></span>restart</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">double FitOptions::tol = 1e-6</td>
+          <td class="memname">int RestartSummary::restart</td>
         </tr>
       </table>
 </div><div class="memdoc">
-
-<p>Convergence threshold on log-likelihood change. </p>
 
 </div>
 </div>
@@ -212,7 +186,7 @@ Public Attributes</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a class="el" href="structFitOptions.html">FitOptions</a></li>
+    <li class="navelem"><a class="el" href="structRestartSummary.html">RestartSummary</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8 </li>
   </ul>
 </div>

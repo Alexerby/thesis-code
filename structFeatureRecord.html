@@ -116,13 +116,15 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a4599b4a07059e202ebbddc8f758fa3aa" id="r_a4599b4a07059e202ebbddc8f758fa3aa"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a4599b4a07059e202ebbddc8f758fa3aa">induced_imbalance</a></td></tr>
 <tr class="memdesc:a4599b4a07059e202ebbddc8f758fa3aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">\Delta \mathcal{I}_i  <br /></td></tr>
 <tr class="separator:a4599b4a07059e202ebbddc8f758fa3aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b5b401e64b4f9e9b18f32aff6aa7efa" id="r_a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a5b5b401e64b4f9e9b18f32aff6aa7efa">volume_ahead</a></td></tr>
+<tr class="memdesc:a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total volume between order and BBO at add-time.  <br /></td></tr>
+<tr class="separator:a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ade2f97e6aa745138d5fea4f52578640f" id="r_ade2f97e6aa745138d5fea4f52578640f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="order__tracker_8hpp.html#a58515bb0dcb14aae4d7e612fd891f49d">CancelType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#ade2f97e6aa745138d5fea4f52578640f">cancel_type</a></td></tr>
 <tr class="memdesc:ade2f97e6aa745138d5fea4f52578640f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pure cancellation or fill-induced cancel.  <br /></td></tr>
 <tr class="separator:ade2f97e6aa745138d5fea4f52578640f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Feature vector x_i for a single order lifecycle. </p>
-<p>Index mapping for use with <a class="el" href="classGMM.html#ac492d4da9196a799aab16d44d5dbd42b" title="Extracts selected feature indices from a FeatureRecord vector.">GMM::ToEigen</a>: 0 = delta_t (\Delta t_i, order age in nanoseconds) </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="ade2f97e6aa745138d5fea4f52578640f" name="ade2f97e6aa745138d5fea4f52578640f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ade2f97e6aa745138d5fea4f52578640f">&#9670;&#160;</a></span>cancel_type</h2>
@@ -169,6 +171,22 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>\Delta \mathcal{I}_i </p>
+
+</div>
+</div>
+<a id="a5b5b401e64b4f9e9b18f32aff6aa7efa" name="a5b5b401e64b4f9e9b18f32aff6aa7efa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b5b401e64b4f9e9b18f32aff6aa7efa">&#9670;&#160;</a></span>volume_ahead</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double FeatureRecord::volume_ahead</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Total volume between order and BBO at add-time. </p>
 
 </div>
 </div>

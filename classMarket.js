@@ -13,6 +13,7 @@ var classMarket =
     [ "GetBooksByPub", "classMarket.html#a463b333212bba10776ec710ea01bac4c", null ],
     [ "GetLastTrade", "classMarket.html#a586ac86d214e2f4c0da3eed22b45ecb3", null ],
     [ "GetSnapshot", "classMarket.html#ae58b2f0eb10190dfb7d29a12b3a744d4", null ],
+    [ "GetVolumeAhead", "classMarket.html#a0885a207097ecceba19f59de0008066c", null ],
     [ "Imbalance", "classMarket.html#ae13a178155cae6d7911d7fb314fed968", null ],
     [ "books_", "classMarket.html#aa8b6d41efffc4f9ca80e0c3c8853c1cc", null ],
     [ "last_imbalances_", "classMarket.html#af99a1a551565c6e66cb819d6c86bc8cb", null ]

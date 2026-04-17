@@ -25,6 +25,7 @@ var classBook =
     [ "GetSideLevels", "classBook.html#a45eaa9e293da92eaec45412a11bf59eb", null ],
     [ "GetSnapshot", "classBook.html#a8c6e97b7a619e9214537c0f31c0f0175", null ],
     [ "GetTotalTradeVolume", "classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9", null ],
+    [ "GetVolumeAhead", "classBook.html#aa9ecf1e194bed13a5219a8617da58670", null ],
     [ "Modify", "classBook.html#a5cd247a8c2b957eddf01678981ebd895", null ],
     [ "RemoveLevel", "classBook.html#ac13ec71d704aadcb395664db397076e1", null ],
     [ "Trade", "classBook.html#a35efc6c6212131723263c6296c42216a", null ],

@@ -141,6 +141,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a159afc3ec436a7bd9d8f78b998a6bc39" id="r_a159afc3ec436a7bd9d8f78b998a6bc39"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a159afc3ec436a7bd9d8f78b998a6bc39">GetQueuePos</a> (uint64_t order_id)</td></tr>
 <tr class="memdesc:a159afc3ec436a7bd9d8f78b998a6bc39"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the quantity of volume ahead of a specific order.  <br /></td></tr>
 <tr class="separator:a159afc3ec436a7bd9d8f78b998a6bc39"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9ecf1e194bed13a5219a8617da58670" id="r_aa9ecf1e194bed13a5219a8617da58670"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#aa9ecf1e194bed13a5219a8617da58670">GetVolumeAhead</a> (uint64_t order_id)</td></tr>
+<tr class="memdesc:aa9ecf1e194bed13a5219a8617da58670"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates total volume between this order and the BBO.  <br /></td></tr>
+<tr class="separator:aa9ecf1e194bed13a5219a8617da58670"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8c6e97b7a619e9214537c0f31c0f0175" id="r_a8c6e97b7a619e9214537c0f31c0f0175"><td class="memItemLeft" align="right" valign="top">std::vector&lt; db::BidAskPair &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a8c6e97b7a619e9214537c0f31c0f0175">GetSnapshot</a> (std::size_t level_count=1) const</td></tr>
 <tr class="memdesc:a8c6e97b7a619e9214537c0f31c0f0175"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a flat vector of price-level pairs up to N depth.  <br /></td></tr>
 <tr class="separator:a8c6e97b7a619e9214537c0f31c0f0175"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -920,6 +923,43 @@ Private Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa9ecf1e194bed13a5219a8617da58670" name="aa9ecf1e194bed13a5219a8617da58670"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9ecf1e194bed13a5219a8617da58670">&#9670;&#160;</a></span>GetVolumeAhead()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Book::GetVolumeAhead </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>order_id</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculates total volume between this order and the BBO. </p>
+<p>For a bid order at price P, "ahead" means closer to the best bid, i.e. higher prices. For an ask order at price P, "ahead" means lower prices.</p>
+<p>The result is the sum of two parts:</p><ol type="1">
+<li>All volume at price levels strictly between P and the BBO (cross-level sum).</li>
+<li>Volume at price level P that arrived before this order (intra-level queue position via GetQueuePos).</li>
+</ol>
+<p>Example for a bid order at price 100: </p><div class="fragment"><div class="line">price 103 → [X, Y]      ← BBO</div>
+<div class="line">price 102 → [Z]         ┐</div>
+<div class="line">price 101 → [A, B]      ┘ summed in part 1</div>
+<div class="line">price 100 → [C, D, YOU] ← C and D summed in part 2</div>
+<div class="line">price  99 → [E]         ← ignored (behind your order)</div>
+</div><!-- fragment --><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">order_id</td><td>The exchange-assigned order identifier. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Total volume ahead of this order. </dd></dl>
 
 </div>
 </div>

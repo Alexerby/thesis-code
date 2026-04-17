@@ -115,6 +115,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structGMMParams.html">GMMParams</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Estimated parameters \theta = {\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2}.  <a href="structGMMParams.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structRestartSummary.html">RestartSummary</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Per-restart diagnostics from a <a class="el" href="classGMM.html#a992078d78508dd35ab57e2e324ecbe60" title="Runs the EM algorithm on  observations of dimension .">GMM::Fit()</a> call.  <a href="structRestartSummary.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structGMMResult.html">GMMResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output of a single <a class="el" href="classGMM.html#a992078d78508dd35ab57e2e324ecbe60" title="Runs the EM algorithm on  observations of dimension .">GMM::Fit()</a> call.  <a href="structGMMResult.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -127,7 +130,7 @@ Classes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Two-component Gaussian Mixture Model fitted via the EM algorithm. </p>
-<p>Implements the unsupervised identification strategy from the empirical chapter. The population of cancelled orders is modelled as a mixture of two multivariate Gaussians — a strategic component and a reactive component — whose parameters \theta = {\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2} are estimated by maximum likelihood via Expectation Maximisation (Dempster 1977). </p>
+<p>Implements the unsupervised identification strategy from the empirical chapter. The population of cancelled orders is modelled as a mixture of two multivariate Gaussians — an anomalous component and a liquidity-consistent component — whose parameters \theta = {\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2} are estimated by maximum likelihood via Expectation Maximisation (Dempster 1977). </p>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

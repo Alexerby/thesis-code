@@ -8,5 +8,6 @@ var searchData=
   ['error_5',['ERROR',['../logging_8hpp.html#aca1fd1d8935433e6ba2e3918214e07f9a2fd6f336d08340583bd620a7f5694c90',1,'logging.hpp']]],
   ['exists_6',['Exists',['../classCSVWriter.html#adcd96fd07aa0db2926e1729d4b85452f',1,'CSVWriter']]],
   ['expiry_5fqueue_5f_7',['expiry_queue_',['../classOrderTracker.html#a3a4e9e5957a7a2d397ccb77697a14183',1,'OrderTracker']]],
-  ['expiryqueue_8',['ExpiryQueue',['../classOrderTracker.html#a36a88c725d46c667861d1d552b1d2f60',1,'OrderTracker']]]
+  ['expiryqueue_8',['ExpiryQueue',['../classOrderTracker.html#a36a88c725d46c667861d1d552b1d2f60',1,'OrderTracker']]],
+  ['extract_9',['extract',['../structFeatureDef.html#ae07deaa4086ac52aa8750179619456ff',1,'FeatureDef']]]
 ];

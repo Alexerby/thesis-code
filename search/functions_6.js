@@ -26,5 +26,6 @@ var searchData=
   ['getspeed_23',['GetSpeed',['../classReplayController.html#a70ed504e5387eaabd9d9ee042113f454',1,'ReplayController']]],
   ['getspreadhistory_24',['GetSpreadHistory',['../classReplayController.html#ac35dd16ff3af623bc51ff3956dae6f25',1,'ReplayController']]],
   ['getsymbolmap_25',['GetSymbolMap',['../classReplayEngine.html#ab12415a108eb47df7b82f33c0924f33c',1,'ReplayEngine']]],
-  ['gettotaltradevolume_26',['GetTotalTradeVolume',['../classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9',1,'Book']]]
+  ['gettotaltradevolume_26',['GetTotalTradeVolume',['../classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9',1,'Book']]],
+  ['getvolumeahead_27',['getvolumeahead',['../classBook.html#aa9ecf1e194bed13a5219a8617da58670',1,'Book::GetVolumeAhead()'],['../classMarket.html#a0885a207097ecceba19f59de0008066c',1,'Market::GetVolumeAhead()']]]
 ];

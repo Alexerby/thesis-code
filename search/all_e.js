@@ -6,7 +6,7 @@ var searchData=
   ['pending_5fvolume_5fmap_5f_3',['pending_volume_map_',['../classOrderTracker.html#abbafbf133d53b6bd4db6ab32407f8669',1,'OrderTracker']]],
   ['pendingvolumemap_4',['PendingVolumeMap',['../classOrderTracker.html#a7115b901140b944ce344f676d0f27fd2',1,'OrderTracker']]],
   ['pi_5',['pi',['../structGMMParams.html#a96cb6605e40c5e9109c4657ae65d19de',1,'GMMParams']]],
-  ['pi_5fspoof_6',['pi_spoof',['../structGMMResult.html#ab1e538465abf73bbadba4eb92d27b329',1,'GMMResult']]],
+  ['pi_5fspoof_6',['pi_spoof',['../structRestartSummary.html#aba99f9ba7145b1e7c76ff5b1b8201a0d',1,'RestartSummary::pi_spoof'],['../structGMMResult.html#ab1e538465abf73bbadba4eb92d27b329',1,'GMMResult::pi_spoof']]],
   ['playbackstate_7',['PlaybackState',['../replay__controller_8hpp.html#ae777c4083532155b0f63774284124497',1,'replay_controller.hpp']]],
   ['playing_8',['Playing',['../replay__controller_8hpp.html#ae777c4083532155b0f63774284124497ac9dbb2b7c84159b632d71e512eba8428',1,'replay_controller.hpp']]],
   ['pre_5fask_9',['pre_ask',['../structSpreadPoint.html#afa9a2eebc652c06f7268921aba0000b1',1,'SpreadPoint']]],

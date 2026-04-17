@@ -1,6 +1,8 @@
 var searchData=
 [
-  ['main_0',['main',['../main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main.cpp']]],
-  ['market_1',['Market',['../classMarket.html#a7b678beab2a684fac89dd6df04f88ea9',1,'Market']]],
-  ['modify_2',['modify',['../classBook.html#a5cd247a8c2b957eddf01678981ebd895',1,'Book::Modify()'],['../classOrderTracker.html#a79f39fe9619013bed7ec1be96715dd98',1,'OrderTracker::Modify()']]]
+  ['leveltostring_0',['levelToString',['../classLogger.html#acfb794ab842c63396ad1c6a771f43483',1,'Logger']]],
+  ['log_1',['log',['../classLogger.html#a3d3f0801eeaf39b33a906ea8569c19b2',1,'Logger']]],
+  ['loggaussianpdf_2',['LogGaussianPdf',['../classGMM.html#a437100e3816892731816347bbcd7457e',1,'GMM']]],
+  ['logger_3',['Logger',['../classLogger.html#a4f2ee02db1d03a83b6b9b43808e09f15',1,'Logger']]],
+  ['loglikelihood_4',['LogLikelihood',['../classGMM.html#a62505c23172c4a9defbca84eedce6c6c',1,'GMM']]]
 ];
