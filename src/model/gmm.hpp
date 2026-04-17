@@ -106,7 +106,7 @@ class GMM {
    * Iteration stops when \f$ |\ell^{(t)} - \ell^{(t-1)}| < \texttt{tol} \f$
    * or `max_iter` is reached.
    *
-   * @param data  \f$ N \f$ observations, each a \f$ D \f$-dimensional vector.
+   * @param data  \f$ N \f$ observations, each a \f$ n \f$-dimensional vector.
    * @param opts  Tuning parameters (iterations, tolerance, regularisation).
    * @return      GMMResult with fitted \f$\theta\f$, responsibilities, and
    *              \f$\hat\pi_{\text{spoof}} = \frac{1}{N}\sum_i r_i\f$.
@@ -158,7 +158,7 @@ class GMM {
    * @details
    * \f[
    *   \log \mathcal{N}(x \mid \mu, \Sigma)
-   *     = -\tfrac{1}{2}\bigl[D\log 2\pi
+   *     = -\frac{1}{2}\bigl[n\log 2\pi
    *       + \log|\Sigma|
    *       + (x-\mu)^\top \Sigma^{-1}(x-\mu)\bigr].
    * \f]
@@ -166,7 +166,7 @@ class GMM {
    * (via LDLT decomposition) so the M-step can reuse them across all \f$N\f$
    * observations without redundant factorisations.
    *
-   * @param x        Observation vector \f$x \in \mathbb{R}^D\f$.
+   * @param x        Observation vector \f$x \in \mathbb{R}^n\f$.
    * @param mu       Component mean \f$\mu\f$.
    * @param sigma_inv Precomputed \f$\Sigma^{-1}\f$.
    * @param log_det  Precomputed \f$\log|\Sigma|\f$.

@@ -17,13 +17,13 @@ using Eigen::LDLT;
 
 double GMM::LogGaussianPdf(const VectorXd &x, const VectorXd &mu,
                            const MatrixXd &sigma_inv, double log_det) {
-  // log N(x | \mu, \Sigma) = -1/2 [ n log(2\pi) + log|\Sigma| + (x-\mu)^T
+  // log N(x | \mu, \Sigma) = -1/2 [ D log(2\pi) + log|\Sigma| + (x-\mu)^T
   // \Sigma^{-1} (x-\mu) ]
-  int n = static_cast<int>(x.size());  // number of features
+  int D = static_cast<int>(x.size());  // number of features
   VectorXd x_bar = x - mu;  // (x_i - \mu): deviation from component mean
   double mahal = x_bar.transpose() * sigma_inv *
                  x_bar;  // (x-\mu)^T \Sigma^{-1} (x-\mu): Mahalanobis distance
-  return -0.5 * (n * std::log(2.0 * M_PI)  // normalisation constant
+  return -0.5 * (D * std::log(2.0 * M_PI)  // normalisation constant
                  + log_det                 // log|\Sigma|: precomputed from LDLT
                  + mahal);                 // Mahalanobis distance
 }
