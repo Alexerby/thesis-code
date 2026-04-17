@@ -4,7 +4,7 @@
  *
  * Implements the unsupervised identification strategy from the empirical
  * chapter. The population of cancelled orders is modelled as a mixture of
- * two multivariate Gaussians — a strategic component and a reactive component
+ * two multivariate Gaussians — an anomalous component and a liquidity-consistent component
  * — whose parameters \theta = {\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2} are
  * estimated by maximum likelihood via Expectation Maximisation (Dempster 1977).
  */
@@ -22,14 +22,14 @@
  * @struct GMMParams
  * @brief Estimated parameters \theta = {\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2}.
  *
- * Component 1 = strategic, Component 2 = reactive.
+ * Component 1 = anomalous, Component 2 = liquidity-consistent.
  */
 struct GMMParams {
-  double pi;               ///< Mixing weight for the strategic component
-  Eigen::VectorXd mu1;     ///< Mean of the strategic component
-  Eigen::VectorXd mu2;     ///< Mean of the reactive component
-  Eigen::MatrixXd sigma1;  ///< Covariance of the strategic component
-  Eigen::MatrixXd sigma2;  ///< Covariance of the reactive component
+  double pi;               ///< Mixing weight for the anomalous component
+  Eigen::VectorXd mu1;     ///< Mean of the anomalous component
+  Eigen::VectorXd mu2;     ///< Mean of the liquidity-consistent component
+  Eigen::MatrixXd sigma1;  ///< Covariance of the anomalous component
+  Eigen::MatrixXd sigma2;  ///< Covariance of the liquidity-consistent component
 };
 
 /**
@@ -53,10 +53,10 @@ struct FitOptions {
   double tol = 1e-6;  ///< Convergence threshold on log-likelihood change
   double reg = 1e-6;  ///< Ridge added to \Sigma diagonal to prevent singularity
 
-  /// Optional per-observation constraint. If fixed_reactive[i] == true,
-  /// r_i is forced to 0 in every E-step (observation is known-reactive).
+  /// Optional per-observation constraint. If fixed_lc[i] == true,
+  /// r_i is forced to 0 in every E-step (observation is known liquidity-consistent).
   /// Must be empty or the same length as the data passed to Fit().
-  std::vector<bool> fixed_reactive;
+  std::vector<bool> fixed_lc;
 };
 
 /**
@@ -69,8 +69,8 @@ struct FitOptions {
  *   p(x_i \mid \theta) = \pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)
  *                      + (1-\pi) \, \mathcal{N}(x_i \mid \mu_2, \Sigma_2),
  * \f]
- * where component 1 is the **strategic** (fast-cancel) cluster and
- * component 2 is the **reactive** cluster.
+ * where component 1 is the **anomalous** (fast-cancel) cluster and
+ * component 2 is the **liquidity-consistent** cluster.
  * Parameters \f$ \theta = \{\pi, \mu_1, \Sigma_1, \mu_2, \Sigma_2\} \f$ are
  * estimated by maximum likelihood via the EM algorithm (Dempster et al. 1977).
  */
@@ -82,7 +82,7 @@ class GMM {
    *
    * @details
    * **Initialisation** — observations are sorted on the first feature;
-   * the bottom 20 % are assigned to component 1 (strategic).
+   * the bottom 20 % are assigned to component 1 (anomalous).
    *
    * **E-step** — compute the posterior responsibility of component 1 for
    * each observation:
@@ -91,7 +91,7 @@ class GMM {
    *              {\pi \, \mathcal{N}(x_i \mid \mu_1, \Sigma_1)
    *               + (1-\pi) \, \mathcal{N}(x_i \mid \mu_2, \Sigma_2)}.
    * \f]
-   * If `opts.fixed_reactive[i]` is true the responsibility is clamped to
+   * If `opts.fixed_lc[i]` is true the responsibility is clamped to
    * \f$ r_i = 0 \f$.
    *
    * **M-step** — update parameters using the soft counts

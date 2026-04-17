@@ -47,6 +47,7 @@ class Market {
                              std::size_t depth);
 
   BestBidOffer AggregatedBbo(uint32_t instrument_id);
+  uint32_t GetVolumeAhead(uint32_t instrument_id, uint64_t order_id);
 
  private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;

@@ -162,16 +162,17 @@ void run_model(const Config &cfg) {
   engine.Run(market, callback);
 
   // --- Semi-supervised GMM ---
-  // All records enter the model so fill-cancelled orders anchor the reactive
-  // component. Their responsibilities are pinned to 0 in every E-step via the
-  // fixed_reactive mask, they can never be assigned to the strategic component.
+  // All records enter the model so fill-cancelled orders anchor the
+  // liquidity-consistent component. Their responsibilities are pinned to 0 in
+  // every E-step via the fixed_lc mask — they can never be assigned to the
+  // anomalous component.
   const auto &all_records = tracker.feature_records_;
 
-  std::vector<bool> fixed_reactive(all_records.size());
+  std::vector<bool> fixed_lc(all_records.size());
   int n_pure = 0, n_fill = 0;
   for (std::size_t i = 0; i < all_records.size(); ++i) {
-    fixed_reactive[i] = (all_records[i].cancel_type == CancelType::Fill);
-    fixed_reactive[i] ? ++n_fill : ++n_pure;
+    fixed_lc[i] = (all_records[i].cancel_type == CancelType::Fill);
+    fixed_lc[i] ? ++n_fill : ++n_pure;
   }
 
   std::cout << "\nCollected " << all_records.size() << " total records  ("
@@ -182,12 +183,13 @@ void run_model(const Config &cfg) {
     return;
   }
 
-  const std::vector<int> feature_indices = {0, 1};  // delta_t, induced_imbalance
+  // delta_t, induced_imbalance, volume_ahead
+  const std::vector<int> feature_indices = {0, 1, 2}; 
   auto data = GMM::ToEigen(all_records, feature_indices);
   GMM::Standardize(data);
 
   FitOptions opts;
-  opts.fixed_reactive = fixed_reactive;
+  opts.fixed_lc = fixed_lc;
 
   GMM gmm;
   GMMResult result = gmm.Fit(data, opts);
@@ -215,9 +217,9 @@ void run_model(const Config &cfg) {
       << result.log_likelihood << "\n"
       << "pi_spoof (pi_hat): " << std::setprecision(6) << result.pi_spoof
       << "\n"
-      << "\nComponent 1 — strategic (standardised mean):\n";
+      << "\nComponent 1 — anomalous (standardised mean):\n";
   write_mean(result.params.mu1);
-  out << "\nComponent 2 — reactive (standardised mean):\n";
+  out << "\nComponent 2 — liquidity-consistent (standardised mean):\n";
   write_mean(result.params.mu2);
 
   std::cout << "GMM results written to " << out_path << "\n";

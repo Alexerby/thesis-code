@@ -96,6 +96,8 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         mbo.ts_recv.time_since_epoch().count(),
         mbo.hd.ts_event.time_since_epoch().count(),
         OrderInducedImbalance(mbo),
+        0,
+        market_.GetVolumeAhead(instrument_id_, mbo.order_id),
     };
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
   } else {
@@ -176,9 +178,10 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
 
   feature_records_.push_back(
       FeatureRecord{
-          delta_t, 
-          order.induced_imbalance, 
-          resolved
+          delta_t,
+          order.induced_imbalance,
+          static_cast<double>(order.volume_ahead),
+          resolved,
       });
 }
 

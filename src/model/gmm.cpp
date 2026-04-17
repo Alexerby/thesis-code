@@ -102,7 +102,7 @@ GMMResult GMM::Fit(const std::vector<VectorXd> &data,
 
   // --- Initialisation ---
   // Sort by first feature and assign the bottom 20% to component 1
-  // (the fast-cancel / strategic region).
+  // (the fast-cancel / anomalous region).
   std::vector<int> idx(N);
   std::iota(idx.begin(), idx.end(), 0);
   std::sort(idx.begin(), idx.end(),
@@ -158,26 +158,26 @@ GMMResult GMM::Fit(const std::vector<VectorXd> &data,
     double ld1 = ldlt1.vectorD().array().log().sum();
     double ld2 = ldlt2.vectorD().array().log().sum();
 
-    // E-step: compute r_i^{(p)} = P(z_i = strategic | x_i, \theta^{(p)})
-    // Eq. (10): r_i = [ \pi^{(p)} f_strategic(x_i) ] /
-    //                 [ \pi^{(p)} f_strategic(x_i) + (1 - \pi^{(p)})
-    //                 f_reactive(x_i) ]
+    // E-step: compute r_i^{(p)} = P(z_i = anomalous | x_i, \theta^{(p)})
+    // Eq. (10): r_i = [ \pi^{(p)} f_anomalous(x_i) ] /
+    //                 [ \pi^{(p)} f_anomalous(x_i) + (1 - \pi^{(p)})
+    //                 f_lc(x_i) ]
     // Works in log-space throughout to avoid floating-point underflow;
     // log_p1 and log_p2 are the logs of the two terms in Eq. (10), not the
     // terms themselves.
     for (int i = 0; i < N; ++i) {
-      // Known-reactive observations (e.g. fill-cancelled orders) are pinned
-      // to r_i = 0, they inform the reactive component but can never be
-      // assigned to the strategic component.
-      if (!opts.fixed_reactive.empty() && opts.fixed_reactive[i]) {
+      // Known liquidity-consistent observations (e.g. fill-cancelled orders)
+      // are pinned to r_i = 0 — they inform the LC component but can never be
+      // assigned to the anomalous component.
+      if (!opts.fixed_lc.empty() && opts.fixed_lc[i]) {
         r[i] = 0.0;
         continue;
       }
-      // log[ \pi^{(p)} * f_strategic(x_i | \theta^{(p)}) ]  (numerator of Eq.
+      // log[ \pi^{(p)} * f_anomalous(x_i | \theta^{(p)}) ]  (numerator of Eq.
       // 10)
       double log_p1 =
           std::log(p.pi) + LogGaussianPdf(data[i], p.mu1, s1_inv, ld1);
-      // log[ (1 - \pi^{(p)}) * f_reactive(x_i | \theta^{(p)}) ]  (second
+      // log[ (1 - \pi^{(p)}) * f_lc(x_i | \theta^{(p)}) ]  (second
       // denominator term)
       double log_p2 =
           std::log(1.0 - p.pi) + LogGaussianPdf(data[i], p.mu2, s2_inv, ld2);

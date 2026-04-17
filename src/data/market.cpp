@@ -31,6 +31,17 @@ BestBidOffer Market::Bbo(uint32_t instrument_id, uint16_t publisher_id) {
   return book.Bbo();
 }
 
+uint32_t Market::GetVolumeAhead(uint32_t instrument_id, uint64_t order_id) {
+  for (auto &pub_book : books_[instrument_id]) {
+    try {
+      return pub_book.book.GetVolumeAhead(order_id);
+    } catch (const std::invalid_argument &) {
+      // Order not in this publisher's book — try the next one
+    }
+  }
+  return 0;  // TOB order or order not yet tracked
+}
+
 BestBidOffer Market::AggregatedBbo(uint32_t instrument_id) {
   PriceLevel agg_bid;
   PriceLevel agg_ask;

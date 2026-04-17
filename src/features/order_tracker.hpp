@@ -47,6 +47,7 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
 struct FeatureRecord {
   double delta_t;            ///< \Delta t_i
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
+  double volume_ahead;       ///< Total volume between order and BBO at add-time
   CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
 };
 
@@ -65,9 +66,12 @@ struct FeatureDef {
 };
 
 inline const FeatureDef kFeatures[] = {
-    {"delta_t", [](const FeatureRecord &r) { return r.delta_t; }},
+    {"delta_t", 
+     [](const FeatureRecord &r) { return r.delta_t; }},
     {"induced_imbalance",
      [](const FeatureRecord &r) { return r.induced_imbalance; }},
+    {"volume_ahead",
+     [](const FeatureRecord &r) { return r.volume_ahead; }},
 };
 
 // Represents the tracking of an individual order
@@ -81,6 +85,7 @@ struct Order {
   uint64_t ts_event_add;   // ts_event at add — matching engine clock (nanoseconds)
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   int64_t total_filled{0};   // Cumulative filled volume across all events
+  uint32_t volume_ahead;
 };
 
 /* @class OrderTracker
