@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['reconcile_0',['Reconcile',['../classOrderTracker.html#ac1c23cdeea34eb130e3cdd0002a3d1a1',1,'OrderTracker']]],
+  ['recordevent_1',['RecordEvent',['../classReplayController.html#ae8ded6c4673c95d0f0aa2b2c27cf7d45',1,'ReplayController']]],
+  ['reg_2',['reg',['../structFitOptions.html#ada001d84416fdfd3107cef833956cc13',1,'FitOptions']]],
+  ['removelevel_3',['RemoveLevel',['../classBook.html#ac13ec71d704aadcb395664db397076e1',1,'Book']]],
+  ['render_4',['Render',['../classDashboard.html#a9df21cb46bc71494e8e2a22c1269aa93',1,'Dashboard']]],
+  ['renderheader_5',['RenderHeader',['../classDashboard.html#a73943d75ab6532acade3fbfc00124663',1,'Dashboard']]],
+  ['renderorderbookdepth_6',['RenderOrderBookDepth',['../classDashboard.html#a798e80e19dc91a43187dfd23711640a4',1,'Dashboard']]],
+  ['renderordereventlist_7',['RenderOrderEventList',['../classDashboard.html#ac6a3297591e5eff9f318f693524fa5d0',1,'Dashboard']]],
+  ['renderplaybackcontrols_8',['RenderPlaybackControls',['../classDashboard.html#a52997d697c03cc0f59c4aa65ba119b71',1,'Dashboard']]],
+  ['renderspreadgraph_9',['RenderSpreadGraph',['../classDashboard.html#aef8b97b62f25b42f91fb2b4ed1d103ef',1,'Dashboard']]],
+  ['replay_5fcontroller_2ecpp_10',['replay_controller.cpp',['../replay__controller_8cpp.html',1,'']]],
+  ['replay_5fcontroller_2ehpp_11',['replay_controller.hpp',['../replay__controller_8hpp.html',1,'']]],
+  ['replay_5fengine_2ehpp_12',['replay_engine.hpp',['../replay__engine_8hpp.html',1,'']]],
+  ['replaycontroller_13',['replaycontroller',['../classReplayController.html',1,'ReplayController'],['../classReplayController.html#ac1c44ac0a78ae2594e9a9644ce11ad41',1,'ReplayController::ReplayController()']]],
+  ['replayengine_14',['replayengine',['../classReplayEngine.html',1,'ReplayEngine'],['../classReplayEngine.html#ae430435a7b3ae9a033545b74184dc625',1,'ReplayEngine::ReplayEngine()']]],
+  ['replayloop_15',['ReplayLoop',['../classReplayController.html#ab99a77b53d29495f1244b0b7d1052c57',1,'ReplayController']]],
+  ['requeststep_16',['RequestStep',['../classReplayController.html#a5867907af39fffac9fb306c226e38bd2',1,'ReplayController']]],
+  ['responsibilities_17',['responsibilities',['../structGMMResult.html#a75b00dfed5ce67b3c40cdf8e89377c0e',1,'GMMResult']]],
+  ['router_18',['Router',['../classOrderTracker.html#a735f7a0031d9aacb5e3be787c9e34a1b',1,'OrderTracker']]],
+  ['run_19',['run',['../classApplication.html#aaf09cd6cb412086dc039e28cdb059f0d',1,'Application::Run()'],['../classReplayEngine.html#a8298d834e9fe916ea7deccb5392bea4d',1,'ReplayEngine::Run()']]],
+  ['run_5fdownloader_20',['run_downloader',['../main_8cpp.html#a071fd2a92a5d0bb0c8f4c651a9f273fc',1,'main.cpp']]],
+  ['run_5fgui_5fapplication_21',['run_gui_application',['../main_8cpp.html#a305da31c8ef9e6f9bcd2c27684eaf46b',1,'main.cpp']]],
+  ['run_5fmodel_22',['run_model',['../main_8cpp.html#a4eee9f5e4213de24b8fbb047c5435e3f',1,'main.cpp']]],
+  ['run_5fplot_23',['run_plot',['../main_8cpp.html#ab4fdd5f7cd8b92a3118ded5c278a0866',1,'main.cpp']]],
+  ['runvisualizer_24',['runvisualizer',['../visualizer_8cpp.html#a218926571c831f0a7a5cbd16220e0d5b',1,'RunVisualizer(const std::vector&lt; FeatureRecord &gt; &amp;records, const std::string &amp;base_dir):&#160;visualizer.cpp'],['../visualizer_8hpp.html#a31f9dca934a83cdaafc04e19c74bb77f',1,'RunVisualizer(const std::vector&lt; FeatureRecord &gt; &amp;records, const std::string &amp;base_dir=&quot;features/descriptives&quot;):&#160;visualizer.cpp']]]
+];
