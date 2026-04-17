@@ -202,7 +202,7 @@ void run_model(const Config &cfg) {
   auto write_mean = [&](const Eigen::VectorXd &mu) {
     for (int j = 0; j < static_cast<int>(feature_indices.size()); ++j) {
       out << "    " << std::left << std::setw(20)
-          << GMM::kFeatureNames[feature_indices[j]] << std::right
+          << kFeatures[feature_indices[j]].name << std::right
           << std::setw(14) << std::fixed << std::setprecision(6) << mu[j]
           << "\n";
     }

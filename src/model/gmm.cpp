@@ -52,11 +52,9 @@ std::vector<VectorXd> GMM::ToEigen(
 
   int D = static_cast<int>(feature_indices.size());
   for (const auto &r : records) {
-    const double all[2] = {r.delta_t, r.induced_imbalance};
     VectorXd v(D);
-    for (int j = 0; j < D; ++j) {
-      v[j] = all[feature_indices[j]];
-    }
+    for (int j = 0; j < D; ++j)
+      v[j] = kFeatures[feature_indices[j]].extract(r);
     out.push_back(std::move(v));
   }
   return out;

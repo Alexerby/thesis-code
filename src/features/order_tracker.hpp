@@ -43,14 +43,31 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
 /**
  * @struct FeatureRecord
  * @brief Feature vector x_i for a single order lifecycle.
- *
- * Index mapping for use with GMM::ToEigen:
- *   0 = delta_t  (\Delta t_i, order age in nanoseconds)
  */
 struct FeatureRecord {
   double delta_t;            ///< \Delta t_i
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
+};
+
+// ---------------------------------------------------------------------------
+// Feature registry
+// To add a new feature:
+//   1. Add a field to FeatureRecord above.
+//   2. Add an entry here (name + extractor lambda).
+//   3. Populate the field in OrderTracker::EmitFeatureRecord().
+// ---------------------------------------------------------------------------
+using FeatureExtractor = double (*)(const FeatureRecord &);
+
+struct FeatureDef {
+  const char *name;
+  FeatureExtractor extract;
+};
+
+inline const FeatureDef kFeatures[] = {
+    {"delta_t", [](const FeatureRecord &r) { return r.delta_t; }},
+    {"induced_imbalance",
+     [](const FeatureRecord &r) { return r.induced_imbalance; }},
 };
 
 // Represents the tracking of an individual order

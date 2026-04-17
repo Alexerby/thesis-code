@@ -146,10 +146,6 @@ class GMM {
   static std::pair<Eigen::VectorXd, Eigen::VectorXd> Standardize(
       std::vector<Eigen::VectorXd> &data);
 
-  /// Human-readable names for each FeatureRecord field, indexed 0-5.
-  static constexpr const char *kFeatureNames[2] = {"delta_t",
-                                                    "induced_imbalance"};
-
  private:
   /**
    * @brief Evaluates \f$\log \mathcal{N}(x \mid \mu, \Sigma)\f$ using a
