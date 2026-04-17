@@ -48,6 +48,10 @@ class Market {
 
   BestBidOffer AggregatedBbo(uint32_t instrument_id);
   uint32_t GetVolumeAhead(uint32_t instrument_id, uint64_t order_id);
+  std::pair<double, double> GetTopNDepth(uint32_t instrument_id, int n);
+  std::pair<double, double> GetTopNDepthExcluding(uint32_t instrument_id, int n,
+                                                   int64_t price, uint32_t size,
+                                                   Side side);
 
  private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;

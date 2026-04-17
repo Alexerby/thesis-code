@@ -123,6 +123,22 @@ class Book {
    */
   double CalculateDeepImbalance(std::size_t depth) const;
 
+  /**
+   * @brief Returns total bid and ask volume summed over the top @p n price
+   *        levels on each side.
+   */
+  std::pair<double, double> GetTopNDepth(int n) const;
+
+  /**
+   * @brief Same as GetTopNDepth but subtracts one order's contribution from
+   *        its side, giving the pre-add depth state.  If the order's price is
+   *        not among the top @p n levels its contribution is zero and the
+   *        result is identical to GetTopNDepth.
+   */
+  std::pair<double, double> GetTopNDepthExcluding(int n, int64_t order_price,
+                                                   uint32_t order_size,
+                                                   Side order_side) const;
+
   /** @name Getters */
   ///@{
   uint64_t GetTotalTradeVolume() const { return total_trade_volume_; }

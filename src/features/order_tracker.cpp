@@ -209,37 +209,21 @@ void OrderTracker::PruneZombies() {
 }
 
 double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
-  BestBidOffer bbo = market_.AggregatedBbo(instrument_id_);
-  PriceLevel best_bid = bbo.first;
-  PriceLevel best_ask = bbo.second;
+  const int N = 5;
+  Side side = (mbo.side == db::Side::Bid) ? Side::Bid : Side::Ask;
 
-  if (best_bid.IsEmpty() || best_ask.IsEmpty()) return 0.0;
-
-  double V_b = best_bid.size;
-  double V_a = best_ask.size;
-
-  if (V_b + V_a == 0.0) return 0.0;
-
-  // I_after: current (post-Add) BBO imbalance
-  double I_after = (V_b - V_a) / (V_b + V_a);
-
-  // Reconstruct pre-Add volumes by removing this order's contribution.
-  // Only valid when the order sits at the current best on its side.
-  // Orders that created a new best level or sit behind the touch
-  // are treated as having no measurable BBO impact.
-  double V_b_pre = V_b;
-  double V_a_pre = V_a;
-
-  if (mbo.side == db::Side::Bid && mbo.price == best_bid.price)
-    V_b_pre = V_b - mbo.size;
-  else if (mbo.side == db::Side::Ask && mbo.price == best_ask.price)
-    V_a_pre = V_a - mbo.size;
-  else
-    return 0.0;  // no BBO impact
-
+  // Pre-add OBI: top-N depth with this order's contribution removed
+  auto [V_b_pre, V_a_pre] = market_.GetTopNDepthExcluding(
+      instrument_id_, N, mbo.price, mbo.size, side);
   double denom_pre = V_b_pre + V_a_pre;
   if (denom_pre == 0.0) return 0.0;
-  double I_before = (V_b_pre - V_a_pre) / denom_pre;
+  double OBI_before = (V_b_pre - V_a_pre) / denom_pre;
 
-  return abs(I_before - I_after);
+  // Post-add OBI: top-N depth including this order
+  auto [V_b, V_a] = market_.GetTopNDepth(instrument_id_, N);
+  double denom = V_b + V_a;
+  if (denom == 0.0) return 0.0;
+  double OBI_after = (V_b - V_a) / denom;
+
+  return std::abs(OBI_after - OBI_before);
 }

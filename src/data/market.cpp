@@ -31,6 +31,28 @@ BestBidOffer Market::Bbo(uint32_t instrument_id, uint16_t publisher_id) {
   return book.Bbo();
 }
 
+std::pair<double, double> Market::GetTopNDepth(uint32_t instrument_id, int n) {
+  double bid_vol = 0, ask_vol = 0;
+  for (auto &pub_book : books_[instrument_id]) {
+    auto [b, a] = pub_book.book.GetTopNDepth(n);
+    bid_vol += b;
+    ask_vol += a;
+  }
+  return {bid_vol, ask_vol};
+}
+
+std::pair<double, double> Market::GetTopNDepthExcluding(uint32_t instrument_id,
+                                                         int n, int64_t price,
+                                                         uint32_t size, Side side) {
+  double bid_vol = 0, ask_vol = 0;
+  for (auto &pub_book : books_[instrument_id]) {
+    auto [b, a] = pub_book.book.GetTopNDepthExcluding(n, price, size, side);
+    bid_vol += b;
+    ask_vol += a;
+  }
+  return {bid_vol, ask_vol};
+}
+
 uint32_t Market::GetVolumeAhead(uint32_t instrument_id, uint64_t order_id) {
   for (auto &pub_book : books_[instrument_id]) {
     try {
