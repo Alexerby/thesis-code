@@ -46,10 +46,10 @@ void print_usage() {
       << "Commands:\n"
       << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
-      << "  model <data_path>            Run order tracking + GMM analysis\n"
+      << "  gmm <data_path>            Run order tracking + GMM analysis\n"
       << "  plot <data_path>             Plot feature distributions (PNGs)\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
-      << "Options (gui / model / plot):\n"
+      << "Options (gui / gmm / plot):\n"
       << "  --symbol <id>                Focus instrument ID\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
@@ -127,25 +127,50 @@ void run_info(const Config &cfg) {
   ReplayEngine engine(cfg.data_path, /*print_metadata=*/false);
   const auto &meta = engine.GetMetadata();
 
+  // Sample the first 500k messages and extrapolate total counts
+  const uint64_t SAMPLE_SIZE = 500'000;
+  std::unordered_map<uint32_t, uint64_t> msg_counts;
+  uint64_t sampled = 0;
+  Market market;
+  engine.Run(market, [&](const db::MboMsg &mbo) {
+    if (sampled >= SAMPLE_SIZE) return false;
+    msg_counts[mbo.hd.instrument_id]++;
+    sampled++;
+    return true;
+  });
+
+  // Build instrument_id → raw_symbol lookup from mappings
+  std::unordered_map<std::string, std::string> id_to_ticker;
+  for (const auto &mapping : meta.mappings)
+    for (const auto &interval : mapping.intervals)
+      id_to_ticker[interval.symbol] = mapping.raw_symbol;
+
   std::cout << "=== DBN File Info ===\n"
-            << std::left << std::setw(16) << "Dataset:"   << meta.dataset << "\n"
+            << std::left << std::setw(16) << "Dataset:"
+            << meta.dataset << "\n"
             << std::left << std::setw(16) << "Schema:"
             << (meta.schema ? db::ToString(*meta.schema) : "Unknown") << "\n"
-            << std::left << std::setw(16) << "Start:"     << db::ToIso8601(meta.start) << "\n"
-            << std::left << std::setw(16) << "End:"       << db::ToIso8601(meta.end) << "\n"
-            << std::left << std::setw(16) << "SType out:" << db::ToString(meta.stype_out) << "\n"
+            << std::left << std::setw(16) << "Start:"
+            << db::ToIso8601(meta.start) << "\n"
+            << std::left << std::setw(16) << "End:"
+            << db::ToIso8601(meta.end) << "\n"
+            << std::left << std::setw(16) << "SType out:"
+            << db::ToString(meta.stype_out) << "\n"
             << "\n"
-            << std::left << std::setw(12) << "Ticker"
-            << std::setw(14) << "Instrument ID"
+            << std::left << std::setw(10) << "Ticker"
+            << std::setw(16) << "Instrument ID"
+            << std::setw(20) << "Msgs (500k sample)"
             << "Date range\n"
-            << std::string(50, '-') << "\n";
+            << std::string(58, '-') << "\n";
 
   for (const auto &mapping : meta.mappings) {
     for (const auto &interval : mapping.intervals) {
-      std::cout << std::left << std::setw(12) << mapping.raw_symbol
-                << std::setw(14) << interval.symbol
-                << interval.start_date << " – "
-                << interval.end_date << "\n";
+      uint32_t inst_id = static_cast<uint32_t>(std::stoul(interval.symbol));
+      uint64_t count = msg_counts.count(inst_id) ? msg_counts.at(inst_id) : 0;
+      std::cout << std::left << std::setw(10) << mapping.raw_symbol
+                << std::setw(16) << interval.symbol
+                << std::setw(20) << count
+                << interval.start_date << " – " << interval.end_date << "\n";
     }
   }
 }
@@ -172,7 +197,7 @@ void run_plot(const Config &cfg) {
   RunVisualizer(tracker.feature_records_);
 }
 
-void run_model(const Config &cfg) {
+void run_gmm(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
   Market market;
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
@@ -190,7 +215,7 @@ void run_model(const Config &cfg) {
   engine.Run(market, callback);
 
   // --- Semi-supervised GMM ---
-  // All records enter the model so fill-cancelled orders anchor the
+  // All records enter the uodel so fill-cancelled orders anchor the
   // liquidity-consistent component. Their responsibilities are pinned to 0 in
   // every E-step via the fixed_lc mask — they can never be assigned to the
   // anomalous component.
@@ -327,8 +352,8 @@ int main(int argc, char **argv) {
       run_info(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
-    } else if (cfg.command == "model") {
-      run_model(cfg);
+    } else if (cfg.command == "gmm") {
+      run_gmm(cfg);
     } else if (cfg.command == "plot") {
       run_plot(cfg);
     } else if (cfg.command == "databento-fetch") {
