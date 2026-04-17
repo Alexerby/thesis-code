@@ -44,6 +44,7 @@ void print_usage() {
       << "Thesis Research suite\n"
       << "Usage: ./thesis [command] [args] [options]\n\n"
       << "Commands:\n"
+      << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
       << "  model <data_path>            Run order tracking + GMM analysis\n"
       << "  plot <data_path>             Plot feature distributions (PNGs)\n"
@@ -120,6 +121,33 @@ Config parse_args(int argc, char **argv) {
     }
   }
   return cfg;
+}
+
+void run_info(const Config &cfg) {
+  ReplayEngine engine(cfg.data_path, /*print_metadata=*/false);
+  const auto &meta = engine.GetMetadata();
+
+  std::cout << "=== DBN File Info ===\n"
+            << std::left << std::setw(16) << "Dataset:"   << meta.dataset << "\n"
+            << std::left << std::setw(16) << "Schema:"
+            << (meta.schema ? db::ToString(*meta.schema) : "Unknown") << "\n"
+            << std::left << std::setw(16) << "Start:"     << db::ToIso8601(meta.start) << "\n"
+            << std::left << std::setw(16) << "End:"       << db::ToIso8601(meta.end) << "\n"
+            << std::left << std::setw(16) << "SType out:" << db::ToString(meta.stype_out) << "\n"
+            << "\n"
+            << std::left << std::setw(12) << "Ticker"
+            << std::setw(14) << "Instrument ID"
+            << "Date range\n"
+            << std::string(50, '-') << "\n";
+
+  for (const auto &mapping : meta.mappings) {
+    for (const auto &interval : mapping.intervals) {
+      std::cout << std::left << std::setw(12) << mapping.raw_symbol
+                << std::setw(14) << interval.symbol
+                << interval.start_date << " – "
+                << interval.end_date << "\n";
+    }
+  }
 }
 
 void run_plot(const Config &cfg) {
@@ -295,7 +323,9 @@ int main(int argc, char **argv) {
   try {
     Config cfg = parse_args(argc, argv);
 
-    if (cfg.command == "gui") {
+    if (cfg.command == "info") {
+      run_info(cfg);
+    } else if (cfg.command == "gui") {
       run_gui_application(cfg);
     } else if (cfg.command == "model") {
       run_model(cfg);
