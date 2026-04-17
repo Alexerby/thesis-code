@@ -10,40 +10,6 @@ C++ implementation of an unsupervised spoofing detection framework for limit ord
 
 ---
 
-## Implementation Progress
-
-### Infrastructure
-
-| | Component |
-|---|---|
-| ✅ | L3/MBO order book reconstruction |
-| ✅ | Order lifecycle tracking |
-| ✅ | Best bid/offer & imbalance calculation |
-| ✅ | Market visualizer (GUI) |
-| ✅ | Data streaming (DBN format) |
-
-### Features
-
-| | Feature |
-|---|---|
-| ✅ | Order Age (Δt) |
-| ✅ | Imbalance Change (\|ΔI\|) |
-| ❌ | Order-Size Ratio |
-| ❌ | Queue Position |
-| ❌ | Distance from Touch |
-| ❌ | Local Cancel Rate |
-
-### Model
-
-| | Component |
-|---|---|
-| ❌ | Gaussian Mixture Model (EM algorithm) |
-
-
-Note: Initialisation of EM-algo not complete, [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
-
----
-
 ## Requirements
 
 | Dependency | Version |
@@ -136,3 +102,5 @@ Then run the fetcher. It prints estimated cost and billable size before asking f
 
 The API key can also be passed directly with `--key <key>`. All flags except `--key` are required; `--dataset` defaults to `XNAS.ITCH` if omitted.
 
+## Known issues
+- Note: Initialisation of EM-algo not complete, [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
