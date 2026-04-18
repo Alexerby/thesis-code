@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-FILE_NAME=$1
+FILE_PATH=$1
 LIMIT=${2:-1000}
 ACTION_FILTER=${3:-""}   # optional: pass "C" to filter by action
 DATA_DIR="./data"
-FILE_PATH="${DATA_DIR}/$FILE_NAME"
 
 if [ -z "$FILE_NAME" ]; then
     echo "Usage: $0 <file> [limit] [action_filter]"

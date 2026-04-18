@@ -1,9 +1,8 @@
 #!/bin/bash
 
-FILE_NAME=$1
+FILE_PATH=$1
 LIMIT=${2:-10000000}
 DATA_DIR="./data/"
-FILE_PATH="${DATA_DIR}$FILE_NAME"
 
 echo "Hunting for the elusive Action::M (Modify) in $LIMIT records..."
 
