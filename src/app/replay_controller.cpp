@@ -105,6 +105,11 @@ void ReplayController::ReplayLoop() {
   Market market;
   const int MAX_DEPTH = 20;
 
+  // Delta-T clock state
+  uint64_t t_start_market = 0;
+  std::chrono::steady_clock::time_point s_start_wall;
+  bool clock_initialized = false;
+
   // Initial metadata setup
   {
     const auto &meta = m_engine->GetMetadata();
@@ -113,22 +118,25 @@ void ReplayController::ReplayLoop() {
     m_session_stats.end_ts = meta.end.time_since_epoch().count();
   }
 
+  auto recalibrate = [&](uint64_t current_ts) {
+    t_start_market = current_ts;
+    s_start_wall = std::chrono::steady_clock::now();
+    clock_initialized = true;
+    m_recalibrate = false;
+  };
+
   auto callback = [&](const db::MboMsg &mbo) {
     uint64_t current_ts = mbo.ts_recv.time_since_epoch().count();
     uint32_t focus_id = m_focus_instrument.load();
     bool is_focus = (mbo.hd.instrument_id == focus_id);
 
-    // Resolve symbol for current focus
     std::string symbol = "Unknown";
     auto it = m_available_instruments.find(focus_id);
-    if (it != m_available_instruments.end()) {
-      symbol = it->second;
-    }
+    if (it != m_available_instruments.end()) symbol = it->second;
 
     // Warp Logic (Fast-forward to target time)
     if (m_is_warping) {
       if (current_ts < m_target_ts) {
-        // Throttled UI update during warp so we see the mountain move
         static uint64_t last_warp_ui_update = 0;
         if (is_focus && ++last_warp_ui_update >= 2000) {
           MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
@@ -144,11 +152,12 @@ void ReplayController::ReplayLoop() {
         return true;
       } else {
         m_is_warping = false;
-        m_playback_state = PlaybackState::Paused;  // Pause when reached
+        m_playback_state = PlaybackState::Paused;
+        clock_initialized = false;
       }
     }
 
-    // Coarse Progress Tracking (for non-focus or low-activity periods)
+    // Coarse progress tracking
     static uint64_t last_stats_update = 0;
     if (++last_stats_update >= 10000) {
       std::lock_guard<std::mutex> lock(m_mutex);
@@ -157,16 +166,36 @@ void ReplayController::ReplayLoop() {
       last_stats_update = 0;
     }
 
-    // Wait while paused (and not stepping)
+    // Wait while paused
     while (m_running && m_playback_state == PlaybackState::Paused &&
            !m_step_requested) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      clock_initialized = false;  // Force recalibration on resume
     }
 
     if (!m_running) return false;
 
-    // Consume step request if present
     bool stepping = m_step_requested.exchange(false);
+
+    // Delta-T synchronization: process all messages whose market time has
+    // elapsed on the wall clock; sleep only when we are ahead of real time.
+    if (!stepping) {
+      if (m_recalibrate || !clock_initialized) {
+        recalibrate(current_ts);
+      } else {
+        float speed = m_speed_multiplier.load();
+        if (speed > 0.0f) {
+          uint64_t dt_market_ns = current_ts - t_start_market;
+          auto scheduled = s_start_wall + std::chrono::nanoseconds(
+              static_cast<uint64_t>(dt_market_ns / speed));
+          while (m_running &&
+                 m_playback_state == PlaybackState::Playing &&
+                 std::chrono::steady_clock::now() < scheduled) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+          }
+        }
+      }
+    }
 
     if (is_focus) {
       m_msg_count++;
@@ -178,15 +207,10 @@ void ReplayController::ReplayLoop() {
 
       {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_last_snap = m_latest_snapshot; // This snap becomes "pre" for next msg
+        m_last_snap = m_latest_snapshot;
         m_latest_snapshot = std::move(snap);
         m_session_stats.current_ts = current_ts;
         m_session_stats.msg_count = m_msg_count;
-      }
-
-      // Control replay speed (Skip sleep if stepping)
-      if (!stepping && m_sleep_micros > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(m_sleep_micros));
       }
     }
     return true;

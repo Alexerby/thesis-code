@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <databento/datetime.hpp>
 #include <databento/dbn_file_store.hpp>
@@ -9,6 +10,8 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <numeric>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -37,6 +40,7 @@ struct Config {
   std::string start_time;
   std::string end_time;
   std::string output_path;
+  size_t sample_size = 0;  // 0 = use all records
 };
 
 void print_usage() {
@@ -50,7 +54,8 @@ void print_usage() {
       << "  plot <data_path>             Plot feature distributions (PNGs)\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
       << "Options (gui / gmm / plot):\n"
-      << "  --symbol <id>                Focus instrument ID\n\n"
+      << "  --symbol <id>                Focus instrument ID\n"
+      << "  --sample <N>                 Randomly subsample N feature records before GMM fit\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
@@ -115,6 +120,8 @@ Config parse_args(int argc, char **argv) {
       std::string arg = argv[i];
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
+      } else if (arg == "--sample" && i + 1 < argc) {
+        cfg.sample_size = std::stoul(argv[++i]);
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
@@ -215,11 +222,44 @@ void run_gmm(const Config &cfg) {
   engine.Run(market, callback);
 
   // --- Semi-supervised GMM ---
-  // All records enter the uodel so fill-cancelled orders anchor the
-  // liquidity-consistent component. Their responsibilities are pinned to 0 in
-  // every E-step via the fixed_lc mask — they can never be assigned to the
-  // anomalous component.
-  const auto &all_records = tracker.feature_records_;
+  // Optionally subsample records before fitting (stratified by cancel type)
+  std::vector<FeatureRecord> sampled_storage;
+  const std::vector<FeatureRecord> *records_ptr = &tracker.feature_records_;
+
+  if (cfg.sample_size > 0 && tracker.feature_records_.size() > cfg.sample_size) {
+    // Separate by type, shuffle each stratum, then merge proportionally
+    std::vector<size_t> pure_idx, fill_idx;
+    for (size_t i = 0; i < tracker.feature_records_.size(); ++i) {
+      if (tracker.feature_records_[i].cancel_type == CancelType::Fill)
+        fill_idx.push_back(i);
+      else
+        pure_idx.push_back(i);
+    }
+
+    std::mt19937 rng(42);
+    std::shuffle(pure_idx.begin(), pure_idx.end(), rng);
+    std::shuffle(fill_idx.begin(), fill_idx.end(), rng);
+
+    double fill_ratio = static_cast<double>(fill_idx.size()) /
+                        tracker.feature_records_.size();
+    size_t n_fill = static_cast<size_t>(cfg.sample_size * fill_ratio);
+    size_t n_pure = cfg.sample_size - n_fill;
+    n_pure = std::min(n_pure, pure_idx.size());
+    n_fill = std::min(n_fill, fill_idx.size());
+
+    sampled_storage.reserve(n_pure + n_fill);
+    for (size_t i = 0; i < n_pure; ++i)
+      sampled_storage.push_back(tracker.feature_records_[pure_idx[i]]);
+    for (size_t i = 0; i < n_fill; ++i)
+      sampled_storage.push_back(tracker.feature_records_[fill_idx[i]]);
+
+    std::shuffle(sampled_storage.begin(), sampled_storage.end(), rng);
+    records_ptr = &sampled_storage;
+    std::cout << "Subsampled " << records_ptr->size() << " records from "
+              << tracker.feature_records_.size() << " total.\n";
+  }
+
+  const auto &all_records = *records_ptr;
 
   std::vector<bool> fixed_lc(all_records.size());
   int n_pure = 0, n_fill = 0;
@@ -236,8 +276,8 @@ void run_gmm(const Config &cfg) {
     return;
   }
 
-  // delta_t, induced_imbalance, volume_ahead
-  const std::vector<int> feature_indices = {0, 1, 2}; 
+  // delta_t, induced_imbalance, volume_ahead, relative_size
+  const std::vector<int> feature_indices = {0, 1, 2, 3};
   auto data = GMM::ToEigen(all_records, feature_indices);
   GMM::Standardize(data);
 

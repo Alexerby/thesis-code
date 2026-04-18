@@ -48,6 +48,7 @@ struct FeatureRecord {
   double delta_t;            ///< \Delta t_i
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   double volume_ahead;       ///< Total volume between order and BBO at add-time
+  double relative_size;      ///< order size / rolling median size (last 500 adds)
   CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
 };
 
@@ -56,7 +57,8 @@ struct FeatureRecord {
 // To add a new feature:
 //   1. Add a field to FeatureRecord above.
 //   2. Add an entry here (name + extractor lambda).
-//   3. Populate the field in OrderTracker::EmitFeatureRecord().
+//   3. Compute it in OrderTracker::Add() and store it on the Order struct,
+//      then copy it to FeatureRecord in OrderTracker::EmitFeatureRecord().
 // ---------------------------------------------------------------------------
 using FeatureExtractor = double (*)(const FeatureRecord &);
 
@@ -66,12 +68,14 @@ struct FeatureDef {
 };
 
 inline const FeatureDef kFeatures[] = {
-    {"delta_t", 
+    {"delta_t",
      [](const FeatureRecord &r) { return r.delta_t; }},
     {"induced_imbalance",
      [](const FeatureRecord &r) { return r.induced_imbalance; }},
     {"volume_ahead",
      [](const FeatureRecord &r) { return r.volume_ahead; }},
+    {"relative_size",
+     [](const FeatureRecord &r) { return r.relative_size; }},
 };
 
 // Represents the tracking of an individual order
@@ -86,6 +90,7 @@ struct Order {
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   int64_t total_filled{0};   // Cumulative filled volume across all events
   uint32_t volume_ahead;
+  double relative_size;      ///< size / rolling median size at add-time
 };
 
 /* @class OrderTracker
@@ -170,10 +175,16 @@ class OrderTracker {
    */
   double OrderInducedImbalance(const db::MboMsg &mbo);
 
+  /// Returns the median of size_window_, or 1.0 if the window is empty.
+  double RollingMedianSize() const;
+
   /**
    * @brief Emits a FeatureRecord. We call this on event
    * CANCEL and RECONCILE.
    */
   void EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
                          CancelType cancel_type);
+
+  static constexpr int kSizeWindowN = 500;
+  std::deque<uint32_t> size_window_;
 };

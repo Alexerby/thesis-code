@@ -13,8 +13,6 @@
 
 namespace {  // make anonymous
 constexpr uint64_t NANOS_1S = 1'000'000'000ULL;
-constexpr uint64_t NANOS_10S = 10'000'000'000ULL;
-constexpr uint64_t NANOS_1M = 60'000'000'000ULL;
 
 constexpr float HEADER_HEIGHT = 50.0f;
 constexpr float CONTROLS_HEIGHT = 80.0f;
@@ -113,17 +111,8 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
       controller.SetPlaybackState(PlaybackState::Paused);
   }
 
-  // Skips
-  ImGui::SameLine(0, 20);
-  if (ImGui::Button("+1s")) controller.SeekToTime(stats.current_ts + NANOS_1S);
-  ImGui::SameLine();
-  if (ImGui::Button("+10s"))
-    controller.SeekToTime(stats.current_ts + NANOS_10S);
-  ImGui::SameLine();
-  if (ImGui::Button("+1m")) controller.SeekToTime(stats.current_ts + NANOS_1M);
-
   // Jump to Time
-  ImGui::SameLine(0, 40);
+  ImGui::SameLine(0, 20);
   static char jump_time[16] = "14:30:00";
   ImGui::SetNextItemWidth(100);
   ImGui::InputText("##JumpTime", jump_time, IM_ARRAYSIZE(jump_time));
@@ -133,12 +122,12 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
     if (target > 0) controller.SeekToTime(target);
   }
 
-  // Delay Slider
+  // Speed Multiplier
   ImGui::SameLine(0, 40);
   ImGui::SetNextItemWidth(150);
-  int speed = controller.GetSpeed();
-  if (ImGui::SliderInt("Delay (us)", &speed, 0, 10000))
-    controller.SetSpeed(speed);
+  float speed = controller.GetSpeedMultiplier();
+  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 5.0f, "%.1fx"))
+    controller.SetSpeedMultiplier(speed);
 
   // Timeline
   float progress = 0.0f;

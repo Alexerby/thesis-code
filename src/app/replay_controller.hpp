@@ -58,8 +58,8 @@ class ReplayController {
   void SetPlaybackState(PlaybackState state) { m_playback_state = state; }
   PlaybackState GetPlaybackState() const { return m_playback_state; }
   void RequestStep() { m_step_requested = true; }
-  void SetSpeed(int sleep_micros) { m_sleep_micros = sleep_micros; }
-  int GetSpeed() const { return m_sleep_micros; }
+  void SetSpeedMultiplier(float s) { m_speed_multiplier = s; m_recalibrate = true; }
+  float GetSpeedMultiplier() const { return m_speed_multiplier; }
 
   // Navigation
   void SeekToTime(uint64_t target_ts);
@@ -88,7 +88,8 @@ class ReplayController {
   std::atomic<bool> m_running{false};
   std::atomic<PlaybackState> m_playback_state{PlaybackState::Paused};
   std::atomic<bool> m_step_requested{false};
-  std::atomic<int> m_sleep_micros{100};
+  std::atomic<float> m_speed_multiplier{1.0f};
+  std::atomic<bool> m_recalibrate{false};
 
   // Navigation state
   std::atomic<uint64_t> m_target_ts{0};

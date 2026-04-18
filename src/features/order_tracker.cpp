@@ -83,10 +83,20 @@ void OrderTracker::DumpOrders(const std::string &filename) const {
             << filename << std::endl;
 }
 
+double OrderTracker::RollingMedianSize() const {
+  if (size_window_.empty()) return 1.0;
+  std::vector<uint32_t> sorted(size_window_.begin(), size_window_.end());
+  std::sort(sorted.begin(), sorted.end());
+  return sorted[sorted.size() / 2];
+}
+
 void OrderTracker::Add(const db::MboMsg &mbo) {
   OrderMap::iterator it = order_map.find(mbo.order_id);
 
   if (it == order_map.end()) {
+    double median = RollingMedianSize();
+    double rel_size = (median > 0.0) ? (mbo.size / median) : 1.0;
+
     order_map[mbo.order_id] = Order{
         mbo.order_id,
         static_cast<int64_t>(mbo.size),
@@ -98,7 +108,13 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         OrderInducedImbalance(mbo),
         0,
         market_.GetVolumeAhead(instrument_id_, mbo.order_id),
+        rel_size,
     };
+
+    size_window_.push_back(mbo.size);
+    if (static_cast<int>(size_window_.size()) > kSizeWindowN)
+      size_window_.pop_front();
+
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
   } else {
     // Existing Order: Update size directly (XNAS.ITCH multi-part add)
@@ -181,6 +197,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
           delta_t,
           order.induced_imbalance,
           static_cast<double>(order.volume_ahead),
+          order.relative_size,
           resolved,
       });
 }
