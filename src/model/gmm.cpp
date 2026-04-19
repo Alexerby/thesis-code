@@ -224,14 +224,9 @@ GMMResult GMM::Fit(const std::vector<VectorXd> &data,
       p.sigma1 = s1_new / sum_r1;
       p.sigma2 = s2_new / sum_r2;
 
-      // Convergence check: |log L(\theta^{(p+1)}) - log L(\theta^{(p)})| < tol
-      LDLT<MatrixXd> c1(p.sigma1), c2(p.sigma2);
-      MatrixXd cs1_inv = c1.solve(MatrixXd::Identity(D, D));
-      MatrixXd cs2_inv = c2.solve(MatrixXd::Identity(D, D));
-      double cld1 = c1.vectorD().array().log().sum();
-      double cld2 = c2.vectorD().array().log().sum();
-
-      double ll = LogLikelihood(data, p, cs1_inv, cld1, cs2_inv, cld2);
+      // Convergence check: reuse the LDLT factors from the top of this iteration
+      // rather than factorising the updated covariances a second time.
+      double ll = LogLikelihood(data, p, s1_inv, ld1, s2_inv, ld2);
       if (std::abs(ll - prev_ll) < opts.tol) {
         prev_ll = ll;
         ++iter;

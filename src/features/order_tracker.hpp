@@ -50,6 +50,7 @@ struct FeatureRecord {
   double volume_ahead;       ///< Total volume between order and BBO at add-time
   double relative_size;      ///< order size / rolling median size (last 500 adds)
   CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
+  uint64_t ts_recv{0};       ///< Cancel timestamp (nanoseconds since epoch)
 };
 
 // ---------------------------------------------------------------------------

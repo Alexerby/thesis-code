@@ -74,6 +74,7 @@ set(COMMON_SOURCES
     src/app/dashboard.cpp
     src/app/replay_controller.cpp
     src/app/visualizer.cpp
+    src/app/gmm_visualizer.cpp
     src/features/order_tracker.cpp
     src/model/gmm.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp

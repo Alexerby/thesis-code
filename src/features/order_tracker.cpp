@@ -199,6 +199,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
           static_cast<double>(order.volume_ahead),
           order.relative_size,
           resolved,
+          mbo.ts_recv.time_since_epoch().count(),
       });
 }
 
