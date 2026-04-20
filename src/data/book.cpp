@@ -290,6 +290,36 @@ void Book::RemoveLevel(Side side, int64_t price) {
   GetSideLevels(side).erase(price);
 }
 
+std::pair<double, double> Book::GetTopNDepth(int n) const {
+  double bid_vol = 0, ask_vol = 0;
+  int count = 0;
+  for (auto it = bids_.rbegin(); it != bids_.rend() && count < n; ++it, ++count)
+    for (const auto &o : it->second) bid_vol += o.size;
+  count = 0;
+  for (auto it = offers_.begin(); it != offers_.end() && count < n; ++it, ++count)
+    for (const auto &o : it->second) ask_vol += o.size;
+  return {bid_vol, ask_vol};
+}
+
+std::pair<double, double> Book::GetTopNDepthExcluding(int n, int64_t order_price,
+                                                       uint32_t order_size,
+                                                       Side order_side) const {
+  double bid_vol = 0, ask_vol = 0;
+  int count = 0;
+  for (auto it = bids_.rbegin(); it != bids_.rend() && count < n; ++it, ++count) {
+    for (const auto &o : it->second) bid_vol += o.size;
+    if (order_side == Side::Bid && it->first == order_price)
+      bid_vol -= order_size;
+  }
+  count = 0;
+  for (auto it = offers_.begin(); it != offers_.end() && count < n; ++it, ++count) {
+    for (const auto &o : it->second) ask_vol += o.size;
+    if (order_side == Side::Ask && it->first == order_price)
+      ask_vol -= order_size;
+  }
+  return {std::max(0.0, bid_vol), std::max(0.0, ask_vol)};
+}
+
 uint32_t Book::GetVolumeAhead(uint64_t order_id) {
 
   // Find order

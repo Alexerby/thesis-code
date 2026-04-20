@@ -47,7 +47,20 @@ MarketSnapshot ReplayController::GetLatestSnapshot() {
 
 std::vector<SpreadPoint> ReplayController::GetSpreadHistory() {
   std::lock_guard<std::mutex> lock(m_mutex);
-  return {m_spread_history.begin(), m_spread_history.end()};
+  std::vector<SpreadPoint> result(m_spread_history.begin(), m_spread_history.end());
+
+  // Append a synthetic point at current market time so the chart line
+  // extends smoothly to "now" even when no new messages have arrived
+  if (!result.empty() && m_session_stats.current_ts > 0) {
+    double live_ts = static_cast<double>(m_session_stats.current_ts) / 1e9;
+    if (live_ts > result.back().ts) {
+      SpreadPoint live = result.back();
+      live.ts = live_ts;
+      live.action = '\0';  // no event marker
+      result.push_back(live);
+    }
+  }
+  return result;
 }
 
 std::vector<OrderEvent> ReplayController::GetOrderEvents() {
@@ -55,7 +68,26 @@ std::vector<OrderEvent> ReplayController::GetOrderEvents() {
   return {m_order_events.begin(), m_order_events.end()};
 }
 
+void ReplayController::PlayRange(uint64_t start_ts, uint64_t end_ts) {
+  constexpr uint64_t kPreBufferNs  = 120ULL * 1'000'000'000ULL;
+  constexpr uint64_t kPostBufferNs = 120ULL * 1'000'000'000ULL;
+  m_range_highlight_start = start_ts;
+  m_range_highlight_end   = end_ts;
+  uint64_t seek_to  = (start_ts > kPreBufferNs) ? start_ts - kPreBufferNs : start_ts;
+  uint64_t pause_at = end_ts + kPostBufferNs;
+  SeekToTime(seek_to);   // clears m_range_end_ts
+  m_range_end_ts = pause_at;
+}
+
+ReplayController::RangeHighlight ReplayController::GetRangeHighlight() const {
+  uint64_t s = m_range_highlight_start.load();
+  uint64_t e = m_range_highlight_end.load();
+  if (s == 0 || e == 0) return {};
+  return {static_cast<double>(s) / 1e9, static_cast<double>(e) / 1e9, true};
+}
+
 void ReplayController::SeekToTime(uint64_t target_ts) {
+  m_range_end_ts = 0;  // cancel any active range so warp always pauses on arrival
   uint64_t current;
   {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -105,6 +137,11 @@ void ReplayController::ReplayLoop() {
   Market market;
   const int MAX_DEPTH = 20;
 
+  // Delta-T clock state
+  uint64_t t_start_market = 0;
+  std::chrono::steady_clock::time_point s_start_wall;
+  bool clock_initialized = false;
+
   // Initial metadata setup
   {
     const auto &meta = m_engine->GetMetadata();
@@ -113,22 +150,25 @@ void ReplayController::ReplayLoop() {
     m_session_stats.end_ts = meta.end.time_since_epoch().count();
   }
 
+  auto recalibrate = [&](uint64_t current_ts) {
+    t_start_market = current_ts;
+    s_start_wall = std::chrono::steady_clock::now();
+    clock_initialized = true;
+    m_recalibrate = false;
+  };
+
   auto callback = [&](const db::MboMsg &mbo) {
     uint64_t current_ts = mbo.ts_recv.time_since_epoch().count();
     uint32_t focus_id = m_focus_instrument.load();
     bool is_focus = (mbo.hd.instrument_id == focus_id);
 
-    // Resolve symbol for current focus
     std::string symbol = "Unknown";
     auto it = m_available_instruments.find(focus_id);
-    if (it != m_available_instruments.end()) {
-      symbol = it->second;
-    }
+    if (it != m_available_instruments.end()) symbol = it->second;
 
     // Warp Logic (Fast-forward to target time)
     if (m_is_warping) {
       if (current_ts < m_target_ts) {
-        // Throttled UI update during warp so we see the mountain move
         static uint64_t last_warp_ui_update = 0;
         if (is_focus && ++last_warp_ui_update >= 2000) {
           MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
@@ -144,11 +184,13 @@ void ReplayController::ReplayLoop() {
         return true;
       } else {
         m_is_warping = false;
-        m_playback_state = PlaybackState::Paused;  // Pause when reached
+        if (m_range_end_ts == 0)
+          m_playback_state = PlaybackState::Paused;
+        clock_initialized = false;
       }
     }
 
-    // Coarse Progress Tracking (for non-focus or low-activity periods)
+    // Coarse progress tracking
     static uint64_t last_stats_update = 0;
     if (++last_stats_update >= 10000) {
       std::lock_guard<std::mutex> lock(m_mutex);
@@ -157,16 +199,51 @@ void ReplayController::ReplayLoop() {
       last_stats_update = 0;
     }
 
-    // Wait while paused (and not stepping)
+    // Wait while paused
     while (m_running && m_playback_state == PlaybackState::Paused &&
            !m_step_requested) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      clock_initialized = false;  // Force recalibration on resume
     }
 
     if (!m_running) return false;
 
-    // Consume step request if present
     bool stepping = m_step_requested.exchange(false);
+
+    // Delta-T synchronization: skip entirely during range playback (max speed).
+    if (!stepping && m_range_end_ts == 0) {
+      if (m_recalibrate || !clock_initialized) {
+        recalibrate(current_ts);
+      } else {
+        float speed = m_speed_multiplier.load();
+        if (speed > 0.0f) {
+          uint64_t dt_market_ns = current_ts - t_start_market;
+          auto scheduled = s_start_wall + std::chrono::nanoseconds(
+              static_cast<uint64_t>(dt_market_ns / speed));
+          while (m_running &&
+                 m_playback_state == PlaybackState::Playing &&
+                 std::chrono::steady_clock::now() < scheduled) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            // Interpolate current_ts from wall clock so the chart advances
+            // smoothly between message bursts instead of freezing
+            auto wall_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now() - s_start_wall).count();
+            uint64_t interp_ts = t_start_market +
+                static_cast<uint64_t>(static_cast<double>(wall_ns) * speed);
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_session_stats.current_ts = interp_ts;
+          }
+        }
+      }
+    }
+
+    // Auto-pause at range end
+    uint64_t range_end = m_range_end_ts.load();
+    if (range_end > 0 && current_ts >= range_end) {
+      m_playback_state = PlaybackState::Paused;
+      m_range_end_ts = 0;
+      clock_initialized = false;
+    }
 
     if (is_focus) {
       m_msg_count++;
@@ -178,15 +255,10 @@ void ReplayController::ReplayLoop() {
 
       {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_last_snap = m_latest_snapshot; // This snap becomes "pre" for next msg
+        m_last_snap = m_latest_snapshot;
         m_latest_snapshot = std::move(snap);
         m_session_stats.current_ts = current_ts;
         m_session_stats.msg_count = m_msg_count;
-      }
-
-      // Control replay speed (Skip sleep if stepping)
-      if (!stepping && m_sleep_micros > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(m_sleep_micros));
       }
     }
     return true;

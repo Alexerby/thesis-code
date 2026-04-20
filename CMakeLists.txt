@@ -44,25 +44,7 @@ FetchContent_Declare(
     GIT_TAG v3.4.0
 )
 
-# Eigen (Linear Algebra)
-FetchContent_Declare(
-    eigen
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG 3.4.0
-)
-
-# Matplot++ (Plotting)
-set(MATPLOTPP_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(MATPLOTPP_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-set(MATPLOTPP_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-    matplotplusplus
-    GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus
-    GIT_TAG v1.2.1
-)
-
-set(MATPLOTPP_BUILD_WITH_PEDANTIC_WARNINGS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(databento glfw imgui implot catch2 eigen matplotplusplus)
+FetchContent_MakeAvailable(databento glfw imgui implot catch2)
 
 find_package(OpenGL REQUIRED)
 
@@ -73,9 +55,7 @@ set(COMMON_SOURCES
     src/app/gui_application.cpp
     src/app/dashboard.cpp
     src/app/replay_controller.cpp
-    src/app/visualizer.cpp
     src/features/order_tracker.cpp
-    src/model/gmm.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
@@ -106,8 +86,6 @@ target_include_directories(thesis PRIVATE
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${implot_SOURCE_DIR}
-    ${matplotplusplus_SOURCE_DIR}/source
-    ${CMAKE_BINARY_DIR}/_deps/matplotplusplus-src/source
 )
 target_include_directories(unit_tests PRIVATE
     src
@@ -115,8 +93,6 @@ target_include_directories(unit_tests PRIVATE
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${implot_SOURCE_DIR}
-    ${matplotplusplus_SOURCE_DIR}/source
-    ${CMAKE_BINARY_DIR}/_deps/matplotplusplus-src/source
 )
 
 # Link targets
@@ -126,8 +102,6 @@ target_link_libraries(thesis
     date::date
     glfw
     OpenGL::GL
-    Eigen3::Eigen
-    matplot
 )
 target_link_libraries(unit_tests
     PRIVATE
@@ -136,8 +110,6 @@ target_link_libraries(unit_tests
     glfw
     OpenGL::GL
     Catch2::Catch2WithMain
-    Eigen3::Eigen
-    matplot
 )
 
 # Distribution

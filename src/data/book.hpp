@@ -91,7 +91,7 @@ class Book {
    * @endcode
    *
    * @param order_id The exchange-assigned order identifier.
-   * @return Total volume ahead of this order.
+   * @return Total volume ahead of this order (feature: `volume_ahead` in FeatureRecord).
    */
   uint32_t GetVolumeAhead(uint64_t order_id);
 
@@ -122,6 +122,22 @@ class Book {
    * @return Normalized ratio [0.0, 1.0] where 0.5 is neutral.
    */
   double CalculateDeepImbalance(std::size_t depth) const;
+
+  /**
+   * @brief Returns total bid and ask volume summed over the top @p n price
+   *        levels on each side.
+   */
+  std::pair<double, double> GetTopNDepth(int n) const;
+
+  /**
+   * @brief Same as GetTopNDepth but subtracts one order's contribution from
+   *        its side, giving the pre-add depth state.  If the order's price is
+   *        not among the top @p n levels its contribution is zero and the
+   *        result is identical to GetTopNDepth.
+   */
+  std::pair<double, double> GetTopNDepthExcluding(int n, int64_t order_price,
+                                                   uint32_t order_size,
+                                                   Side order_side) const;
 
   /** @name Getters */
   ///@{

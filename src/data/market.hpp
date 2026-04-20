@@ -25,6 +25,12 @@ struct MarketSnapshot {
   std::vector<float> ask_volumes;
   std::vector<float> bid_volumes_cum;
   std::vector<float> ask_volumes_cum;
+
+  // Per-level price and order count
+  std::vector<double> bid_prices;
+  std::vector<double> ask_prices;
+  std::vector<uint32_t> bid_counts;
+  std::vector<uint32_t> ask_counts;
 };
 
 /**
@@ -47,7 +53,13 @@ class Market {
                              std::size_t depth);
 
   BestBidOffer AggregatedBbo(uint32_t instrument_id);
+  PriceLevel AggregatedBidLevel(uint32_t instrument_id, std::size_t depth_idx);
+  PriceLevel AggregatedAskLevel(uint32_t instrument_id, std::size_t depth_idx);
   uint32_t GetVolumeAhead(uint32_t instrument_id, uint64_t order_id);
+  std::pair<double, double> GetTopNDepth(uint32_t instrument_id, int n);
+  std::pair<double, double> GetTopNDepthExcluding(uint32_t instrument_id, int n,
+                                                   int64_t price, uint32_t size,
+                                                   Side side);
 
  private:
   std::unordered_map<uint32_t, std::vector<PublisherBook>> books_;

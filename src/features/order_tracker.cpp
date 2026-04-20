@@ -6,9 +6,9 @@
 #include <cstdlib>
 #include <unordered_map>
 
+#include "core/constants.hpp"
 #include "core/logging.hpp"
 #include "csv.hpp"
-#include "data/book.hpp"
 #include "databento/record.hpp"
 
 namespace db = databento;
@@ -83,13 +83,23 @@ void OrderTracker::DumpOrders(const std::string &filename) const {
             << filename << std::endl;
 }
 
+double OrderTracker::RollingMedianSize() const {
+  if (size_window_.empty()) return 1.0;
+  std::vector<uint32_t> sorted(size_window_.begin(), size_window_.end());
+  std::sort(sorted.begin(), sorted.end());
+  return sorted[sorted.size() / 2];
+}
+
 void OrderTracker::Add(const db::MboMsg &mbo) {
   OrderMap::iterator it = order_map.find(mbo.order_id);
 
   if (it == order_map.end()) {
+    double median = RollingMedianSize();
+    double rel_size = (median > 0.0) ? (mbo.size / median) : 1.0;
+
     order_map[mbo.order_id] = Order{
         mbo.order_id,
-        static_cast<int64_t>(mbo.size),
+        mbo.size,
         mbo.price,
         mbo.side,
         std::chrono::steady_clock::now(),
@@ -98,7 +108,14 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         OrderInducedImbalance(mbo),
         0,
         market_.GetVolumeAhead(instrument_id_, mbo.order_id),
+        rel_size,
+        OrderPriceDistance(mbo),
     };
+
+    size_window_.push_back(mbo.size);
+    if (size_window_.size() > kSizeWindowN)
+      size_window_.pop_front();
+
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
   } else {
     // Existing Order: Update size directly (XNAS.ITCH multi-part add)
@@ -166,23 +183,43 @@ void OrderTracker::Reconcile(const db::MboMsg &mbo) {
   }
 }
 
+double OrderTracker::OrderDeltaT(const Order &order, const db::MboMsg &mbo) const {
+  uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
+  return (ts_cancel - order.ts_event_add);
+}
+
 void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
                                      CancelType cancel_type) {
-  uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
-  double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
+  double delta_t = OrderDeltaT(order, mbo);
 
   // Override using cross-event fill history. staged_vol (pending_volume_map_)
   // only covers fills within the current event; total_filled persists across
   // all events for this order's lifetime.
-  CancelType resolved = (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
+  CancelType resolved =
+      (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
 
-  feature_records_.push_back(
-      FeatureRecord{
-          delta_t,
-          order.induced_imbalance,
-          static_cast<double>(order.volume_ahead),
-          resolved,
-      });
+  double spread_bps = 0.0;
+  double mid_price = 0.0;
+  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  if (bid && ask) {
+    double mid_raw = static_cast<double>(bid.price + ask.price) / 2.0;
+    if (mid_raw > 0.0) {
+      spread_bps = static_cast<double>(ask.price - bid.price) / mid_raw * 10000.0;
+      mid_price  = mid_raw / constants::PRICE_SCALE;
+    }
+  }
+
+  feature_records_.push_back(FeatureRecord{
+      delta_t,
+      order.induced_imbalance,
+      static_cast<double>(order.volume_ahead),
+      order.relative_size,
+      order.price_distance_ticks,
+      resolved,
+      mbo.ts_recv.time_since_epoch().count(),
+      spread_bps,
+      mid_price,
+  });
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {
@@ -208,38 +245,36 @@ void OrderTracker::PruneZombies() {
   }
 }
 
+double OrderTracker::OrderPriceDistance(const db::MboMsg &mbo) {
+  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  if (!bid || !ask) return 0.0;
+
+  // Bid: best_bid - order_price  (0 = at touch, positive = deeper)
+  // Ask: order_price - best_ask  (0 = at touch, positive = deeper)
+  int64_t touch = (mbo.side == db::Side::Bid) ? bid.price : ask.price;
+  int64_t signed_dist = (mbo.side == db::Side::Bid)
+                            ? touch - mbo.price
+                            : mbo.price - touch;
+  return static_cast<double>(std::max<int64_t>(0, signed_dist)) /
+         constants::XNAS_TICK_SIZE;
+}
+
 double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
-  BestBidOffer bbo = market_.AggregatedBbo(instrument_id_);
-  PriceLevel best_bid = bbo.first;
-  PriceLevel best_ask = bbo.second;
+  const int N = 5;
+  Side side = (mbo.side == db::Side::Bid) ? Side::Bid : Side::Ask;
 
-  if (best_bid.IsEmpty() || best_ask.IsEmpty()) return 0.0;
-
-  double V_b = best_bid.size;
-  double V_a = best_ask.size;
-
-  if (V_b + V_a == 0.0) return 0.0;
-
-  // I_after: current (post-Add) BBO imbalance
-  double I_after = (V_b - V_a) / (V_b + V_a);
-
-  // Reconstruct pre-Add volumes by removing this order's contribution.
-  // Only valid when the order sits at the current best on its side.
-  // Orders that created a new best level or sit behind the touch
-  // are treated as having no measurable BBO impact.
-  double V_b_pre = V_b;
-  double V_a_pre = V_a;
-
-  if (mbo.side == db::Side::Bid && mbo.price == best_bid.price)
-    V_b_pre = V_b - mbo.size;
-  else if (mbo.side == db::Side::Ask && mbo.price == best_ask.price)
-    V_a_pre = V_a - mbo.size;
-  else
-    return 0.0;  // no BBO impact
-
+  // Pre-add OBI: top-N depth with this order's contribution removed
+  auto [V_b_pre, V_a_pre] = market_.GetTopNDepthExcluding(
+      instrument_id_, N, mbo.price, mbo.size, side);
   double denom_pre = V_b_pre + V_a_pre;
   if (denom_pre == 0.0) return 0.0;
-  double I_before = (V_b_pre - V_a_pre) / denom_pre;
+  double OBI_before = (V_b_pre - V_a_pre) / denom_pre;
 
-  return abs(I_before - I_after);
+  // Post-add OBI: top-N depth including this order
+  auto [V_b, V_a] = market_.GetTopNDepth(instrument_id_, N);
+  double denom = V_b + V_a;
+  if (denom == 0.0) return 0.0;
+  double OBI_after = (V_b - V_a) / denom;
+
+  return std::abs(OBI_after - OBI_before);
 }

@@ -4,7 +4,6 @@
 #include <databento/historical.hpp>
 #include <databento/symbol_map.hpp>
 #include <filesystem>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -13,15 +12,10 @@
 #include <vector>
 
 #include "app/gui_application.hpp"
-#include "app/visualizer.hpp"
 #include "data/market.hpp"
 #include "data/replay_engine.hpp"
+#include "features/csv.hpp"
 #include "features/order_tracker.hpp"
-#include "model/gmm.hpp"
-
-// const uint64_t MAX_MSGS = 100'000'000;
-// const uint64_t MAX_MSGS = 100'000;
-const uint64_t MAX_MSGS = 2'000'000;
 
 namespace fs = std::filesystem;
 
@@ -30,13 +24,15 @@ struct Config {
   std::string data_path;
   uint32_t focus_instrument = 0;
   std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
+  uint64_t limit = 0;          // extract-features: max MBO messages (0 = all)
+  std::string output_path;     // extract-features: output CSV path
   std::string api_key;
   // databento-fetch options
   std::string dataset = "XNAS.ITCH";
   std::vector<std::string> symbols;
   std::string start_time;
   std::string end_time;
-  std::string output_path;
+  std::string fetch_output_path;
 };
 
 void print_usage() {
@@ -46,11 +42,13 @@ void print_usage() {
       << "Commands:\n"
       << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
-      << "  gmm <data_path>            Run order tracking + GMM analysis\n"
-      << "  plot <data_path>             Plot feature distributions (PNGs)\n"
+      << "  extract-features <data_path> Run order tracking and write feature CSV\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
-      << "Options (gui / gmm / plot):\n"
-      << "  --symbol <id>                Focus instrument ID\n\n"
+      << "Options (gui / extract-features):\n"
+      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n\n"
+      << "Options (extract-features):\n"
+      << "  --limit  <N>                 Stop after N MBO messages (default: all)\n"
+      << "  --output <path>              Output CSV path (default: features/records.csv)\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
@@ -87,7 +85,7 @@ Config parse_args(int argc, char **argv) {
       } else if (arg == "--end" && i + 1 < argc) {
         cfg.end_time = argv[++i];
       } else if (arg == "--output" && i + 1 < argc) {
-        cfg.output_path = argv[++i];
+        cfg.fetch_output_path = argv[++i];
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
@@ -102,8 +100,8 @@ Config parse_args(int argc, char **argv) {
       throw std::runtime_error("--symbols is required.");
     if (cfg.start_time.empty() || cfg.end_time.empty())
       throw std::runtime_error("--start and --end are required.");
-    if (cfg.output_path.empty())
-      cfg.output_path = "./data/multi_instrument.dbn.zst";
+    if (cfg.fetch_output_path.empty())
+      cfg.fetch_output_path = "./data/multi_instrument.dbn.zst";
   } else {
     if (argc < 3) {
       print_usage();
@@ -111,14 +109,24 @@ Config parse_args(int argc, char **argv) {
     }
     cfg.data_path = argv[2];
 
+    bool symbol_set = false;
     for (int i = 3; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
+        symbol_set = true;
+      } else if (arg == "--limit" && i + 1 < argc) {
+        cfg.limit = std::stoull(argv[++i]);
+      } else if (arg == "--output" && i + 1 < argc) {
+        cfg.output_path = argv[++i];
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
     }
+    if (cfg.command == "extract-features" && !symbol_set)
+      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'info' first to list instrument IDs.");
+    if (cfg.command == "extract-features" && cfg.output_path.empty())
+      cfg.output_path = "features/records.csv";
   }
   return cfg;
 }
@@ -175,127 +183,53 @@ void run_info(const Config &cfg) {
   }
 }
 
-void run_plot(const Config &cfg) {
+void run_extract_features(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
   Market market;
   OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
-  auto callback = [&](const db::MboMsg &mbo) {
-    if (msg_count < MAX_MSGS) {
-      tracker.Router(mbo);
-      msg_count++;
-      return true;
-    }
-    return false;
-  };
+  engine.Run(market, [&](const db::MboMsg &mbo) {
+    if (cfg.limit > 0 && msg_count >= cfg.limit) return false;
+    tracker.Router(mbo);
+    ++msg_count;
+    return true;
+  });
 
-  engine.Run(market, callback);
+  const auto &records = tracker.feature_records_;
+  std::cout << "Processed " << msg_count << " messages → "
+            << records.size() << " feature records.\n";
 
-  std::cout << "Collected " << tracker.feature_records_.size()
-            << " feature records.\n";
-  RunVisualizer(tracker.feature_records_);
-}
-
-void run_gmm(const Config &cfg) {
-  ReplayEngine engine(cfg.data_path);
-  Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
-
-  uint64_t msg_count = 0;
-  auto callback = [&](const db::MboMsg &mbo) {
-    if (msg_count < MAX_MSGS) {
-      tracker.Router(mbo);
-      msg_count++;
-      return true;
-    }
-    return false;
-  };
-
-  engine.Run(market, callback);
-
-  // --- Semi-supervised GMM ---
-  // All records enter the uodel so fill-cancelled orders anchor the
-  // liquidity-consistent component. Their responsibilities are pinned to 0 in
-  // every E-step via the fixed_lc mask — they can never be assigned to the
-  // anomalous component.
-  const auto &all_records = tracker.feature_records_;
-
-  std::vector<bool> fixed_lc(all_records.size());
-  int n_pure = 0, n_fill = 0;
-  for (std::size_t i = 0; i < all_records.size(); ++i) {
-    fixed_lc[i] = (all_records[i].cancel_type == CancelType::Fill);
-    fixed_lc[i] ? ++n_fill : ++n_pure;
-  }
-
-  std::cout << "\nCollected " << all_records.size() << " total records  ("
-            << n_pure << " pure, " << n_fill << " fill-anchored).\n";
-
-  if (n_pure < 1000) {
-    std::cout << "Too few pure cancellations to fit GMM (need >=10).\n";
+  fs::path out(cfg.output_path);
+  CSVWriter csv;
+  if (!csv.Open(out.filename().string(), out.parent_path().string())) {
+    std::cerr << "Failed to open " << cfg.output_path << " for writing.\n";
     return;
   }
 
-  // delta_t, induced_imbalance, volume_ahead
-  const std::vector<int> feature_indices = {0, 1, 2}; 
-  auto data = GMM::ToEigen(all_records, feature_indices);
-  GMM::Standardize(data);
+  csv.Write("ts_recv");
+  csv.Write("cancel_type");
+  csv.Write("delta_t");
+  csv.Write("volume_ahead");
+  csv.Write("induced_imbalance");
+  csv.Write("relative_size");
+  csv.Write("price_distance_ticks");
+  csv.Write("spread_bps");
+  csv.Write("mid_price", /*is_last=*/true);
 
-  FitOptions opts;
-  opts.fixed_lc = fixed_lc;
-
-  GMM gmm;
-  GMMResult result = gmm.Fit(data, opts);
-
-  const std::string out_path = "features/gmm_results.txt";
-  std::ofstream out(out_path);
-  if (!out) {
-    std::cerr << "Failed to open " << out_path << " for writing.\n";
-    return;
+  for (const auto &r : records) {
+    csv.Write(r.ts_recv);
+    csv.Write(static_cast<int>(r.cancel_type));
+    csv.Write(r.delta_t);
+    csv.Write(r.volume_ahead);
+    csv.Write(r.induced_imbalance);
+    csv.Write(r.relative_size);
+    csv.Write(r.price_distance_ticks);
+    csv.Write(r.spread_bps);
+    csv.Write(r.mid_price, /*is_last=*/true);
   }
-
-  auto write_mean = [&](const Eigen::VectorXd &mu) {
-    for (int j = 0; j < static_cast<int>(feature_indices.size()); ++j) {
-      out << "    " << std::left << std::setw(20)
-          << kFeatures[feature_indices[j]].name << std::right
-          << std::setw(14) << std::fixed << std::setprecision(6) << mu[j]
-          << "\n";
-    }
-  };
-
-  // --- Restart summary table ---
-  out << "=== GMM Restart Summary (" << opts.n_init << " restarts) ===\n"
-      << std::left  << std::setw(12) << "Restart"
-      << std::right << std::setw(20) << "Log-likelihood"
-      << std::setw(14) << "pi_spoof"
-      << std::setw(12) << "Iterations"
-      << "\n"
-      << std::string(58, '-') << "\n";
-
-  for (const auto &rs : result.restarts) {
-    bool is_best = (rs.restart == result.best_restart);
-    std::string label = std::to_string(rs.restart + 1) + (is_best ? " *" : "");
-    out << std::left  << std::setw(12) << label
-        << std::right << std::setw(20) << std::fixed << std::setprecision(4) << rs.log_likelihood
-        << std::setw(14) << std::setprecision(6) << rs.pi_spoof
-        << std::setw(12) << rs.iterations
-        << "\n";
-  }
-
-  // --- Best result ---
-  out << "\n=== Best Result (restart " << (result.best_restart + 1) << ") ===\n"
-      << "Observations:      " << all_records.size() << "\n"
-      << "Iterations:        " << result.iterations << "\n"
-      << "Log-likelihood:    " << std::fixed << std::setprecision(4)
-      << result.log_likelihood << "\n"
-      << "pi_spoof (pi_hat): " << std::setprecision(6) << result.pi_spoof
-      << "\n"
-      << "\nComponent 1 — anomalous (standardised mean):\n";
-  write_mean(result.params.mu1);
-  out << "\nComponent 2 — liquidity-consistent (standardised mean):\n";
-  write_mean(result.params.mu2);
-
-  std::cout << "GMM results written to " << out_path << "\n";
+  csv.Flush();
+  std::cout << "Written to " << cfg.output_path << "\n";
 }
 
 void run_gui_application(const Config &cfg) {
@@ -322,7 +256,7 @@ void run_downloader(const Config &cfg) {
   for (size_t i = 0; i < cfg.symbols.size(); ++i)
     std::cout << cfg.symbols[i] << (i == cfg.symbols.size() - 1 ? "" : ", ");
   std::cout << "\nRange:   " << cfg.start_time << " to " << cfg.end_time
-            << "\nOutput:  " << cfg.output_path << "\n";
+            << "\nOutput:  " << cfg.fetch_output_path << "\n";
 
   databento::DateTimeRange<std::string> range{cfg.start_time, cfg.end_time};
   double estimated_cost =
@@ -352,7 +286,7 @@ void run_downloader(const Config &cfg) {
     return;
   }
 
-  fs::path out_path(cfg.output_path);
+  fs::path out_path(cfg.fetch_output_path);
   if (out_path.has_parent_path())
     fs::create_directories(out_path.parent_path());
 
@@ -360,7 +294,7 @@ void run_downloader(const Config &cfg) {
   client.TimeseriesGetRangeToFile(
       cfg.dataset, range, cfg.symbols, databento::Schema::Mbo,
       databento::SType::RawSymbol, databento::SType::InstrumentId, 0,
-      cfg.output_path);
+      cfg.fetch_output_path);
   std::cout << "Success!\n";
 }
 
@@ -372,10 +306,8 @@ int main(int argc, char **argv) {
       run_info(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
-    } else if (cfg.command == "gmm") {
-      run_gmm(cfg);
-    } else if (cfg.command == "plot") {
-      run_plot(cfg);
+    } else if (cfg.command == "extract-features") {
+      run_extract_features(cfg);
     } else if (cfg.command == "databento-fetch") {
       run_downloader(cfg);
     } else {

@@ -31,6 +31,28 @@ BestBidOffer Market::Bbo(uint32_t instrument_id, uint16_t publisher_id) {
   return book.Bbo();
 }
 
+std::pair<double, double> Market::GetTopNDepth(uint32_t instrument_id, int n) {
+  double bid_vol = 0, ask_vol = 0;
+  for (auto &pub_book : books_[instrument_id]) {
+    auto [b, a] = pub_book.book.GetTopNDepth(n);
+    bid_vol += b;
+    ask_vol += a;
+  }
+  return {bid_vol, ask_vol};
+}
+
+std::pair<double, double> Market::GetTopNDepthExcluding(uint32_t instrument_id,
+                                                         int n, int64_t price,
+                                                         uint32_t size, Side side) {
+  double bid_vol = 0, ask_vol = 0;
+  for (auto &pub_book : books_[instrument_id]) {
+    auto [b, a] = pub_book.book.GetTopNDepthExcluding(n, price, size, side);
+    bid_vol += b;
+    ask_vol += a;
+  }
+  return {bid_vol, ask_vol};
+}
+
 uint32_t Market::GetVolumeAhead(uint32_t instrument_id, uint64_t order_id) {
   for (auto &pub_book : books_[instrument_id]) {
     try {
@@ -121,6 +143,38 @@ double Market::AggregatedLevelVolume(uint32_t instrument_id, std::size_t depth,
   return level_vol;
 }
 
+PriceLevel Market::AggregatedBidLevel(uint32_t instrument_id, std::size_t depth_idx) {
+  PriceLevel result;
+  for (const auto &pub_book : GetBooksByPub(instrument_id)) {
+    PriceLevel level = pub_book.book.GetBidLevel(depth_idx);
+    if (!level.IsEmpty()) {
+      if (result.IsEmpty() || level.price > result.price) {
+        result = level;
+      } else if (level.price == result.price) {
+        result.size += level.size;
+        result.count += level.count;
+      }
+    }
+  }
+  return result;
+}
+
+PriceLevel Market::AggregatedAskLevel(uint32_t instrument_id, std::size_t depth_idx) {
+  PriceLevel result;
+  for (const auto &pub_book : GetBooksByPub(instrument_id)) {
+    PriceLevel level = pub_book.book.GetAskLevel(depth_idx);
+    if (!level.IsEmpty()) {
+      if (result.IsEmpty() || level.price < result.price) {
+        result = level;
+      } else if (level.price == result.price) {
+        result.size += level.size;
+        result.count += level.count;
+      }
+    }
+  }
+  return result;
+}
+
 double Market::Imbalance(uint32_t instrument_id, uint16_t publisher_id) {
   const auto &book = GetBook(instrument_id, publisher_id);
   return book.CalculateImbalance();
@@ -176,6 +230,10 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   snap.ask_volumes.resize(depth);
   snap.bid_volumes_cum.resize(depth);
   snap.ask_volumes_cum.resize(depth);
+  snap.bid_prices.resize(depth, 0.0);
+  snap.ask_prices.resize(depth, 0.0);
+  snap.bid_counts.resize(depth, 0);
+  snap.ask_counts.resize(depth, 0);
 
   for (std::size_t d = 1; d <= depth; ++d) {
     snap.bid_volumes[d - 1] =
@@ -186,6 +244,13 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
         static_cast<float>(AggregatedSideVolume(inst_id, d, true));
     snap.ask_volumes_cum[d - 1] =
         static_cast<float>(AggregatedSideVolume(inst_id, d, false));
+
+    PriceLevel bid_lvl = AggregatedBidLevel(inst_id, d - 1);
+    PriceLevel ask_lvl = AggregatedAskLevel(inst_id, d - 1);
+    snap.bid_prices[d - 1] = bid_lvl.IsEmpty() ? 0.0 : static_cast<double>(bid_lvl.price) / 1e9;
+    snap.ask_prices[d - 1] = ask_lvl.IsEmpty() ? 0.0 : static_cast<double>(ask_lvl.price) / 1e9;
+    snap.bid_counts[d - 1] = bid_lvl.count;
+    snap.ask_counts[d - 1] = ask_lvl.count;
   }
 
   return snap;

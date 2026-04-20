@@ -26,7 +26,8 @@ class Dashboard {
   bool m_use_cumulative = true;
   bool m_request_quit = false;
   bool m_spread_follow = true;  // Keep time-axis locked to latest data
-  float m_y_range = 10.0f;      // Manual Y-axis range in dollars
+  float m_y_range = 0.05f;      // Manual Y-axis range in dollars
+  float m_window_secs = 120.0f; // Rolling chart window in seconds
 
   // Visual toggles
 

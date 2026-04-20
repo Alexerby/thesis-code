@@ -1,7 +1,6 @@
-FILE_NAME=$1
+FILE_PATH=$1
 LIMIT=${2:-1000}
 DATA_DIR="./data"
-FILE_PATH="${DATA_DIR}/$FILE_NAME"
 
 if [ ! -f "$FILE_PATH" ]; then
     echo "File path: $FILE_PATH not found"
