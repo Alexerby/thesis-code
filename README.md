@@ -64,6 +64,7 @@ To build with debug symbols:
 |---|---|
 | `info` | Print file metadata and instrument ID → ticker map |
 | `gui` | Real-time order book visualizer (OpenGL) |
+| `extract-features` | Run order tracking and write feature CSV |
 | `databento-fetch` | Download historical MBO data from Databento |
 
 ### Examples
@@ -74,6 +75,12 @@ To build with debug symbols:
 
 # Launch the market visualizer (--symbol is required)
 ./dist/thesis gui data/sample.dbn.zst --symbol 38
+
+# Extract features for instrument 38 (process entire file)
+./dist/thesis extract-features data/sample.dbn.zst --symbol 38
+
+# Extract features, cap at 5M messages, write to custom path
+./dist/thesis extract-features data/sample.dbn.zst --symbol 38 --limit 5000000 --output data/features_38.csv
 ```
 
 ## Data

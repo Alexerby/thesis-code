@@ -6,9 +6,9 @@
 #include <cstdlib>
 #include <unordered_map>
 
+#include "core/constants.hpp"
 #include "core/logging.hpp"
 #include "csv.hpp"
-#include "data/book.hpp"
 #include "databento/record.hpp"
 
 namespace db = databento;
@@ -99,7 +99,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
 
     order_map[mbo.order_id] = Order{
         mbo.order_id,
-        static_cast<int64_t>(mbo.size),
+        mbo.size,
         mbo.price,
         mbo.side,
         std::chrono::steady_clock::now(),
@@ -113,7 +113,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
     };
 
     size_window_.push_back(mbo.size);
-    if (static_cast<int>(size_window_.size()) > kSizeWindowN)
+    if (size_window_.size() > kSizeWindowN)
       size_window_.pop_front();
 
     expiry_queue_.push_back({mbo.order_id, std::chrono::steady_clock::now()});
@@ -183,10 +183,14 @@ void OrderTracker::Reconcile(const db::MboMsg &mbo) {
   }
 }
 
+double OrderTracker::OrderDeltaT(const Order &order, const db::MboMsg &mbo) const {
+  uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
+  return (ts_cancel - order.ts_event_add);
+}
+
 void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
                                      CancelType cancel_type) {
-  uint64_t ts_cancel = mbo.hd.ts_event.time_since_epoch().count();
-  double delta_t = static_cast<double>(ts_cancel - order.ts_event_add);
+  double delta_t = OrderDeltaT(order, mbo);
 
   // Override using cross-event fill history. staged_vol (pending_volume_map_)
   // only covers fills within the current event; total_filled persists across
@@ -195,11 +199,14 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
       (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
 
   double spread_bps = 0.0;
+  double mid_price = 0.0;
   auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
   if (bid && ask) {
-    double mid = static_cast<double>(bid.price + ask.price) / 2.0;
-    if (mid > 0.0)
-      spread_bps = static_cast<double>(ask.price - bid.price) / mid * 10000.0;
+    double mid_raw = static_cast<double>(bid.price + ask.price) / 2.0;
+    if (mid_raw > 0.0) {
+      spread_bps = static_cast<double>(ask.price - bid.price) / mid_raw * 10000.0;
+      mid_price  = mid_raw / constants::PRICE_SCALE;
+    }
   }
 
   feature_records_.push_back(FeatureRecord{
@@ -207,10 +214,11 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
       order.induced_imbalance,
       static_cast<double>(order.volume_ahead),
       order.relative_size,
-      order.price_distance_bps,
+      order.price_distance_ticks,
       resolved,
       mbo.ts_recv.time_since_epoch().count(),
       spread_bps,
+      mid_price,
   });
 }
 
@@ -240,18 +248,15 @@ void OrderTracker::PruneZombies() {
 double OrderTracker::OrderPriceDistance(const db::MboMsg &mbo) {
   auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
   if (!bid || !ask) return 0.0;
-  double mid = static_cast<double>(bid.price + ask.price) / 2.0;
-  if (mid <= 0.0) return 0.0;
 
-  // Distance from the same-side touch: how far behind the queue was this order
-  // placed? Bid order: best_bid - order_price  (0 = at touch, positive =
-  // deeper) Ask order: order_price - best_ask  (0 = at touch, positive =
-  // deeper)
-  double touch = (mbo.side == db::Side::Bid) ? bid.price : ask.price;
-  double signed_dist = (mbo.side == db::Side::Bid)
-                           ? touch - mbo.price
-                           : mbo.price - touch;
-  return std::max(0.0, signed_dist) / mid * 10000.0;
+  // Bid: best_bid - order_price  (0 = at touch, positive = deeper)
+  // Ask: order_price - best_ask  (0 = at touch, positive = deeper)
+  int64_t touch = (mbo.side == db::Side::Bid) ? bid.price : ask.price;
+  int64_t signed_dist = (mbo.side == db::Side::Bid)
+                            ? touch - mbo.price
+                            : mbo.price - touch;
+  return static_cast<double>(std::max<int64_t>(0, signed_dist)) /
+         constants::XNAS_TICK_SIZE;
 }
 
 double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {

@@ -45,14 +45,16 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
  * @brief Feature vector x_i for a single order lifecycle.
  */
 struct FeatureRecord {
-  double delta_t;              ///< \Delta t_i
-  double induced_imbalance;    ///< \Delta \mathcal{I}_i
-  double volume_ahead;         ///< Total volume between order and BBO at add-time
-  double relative_size;        ///< order size / rolling median size (last 500 adds)
-  double price_distance_bps;   ///< |order_price - same-side touch| / mid * 10000 at add-time
-  CancelType cancel_type;      ///< Pure cancellation or fill-induced cancel
-  uint64_t ts_recv{0};         ///< Cancel timestamp (nanoseconds since epoch)
-  double spread_bps{0.0};      ///< (ask - bid) / mid * 10000 at cancel time
+  double delta_t;            ///< \Delta t_i
+  double induced_imbalance;  ///< \Delta \mathcal{I}_i
+  double volume_ahead;       ///< Total volume between order and BBO at add-time 
+                             ///< (computed by Book::GetVolumeAhead)
+  double relative_size;  ///< order size / rolling median size (last 500 adds)
+  double price_distance_ticks;  ///< |order_price - same-side touch| in ticks at add-time
+  CancelType cancel_type;     ///< Pure cancellation or fill-induced cancel
+  uint64_t ts_recv{0};        ///< Cancel timestamp (nanoseconds since epoch)
+  double spread_bps{0.0};     ///< (ask - bid) / mid * 10000 at cancel time
+  double mid_price{0.0};      ///< Mid-price in USD at cancel time (for event study)
 };
 
 // ---------------------------------------------------------------------------
@@ -71,32 +73,32 @@ struct FeatureDef {
 };
 
 inline const FeatureDef kFeatures[] = {
-    {"delta_t",
-     [](const FeatureRecord &r) { return r.delta_t; }},            // 0
+    {"delta_t", [](const FeatureRecord &r) { return r.delta_t; }},  // 0
     {"volume_ahead",
-     [](const FeatureRecord &r) { return r.volume_ahead; }},       // 1
+     [](const FeatureRecord &r) { return r.volume_ahead; }},  // 1
     {"induced_imbalance",
      [](const FeatureRecord &r) { return r.induced_imbalance; }},  // 2
     {"relative_size",
-     [](const FeatureRecord &r) { return r.relative_size; }},      // 3
-    {"price_distance_bps",
-     [](const FeatureRecord &r) { return r.price_distance_bps; }}, // 4
+     [](const FeatureRecord &r) { return r.relative_size; }},  // 3
+    {"price_distance_ticks",
+     [](const FeatureRecord &r) { return r.price_distance_ticks; }},  // 4
 };
 
 // Represents the tracking of an individual order
 struct Order {
   uint64_t order_id;
-  int64_t size;          // Remaining quantity
-  int64_t price;         // Current price
-  db::Side side;         // Ask or Bid
+  int64_t size;   // Remaining quantity
+  int64_t price;  // Current price
+  db::Side side;  // Ask or Bid
   std::chrono::steady_clock::time_point entry_time;
   uint64_t entry_ts_recv;  // ts_recv at add (nanoseconds)
-  uint64_t ts_event_add;   // ts_event at add — matching engine clock (nanoseconds)
+  uint64_t
+      ts_event_add;  // ts_event at add — matching engine clock (nanoseconds)
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   int64_t total_filled{0};   // Cumulative filled volume across all events
   uint32_t volume_ahead;
-  double relative_size;          ///< size / rolling median size at add-time
-  double price_distance_bps{0.0}; ///< |order_price - same-side touch| / mid * 10000 at add-time
+  double relative_size;  ///< size / rolling median size at add-time
+  double price_distance_ticks{0.0};  ///< |order_price - same-side touch| in ticks at add-time
 };
 
 /* @class OrderTracker
@@ -165,23 +167,13 @@ class OrderTracker {
    */
   void Reconcile(const db::MboMsg &mbo);
 
-  /**
-   * @brief Calculates feature: Order-Induced Imbalance.
-   *
-   * As the OrderTracker is not aware of the order before
-   * it's added, we can not directly calculate the
-   * difference that this order had on the balance
-   * of the order book. To get around this, we calculate
-   * the order book imbalance per usual (after the ADD)
-   * and backtracks the imbalance level from before by
-   * adjusting the volume at db::Side::Bid.
-   *
-   *
-   * @param The Market-By-Order (MBO) message.
-   */
+  /// @brief |\Delta OBI| induced by this order's placement (top-5 depth).
   double OrderInducedImbalance(const db::MboMsg &mbo);
 
-  /// Distance of the order's price from the same-side touch in bps, at add-time.
+  /// @brief Elapsed nanoseconds between order add and cancel (matching-engine clock).
+  double OrderDeltaT(const Order &order, const db::MboMsg &mbo) const;
+
+  /// @brief Distance from the same-side touch price in ticks at add-time.
   double OrderPriceDistance(const db::MboMsg &mbo);
 
   /// Returns the median of size_window_, or 1.0 if the window is empty.

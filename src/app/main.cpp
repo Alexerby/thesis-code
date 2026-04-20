@@ -14,11 +14,8 @@
 #include "app/gui_application.hpp"
 #include "data/market.hpp"
 #include "data/replay_engine.hpp"
+#include "features/csv.hpp"
 #include "features/order_tracker.hpp"
-
-// const uint64_t MAX_MSGS = 100'000'000;
-// const uint64_t MAX_MSGS = 100'000;
-const uint64_t MAX_MSGS = 2'000'000;
 
 namespace fs = std::filesystem;
 
@@ -27,13 +24,15 @@ struct Config {
   std::string data_path;
   uint32_t focus_instrument = 0;
   std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
+  uint64_t limit = 0;          // extract-features: max MBO messages (0 = all)
+  std::string output_path;     // extract-features: output CSV path
   std::string api_key;
   // databento-fetch options
   std::string dataset = "XNAS.ITCH";
   std::vector<std::string> symbols;
   std::string start_time;
   std::string end_time;
-  std::string output_path;
+  std::string fetch_output_path;
 };
 
 void print_usage() {
@@ -43,9 +42,13 @@ void print_usage() {
       << "Commands:\n"
       << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
+      << "  extract-features <data_path> Run order tracking and write feature CSV\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
-      << "Options (gui):\n"
-      << "  --symbol <id>                Focus instrument ID\n\n"
+      << "Options (gui / extract-features):\n"
+      << "  --symbol <id>                Focus instrument ID (required)\n\n"
+      << "Options (extract-features):\n"
+      << "  --limit  <N>                 Stop after N MBO messages (default: all)\n"
+      << "  --output <path>              Output CSV path (default: features/records.csv)\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
@@ -82,7 +85,7 @@ Config parse_args(int argc, char **argv) {
       } else if (arg == "--end" && i + 1 < argc) {
         cfg.end_time = argv[++i];
       } else if (arg == "--output" && i + 1 < argc) {
-        cfg.output_path = argv[++i];
+        cfg.fetch_output_path = argv[++i];
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
@@ -97,8 +100,8 @@ Config parse_args(int argc, char **argv) {
       throw std::runtime_error("--symbols is required.");
     if (cfg.start_time.empty() || cfg.end_time.empty())
       throw std::runtime_error("--start and --end are required.");
-    if (cfg.output_path.empty())
-      cfg.output_path = "./data/multi_instrument.dbn.zst";
+    if (cfg.fetch_output_path.empty())
+      cfg.fetch_output_path = "./data/multi_instrument.dbn.zst";
   } else {
     if (argc < 3) {
       print_usage();
@@ -112,12 +115,18 @@ Config parse_args(int argc, char **argv) {
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
         symbol_set = true;
+      } else if (arg == "--limit" && i + 1 < argc) {
+        cfg.limit = std::stoull(argv[++i]);
+      } else if (arg == "--output" && i + 1 < argc) {
+        cfg.output_path = argv[++i];
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
     }
-    if (cfg.command == "gui" && !symbol_set)
-      throw std::runtime_error("--symbol <id> is required for the 'gui' command. Run 'info' first to list instrument IDs.");
+    if ((cfg.command == "gui" || cfg.command == "extract-features") && !symbol_set)
+      throw std::runtime_error("--symbol <id> is required for '" + cfg.command + "'. Run 'info' first to list instrument IDs.");
+    if (cfg.command == "extract-features" && cfg.output_path.empty())
+      cfg.output_path = "features/records.csv";
   }
   return cfg;
 }
@@ -174,6 +183,55 @@ void run_info(const Config &cfg) {
   }
 }
 
+void run_extract_features(const Config &cfg) {
+  ReplayEngine engine(cfg.data_path);
+  Market market;
+  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
+
+  uint64_t msg_count = 0;
+  engine.Run(market, [&](const db::MboMsg &mbo) {
+    if (cfg.limit > 0 && msg_count >= cfg.limit) return false;
+    tracker.Router(mbo);
+    ++msg_count;
+    return true;
+  });
+
+  const auto &records = tracker.feature_records_;
+  std::cout << "Processed " << msg_count << " messages → "
+            << records.size() << " feature records.\n";
+
+  fs::path out(cfg.output_path);
+  CSVWriter csv;
+  if (!csv.Open(out.filename().string(), out.parent_path().string())) {
+    std::cerr << "Failed to open " << cfg.output_path << " for writing.\n";
+    return;
+  }
+
+  csv.Write("ts_recv");
+  csv.Write("cancel_type");
+  csv.Write("delta_t");
+  csv.Write("volume_ahead");
+  csv.Write("induced_imbalance");
+  csv.Write("relative_size");
+  csv.Write("price_distance_ticks");
+  csv.Write("spread_bps");
+  csv.Write("mid_price", /*is_last=*/true);
+
+  for (const auto &r : records) {
+    csv.Write(r.ts_recv);
+    csv.Write(static_cast<int>(r.cancel_type));
+    csv.Write(r.delta_t);
+    csv.Write(r.volume_ahead);
+    csv.Write(r.induced_imbalance);
+    csv.Write(r.relative_size);
+    csv.Write(r.price_distance_ticks);
+    csv.Write(r.spread_bps);
+    csv.Write(r.mid_price, /*is_last=*/true);
+  }
+  csv.Flush();
+  std::cout << "Written to " << cfg.output_path << "\n";
+}
+
 void run_gui_application(const Config &cfg) {
   Application::Config gui_cfg;
   gui_cfg.data_path = cfg.data_path;
@@ -198,7 +256,7 @@ void run_downloader(const Config &cfg) {
   for (size_t i = 0; i < cfg.symbols.size(); ++i)
     std::cout << cfg.symbols[i] << (i == cfg.symbols.size() - 1 ? "" : ", ");
   std::cout << "\nRange:   " << cfg.start_time << " to " << cfg.end_time
-            << "\nOutput:  " << cfg.output_path << "\n";
+            << "\nOutput:  " << cfg.fetch_output_path << "\n";
 
   databento::DateTimeRange<std::string> range{cfg.start_time, cfg.end_time};
   double estimated_cost =
@@ -228,7 +286,7 @@ void run_downloader(const Config &cfg) {
     return;
   }
 
-  fs::path out_path(cfg.output_path);
+  fs::path out_path(cfg.fetch_output_path);
   if (out_path.has_parent_path())
     fs::create_directories(out_path.parent_path());
 
@@ -236,7 +294,7 @@ void run_downloader(const Config &cfg) {
   client.TimeseriesGetRangeToFile(
       cfg.dataset, range, cfg.symbols, databento::Schema::Mbo,
       databento::SType::RawSymbol, databento::SType::InstrumentId, 0,
-      cfg.output_path);
+      cfg.fetch_output_path);
   std::cout << "Success!\n";
 }
 
@@ -248,6 +306,8 @@ int main(int argc, char **argv) {
       run_info(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
+    } else if (cfg.command == "extract-features") {
+      run_extract_features(cfg);
     } else if (cfg.command == "databento-fetch") {
       run_downloader(cfg);
     } else {

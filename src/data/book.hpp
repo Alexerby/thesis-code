@@ -91,7 +91,7 @@ class Book {
    * @endcode
    *
    * @param order_id The exchange-assigned order identifier.
-   * @return Total volume ahead of this order.
+   * @return Total volume ahead of this order (feature: `volume_ahead` in FeatureRecord).
    */
   uint32_t GetVolumeAhead(uint64_t order_id);
 
