@@ -109,6 +109,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         0,
         market_.GetVolumeAhead(instrument_id_, mbo.order_id),
         rel_size,
+        OrderPriceDistance(mbo),
     };
 
     size_window_.push_back(mbo.size);
@@ -190,17 +191,27 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
   // Override using cross-event fill history. staged_vol (pending_volume_map_)
   // only covers fills within the current event; total_filled persists across
   // all events for this order's lifetime.
-  CancelType resolved = (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
+  CancelType resolved =
+      (order.total_filled > 0) ? CancelType::Fill : CancelType::Pure;
 
-  feature_records_.push_back(
-      FeatureRecord{
-          delta_t,
-          order.induced_imbalance,
-          static_cast<double>(order.volume_ahead),
-          order.relative_size,
-          resolved,
-          mbo.ts_recv.time_since_epoch().count(),
-      });
+  double spread_bps = 0.0;
+  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  if (bid && ask) {
+    double mid = static_cast<double>(bid.price + ask.price) / 2.0;
+    if (mid > 0.0)
+      spread_bps = static_cast<double>(ask.price - bid.price) / mid * 10000.0;
+  }
+
+  feature_records_.push_back(FeatureRecord{
+      delta_t,
+      order.induced_imbalance,
+      static_cast<double>(order.volume_ahead),
+      order.relative_size,
+      order.price_distance_bps,
+      resolved,
+      mbo.ts_recv.time_since_epoch().count(),
+      spread_bps,
+  });
 }
 
 void OrderTracker::Clear(const db::MboMsg &mbo) {
@@ -224,6 +235,23 @@ void OrderTracker::PruneZombies() {
     }
     expiry_queue_.pop_front();
   }
+}
+
+double OrderTracker::OrderPriceDistance(const db::MboMsg &mbo) {
+  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  if (!bid || !ask) return 0.0;
+  double mid = static_cast<double>(bid.price + ask.price) / 2.0;
+  if (mid <= 0.0) return 0.0;
+
+  // Distance from the same-side touch: how far behind the queue was this order
+  // placed? Bid order: best_bid - order_price  (0 = at touch, positive =
+  // deeper) Ask order: order_price - best_ask  (0 = at touch, positive =
+  // deeper)
+  double touch = (mbo.side == db::Side::Bid) ? bid.price : ask.price;
+  double signed_dist = (mbo.side == db::Side::Bid)
+                           ? touch - mbo.price
+                           : mbo.price - touch;
+  return std::max(0.0, signed_dist) / mid * 10000.0;
 }
 
 double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {

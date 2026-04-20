@@ -1,27 +1,20 @@
-#include <algorithm>
 #include <cstdint>
 #include <databento/datetime.hpp>
 #include <databento/dbn_file_store.hpp>
 #include <databento/historical.hpp>
 #include <databento/symbol_map.hpp>
 #include <filesystem>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <numeric>
-#include <random>
 #include <string>
 #include <vector>
 
-#include "app/gmm_visualizer.hpp"
 #include "app/gui_application.hpp"
-#include "app/visualizer.hpp"
 #include "data/market.hpp"
 #include "data/replay_engine.hpp"
 #include "features/order_tracker.hpp"
-#include "model/gmm.hpp"
 
 // const uint64_t MAX_MSGS = 100'000'000;
 // const uint64_t MAX_MSGS = 100'000;
@@ -41,7 +34,6 @@ struct Config {
   std::string start_time;
   std::string end_time;
   std::string output_path;
-  size_t sample_size = 0;  // 0 = use all records
 };
 
 void print_usage() {
@@ -51,12 +43,9 @@ void print_usage() {
       << "Commands:\n"
       << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
-      << "  gmm <data_path>            Run order tracking + GMM analysis\n"
-      << "  plot <data_path>             Plot feature distributions (PNGs)\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
-      << "Options (gui / gmm / plot):\n"
-      << "  --symbol <id>                Focus instrument ID\n"
-      << "  --sample <N>                 Randomly subsample N feature records before GMM fit\n\n"
+      << "Options (gui):\n"
+      << "  --symbol <id>                Focus instrument ID\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
@@ -117,16 +106,18 @@ Config parse_args(int argc, char **argv) {
     }
     cfg.data_path = argv[2];
 
+    bool symbol_set = false;
     for (int i = 3; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
-      } else if (arg == "--sample" && i + 1 < argc) {
-        cfg.sample_size = std::stoul(argv[++i]);
+        symbol_set = true;
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
     }
+    if (cfg.command == "gui" && !symbol_set)
+      throw std::runtime_error("--symbol <id> is required for the 'gui' command. Run 'info' first to list instrument IDs.");
   }
   return cfg;
 }
@@ -181,148 +172,6 @@ void run_info(const Config &cfg) {
                 << interval.start_date << " – " << interval.end_date << "\n";
     }
   }
-}
-
-void run_plot(const Config &cfg) {
-  ReplayEngine engine(cfg.data_path);
-  Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
-
-  uint64_t msg_count = 0;
-  auto callback = [&](const db::MboMsg &mbo) {
-    if (msg_count < MAX_MSGS) {
-      tracker.Router(mbo);
-      msg_count++;
-      return true;
-    }
-    return false;
-  };
-
-  engine.Run(market, callback);
-
-  std::cout << "Collected " << tracker.feature_records_.size()
-            << " feature records.\n";
-  RunVisualizer(tracker.feature_records_);
-}
-
-void run_gmm(const Config &cfg) {
-  ReplayEngine engine(cfg.data_path);
-  Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
-
-  uint64_t msg_count = 0;
-  auto callback = [&](const db::MboMsg &mbo) {
-    if (msg_count < MAX_MSGS) {
-      tracker.Router(mbo);
-      msg_count++;
-      return true;
-    }
-    return false;
-  };
-
-  engine.Run(market, callback);
-
-  // --- Semi-supervised GMM ---
-  // Optionally subsample records before fitting (stratified by cancel type)
-  std::vector<FeatureRecord> sampled_storage;
-  const std::vector<FeatureRecord> *records_ptr = &tracker.feature_records_;
-
-  if (cfg.sample_size > 0 && tracker.feature_records_.size() > cfg.sample_size) {
-    std::vector<size_t> idx(tracker.feature_records_.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    std::mt19937 rng(42);
-    std::shuffle(idx.begin(), idx.end(), rng);
-    idx.resize(cfg.sample_size);
-
-    sampled_storage.reserve(cfg.sample_size);
-    for (size_t i : idx)
-      sampled_storage.push_back(tracker.feature_records_[i]);
-
-    records_ptr = &sampled_storage;
-    std::cout << "Subsampled " << cfg.sample_size << " records from "
-              << tracker.feature_records_.size() << " total.\n";
-  }
-
-  const auto &all_records = *records_ptr;
-
-  std::vector<bool> fixed_lc(all_records.size());
-  int n_pure = 0, n_fill = 0;
-  for (std::size_t i = 0; i < all_records.size(); ++i) {
-    fixed_lc[i] = (all_records[i].cancel_type == CancelType::Fill);
-    fixed_lc[i] ? ++n_fill : ++n_pure;
-  }
-
-  std::cout << "\nCollected " << all_records.size() << " total records  ("
-            << n_pure << " pure, " << n_fill << " fill-anchored).\n";
-
-  if (n_pure < 10) {
-    std::cout << "Too few pure cancellations to fit GMM (need >=10).\n";
-    return;
-  }
-
-  // delta_t, induced_imbalance, volume_ahead, relative_size
-  const std::vector<int> feature_indices = {0, 1, 2};
-  auto data = GMM::ToEigen(all_records, feature_indices);
-  auto [data_mean, data_std] = GMM::Standardize(data);
-
-  FitOptions opts;
-  opts.fixed_lc = fixed_lc;
-
-  GMM gmm;
-  GMMResult result = gmm.Fit(data, opts);
-
-  const std::string out_path = "features/gmm_results.txt";
-  fs::create_directories("features");
-  std::ofstream out(out_path);
-  if (!out) {
-    std::cerr << "Failed to open " << out_path << " for writing.\n";
-    return;
-  }
-
-  auto write_mean = [&](const Eigen::VectorXd &mu) {
-    for (int j = 0; j < static_cast<int>(feature_indices.size()); ++j) {
-      out << "    " << std::left << std::setw(20)
-          << kFeatures[feature_indices[j]].name << std::right
-          << std::setw(14) << std::fixed << std::setprecision(6) << mu[j]
-          << "\n";
-    }
-  };
-
-  // --- Restart summary table ---
-  out << "=== GMM Restart Summary (" << opts.n_init << " restarts) ===\n"
-      << std::left  << std::setw(12) << "Restart"
-      << std::right << std::setw(20) << "Log-likelihood"
-      << std::setw(14) << "pi_spoof"
-      << std::setw(12) << "Iterations"
-      << "\n"
-      << std::string(58, '-') << "\n";
-
-  for (const auto &rs : result.restarts) {
-    bool is_best = (rs.restart == result.best_restart);
-    std::string label = std::to_string(rs.restart + 1) + (is_best ? " *" : "");
-    out << std::left  << std::setw(12) << label
-        << std::right << std::setw(20) << std::fixed << std::setprecision(4) << rs.log_likelihood
-        << std::setw(14) << std::setprecision(6) << rs.pi_spoof
-        << std::setw(12) << rs.iterations
-        << "\n";
-  }
-
-  // --- Best result ---
-  out << "\n=== Best Result (restart " << (result.best_restart + 1) << ") ===\n"
-      << "Observations:      " << all_records.size() << "\n"
-      << "Iterations:        " << result.iterations << "\n"
-      << "Log-likelihood:    " << std::fixed << std::setprecision(4)
-      << result.log_likelihood << "\n"
-      << "pi_spoof (pi_hat): " << std::setprecision(6) << result.pi_spoof
-      << "\n"
-      << "\nComponent 1 — anomalous (standardised mean):\n";
-  write_mean(result.params.mu1);
-  out << "\nComponent 2 — liquidity-consistent (standardised mean):\n";
-  write_mean(result.params.mu2);
-
-  std::cout << "GMM results written to " << out_path << "\n";
-
-  RunGMMVisualizer(all_records, result, feature_indices, data_mean, data_std);
 }
 
 void run_gui_application(const Config &cfg) {
@@ -399,10 +248,6 @@ int main(int argc, char **argv) {
       run_info(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
-    } else if (cfg.command == "gmm") {
-      run_gmm(cfg);
-    } else if (cfg.command == "plot") {
-      run_plot(cfg);
     } else if (cfg.command == "databento-fetch") {
       run_downloader(cfg);
     } else {

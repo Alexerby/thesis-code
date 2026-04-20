@@ -9,7 +9,7 @@
  *
  * When an order is fully cancelled (pure cancellation, no fills), its lifetime
  * snapshot is used to compute a FeatureRecord x_i and appended to
- * feature_records_. These records are the primary input to the GMM classifier.
+ * feature_records_.
  *
  * FeatureRecord is a direct output of the tracking process; it cannot be
  * produced without the order state accumulated during the lifetime of an order.
@@ -45,12 +45,14 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
  * @brief Feature vector x_i for a single order lifecycle.
  */
 struct FeatureRecord {
-  double delta_t;            ///< \Delta t_i
-  double induced_imbalance;  ///< \Delta \mathcal{I}_i
-  double volume_ahead;       ///< Total volume between order and BBO at add-time
-  double relative_size;      ///< order size / rolling median size (last 500 adds)
-  CancelType cancel_type;    ///< Pure cancellation or fill-induced cancel
-  uint64_t ts_recv{0};       ///< Cancel timestamp (nanoseconds since epoch)
+  double delta_t;              ///< \Delta t_i
+  double induced_imbalance;    ///< \Delta \mathcal{I}_i
+  double volume_ahead;         ///< Total volume between order and BBO at add-time
+  double relative_size;        ///< order size / rolling median size (last 500 adds)
+  double price_distance_bps;   ///< |order_price - same-side touch| / mid * 10000 at add-time
+  CancelType cancel_type;      ///< Pure cancellation or fill-induced cancel
+  uint64_t ts_recv{0};         ///< Cancel timestamp (nanoseconds since epoch)
+  double spread_bps{0.0};      ///< (ask - bid) / mid * 10000 at cancel time
 };
 
 // ---------------------------------------------------------------------------
@@ -70,13 +72,15 @@ struct FeatureDef {
 
 inline const FeatureDef kFeatures[] = {
     {"delta_t",
-     [](const FeatureRecord &r) { return r.delta_t; }},
-    {"induced_imbalance",
-     [](const FeatureRecord &r) { return r.induced_imbalance; }},
+     [](const FeatureRecord &r) { return r.delta_t; }},            // 0
     {"volume_ahead",
-     [](const FeatureRecord &r) { return r.volume_ahead; }},
+     [](const FeatureRecord &r) { return r.volume_ahead; }},       // 1
+    {"induced_imbalance",
+     [](const FeatureRecord &r) { return r.induced_imbalance; }},  // 2
     {"relative_size",
-     [](const FeatureRecord &r) { return r.relative_size; }},
+     [](const FeatureRecord &r) { return r.relative_size; }},      // 3
+    {"price_distance_bps",
+     [](const FeatureRecord &r) { return r.price_distance_bps; }}, // 4
 };
 
 // Represents the tracking of an individual order
@@ -91,7 +95,8 @@ struct Order {
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   int64_t total_filled{0};   // Cumulative filled volume across all events
   uint32_t volume_ahead;
-  double relative_size;      ///< size / rolling median size at add-time
+  double relative_size;          ///< size / rolling median size at add-time
+  double price_distance_bps{0.0}; ///< |order_price - same-side touch| / mid * 10000 at add-time
 };
 
 /* @class OrderTracker
@@ -175,6 +180,9 @@ class OrderTracker {
    * @param The Market-By-Order (MBO) message.
    */
   double OrderInducedImbalance(const db::MboMsg &mbo);
+
+  /// Distance of the order's price from the same-side touch in bps, at add-time.
+  double OrderPriceDistance(const db::MboMsg &mbo);
 
   /// Returns the median of size_window_, or 1.0 if the window is empty.
   double RollingMedianSize() const;

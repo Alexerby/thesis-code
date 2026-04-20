@@ -7,7 +7,7 @@
 
 *Second thesis (15 ECTS) submitted to the Department of Economics, Lund University, in candidacy for the degree of Master of Science in Economics.*
 
-A C++ implementation of an unsupervised spoofing detection framework for limit order book (LOB) markets. This project reconstructs full order lifecycles from raw L3/MBO data and applies a two-component Gaussian Mixture Model (GMM) to separate strategic cancellations from genuine liquidity withdrawals without requiring labelled training data.
+A C++ implementation of a spoofing detection framework for limit order book (LOB) markets. This project reconstructs full order lifecycles from raw L3/MBO data and extracts per-order features to separate strategic cancellations from genuine liquidity withdrawals.
 
 [**Read the Documentation &raquo;**](https://alexerby.github.io/thesis-code/)
 
@@ -16,10 +16,9 @@ A C++ implementation of an unsupervised spoofing detection framework for limit o
 ## Key Features
 
 - **Order Life-Cycle Reconstruction**: Efficiently tracks individual orders from `Add` to `Fill` or `Cancel` using raw MBO (Market-By-Order) data.
-- **Unsupervised Learning**: Implements a Expectation-Maximization (EM) based Gaussian Mixture Model to classify order intent.
 - **Real-time Visualization**: OpenGL-based market visualizer for inspecting order book dynamics and liquidity clusters.
 - **L3/MBO Support**: Native support for Databento's DBN format and XNAS.ITCH schema.
-- **Performance-Oriented**: Core logic implemented in C++17 with Eigen3 for numerical stability.
+- **Performance-Oriented**: Core logic implemented in C++17.
 
 ## Requirements
 
@@ -29,7 +28,6 @@ A C++ implementation of an unsupervised spoofing detection framework for limit o
 | C++ compiler | C++17+ (GCC 11+ / Clang 14+) |
 | zstd | system package |
 | OpenGL | system package |
-| GnuPlot | system package |
 
 ```bash
 sudo apt update
@@ -40,7 +38,7 @@ sudo apt install -y \
     libxcursor-dev libxi-dev libxkbcommon-dev
 ```
 
-All other dependencies (Databento SDK, ImGui, GLFW, Eigen3, Catch2) are fetched automatically via CMake's `FetchContent`.
+All other dependencies (Databento SDK, ImGui, GLFW, Catch2) are fetched automatically via CMake's `FetchContent`.
 
 ## Build
 
@@ -64,22 +62,18 @@ To build with debug symbols:
 
 | Command | Description |
 |---|---|
+| `info` | Print file metadata and instrument ID → ticker map |
 | `gui` | Real-time order book visualizer (OpenGL) |
-| `plot` | Generate PNG plots of feature distributions |
-| `model` | Run full order tracking + GMM analysis |
 | `databento-fetch` | Download historical MBO data from Databento |
 
 ### Examples
 
 ```bash
-# Launch the market visualizer
+# Inspect file metadata to find instrument IDs
+./dist/thesis info data/sample.dbn.zst
+
+# Launch the market visualizer (--symbol is required)
 ./dist/thesis gui data/sample.dbn.zst --symbol 38
-
-# Plot feature distributions
-./dist/thesis plot data/sample.dbn.zst --symbol 38
-
-# Run GMM analysis
-./dist/thesis model data/sample.dbn.zst --symbol 38
 ```
 
 ## Data
@@ -108,5 +102,3 @@ chmod +x ./run_tests.sh
 ./run_tests.sh
 ```
 
-## Known Issues
-- Initialization of the EM algorithm is currently under refinement. See [Issue #2](https://github.com/Alexerby/thesis-code/issues/2).
