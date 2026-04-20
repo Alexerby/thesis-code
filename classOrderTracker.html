@@ -102,6 +102,7 @@ $(document).ready(function(){initNavTree('classOrderTracker.html',''); initResiz
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
+<a href="#pri-static-attribs">Static Private Attributes</a> &#124;
 <a href="classOrderTracker-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">OrderTracker Class Reference</div></div>
 </div><!--header-->
@@ -156,8 +157,17 @@ Private Member Functions</h2></td></tr>
 <tr class="memdesc:ac1c23cdeea34eb130e3cdd0002a3d1a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reconciles the final state of an order at the end of a multi-message event.  <br /></td></tr>
 <tr class="separator:ac1c23cdeea34eb130e3cdd0002a3d1a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2a6bc895613e5861c26f93077d0b2431" id="r_a2a6bc895613e5861c26f93077d0b2431"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a2a6bc895613e5861c26f93077d0b2431">OrderInducedImbalance</a> (const db::MboMsg &amp;mbo)</td></tr>
-<tr class="memdesc:a2a6bc895613e5861c26f93077d0b2431"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates feature: Order-Induced Imbalance.  <br /></td></tr>
+<tr class="memdesc:a2a6bc895613e5861c26f93077d0b2431"><td class="mdescLeft">&#160;</td><td class="mdescRight">|\Delta OBI| induced by this order's placement (top-5 depth).  <br /></td></tr>
 <tr class="separator:a2a6bc895613e5861c26f93077d0b2431"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87f40447abf9dbbd35df57701c1d0ae9" id="r_a87f40447abf9dbbd35df57701c1d0ae9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a87f40447abf9dbbd35df57701c1d0ae9">OrderDeltaT</a> (const <a class="el" href="structOrder.html">Order</a> &amp;order, const db::MboMsg &amp;mbo) const</td></tr>
+<tr class="memdesc:a87f40447abf9dbbd35df57701c1d0ae9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Elapsed nanoseconds between order add and cancel (matching-engine clock).  <br /></td></tr>
+<tr class="separator:a87f40447abf9dbbd35df57701c1d0ae9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf77fa4e87bc401b2cc79525bed8c975" id="r_acf77fa4e87bc401b2cc79525bed8c975"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#acf77fa4e87bc401b2cc79525bed8c975">OrderPriceDistance</a> (const db::MboMsg &amp;mbo)</td></tr>
+<tr class="memdesc:acf77fa4e87bc401b2cc79525bed8c975"><td class="mdescLeft">&#160;</td><td class="mdescRight">Distance from the same-side touch price in ticks at add-time.  <br /></td></tr>
+<tr class="separator:acf77fa4e87bc401b2cc79525bed8c975"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0510002f83268a33891f936dbb69a4b4" id="r_a0510002f83268a33891f936dbb69a4b4"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a0510002f83268a33891f936dbb69a4b4">RollingMedianSize</a> () const</td></tr>
+<tr class="memdesc:a0510002f83268a33891f936dbb69a4b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the median of size_window_, or 1.0 if the window is empty.  <br /></td></tr>
+<tr class="separator:a0510002f83268a33891f936dbb69a4b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b67ee1fc376faa5aaaf9601fc15848b" id="r_a4b67ee1fc376faa5aaaf9601fc15848b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a4b67ee1fc376faa5aaaf9601fc15848b">EmitFeatureRecord</a> (const <a class="el" href="structOrder.html">Order</a> &amp;order, const db::MboMsg &amp;mbo, <a class="el" href="order__tracker_8hpp.html#a58515bb0dcb14aae4d7e612fd891f49d">CancelType</a> cancel_type)</td></tr>
 <tr class="memdesc:a4b67ee1fc376faa5aaaf9601fc15848b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emits a <a class="el" href="structFeatureRecord.html" title="Feature vector x_i for a single order lifecycle.">FeatureRecord</a>. We call this on event CANCEL and RECONCILE.  <br /></td></tr>
 <tr class="separator:a4b67ee1fc376faa5aaaf9601fc15848b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -172,6 +182,13 @@ Private Attributes</h2></td></tr>
 <tr class="separator:ad406ccbdd3e7dfad457f2a57dbd1dace"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e599e33ced4cda6fcc2c7cf708cb880" id="r_a5e599e33ced4cda6fcc2c7cf708cb880"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMarket.html">Market</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a5e599e33ced4cda6fcc2c7cf708cb880">market_</a></td></tr>
 <tr class="separator:a5e599e33ced4cda6fcc2c7cf708cb880"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf338fdd4cabe8c035676ee2be962e68" id="r_aaf338fdd4cabe8c035676ee2be962e68"><td class="memItemLeft" align="right" valign="top">std::deque&lt; uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#aaf338fdd4cabe8c035676ee2be962e68">size_window_</a></td></tr>
+<tr class="separator:aaf338fdd4cabe8c035676ee2be962e68"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-static-attribs" name="pri-static-attribs"></a>
+Static Private Attributes</h2></td></tr>
+<tr class="memitem:aa9318eedaca27830346d87686a53aeac" id="r_aa9318eedaca27830346d87686a53aeac"><td class="memItemLeft" align="right" valign="top">static constexpr int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#aa9318eedaca27830346d87686a53aeac">kSizeWindowN</a> = 500</td></tr>
+<tr class="separator:aa9318eedaca27830346d87686a53aeac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="a36a88c725d46c667861d1d552b1d2f60" name="a36a88c725d46c667861d1d552b1d2f60"></a>
@@ -452,6 +469,44 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a87f40447abf9dbbd35df57701c1d0ae9" name="a87f40447abf9dbbd35df57701c1d0ae9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a87f40447abf9dbbd35df57701c1d0ae9">&#9670;&#160;</a></span>OrderDeltaT()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double OrderTracker::OrderDeltaT </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structOrder.html">Order</a> &amp;&#160;</td>
+          <td class="paramname"><em>order</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const db::MboMsg &amp;&#160;</td>
+          <td class="paramname"><em>mbo</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Elapsed nanoseconds between order add and cancel (matching-engine clock). </p>
+
+</div>
+</div>
 <a id="a2a6bc895613e5861c26f93077d0b2431" name="a2a6bc895613e5861c26f93077d0b2431"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2a6bc895613e5861c26f93077d0b2431">&#9670;&#160;</a></span>OrderInducedImbalance()</h2>
 
@@ -476,14 +531,35 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Calculates feature: Order-Induced Imbalance. </p>
-<p>As the <a class="el" href="classOrderTracker.html">OrderTracker</a> is not aware of the order before it's added, we can not directly calculate the difference that this order had on the balance of the order book. To get around this, we calculate the order book imbalance per usual (after the ADD) and backtracks the imbalance level from before by adjusting the volume at db::Side::Bid.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">The</td><td>Market-By-Order (MBO) message. </td></tr>
-  </table>
-  </dd>
-</dl>
+<p>|\Delta OBI| induced by this order's placement (top-5 depth). </p>
+
+</div>
+</div>
+<a id="acf77fa4e87bc401b2cc79525bed8c975" name="acf77fa4e87bc401b2cc79525bed8c975"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf77fa4e87bc401b2cc79525bed8c975">&#9670;&#160;</a></span>OrderPriceDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double OrderTracker::OrderPriceDistance </td>
+          <td>(</td>
+          <td class="paramtype">const db::MboMsg &amp;&#160;</td>
+          <td class="paramname"><em>mbo</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Distance from the same-side touch price in ticks at add-time. </p>
 
 </div>
 </div>
@@ -554,6 +630,33 @@ Private Attributes</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a0510002f83268a33891f936dbb69a4b4" name="a0510002f83268a33891f936dbb69a4b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0510002f83268a33891f936dbb69a4b4">&#9670;&#160;</a></span>RollingMedianSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double OrderTracker::RollingMedianSize </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the median of size_window_, or 1.0 if the window is empty. </p>
 
 </div>
 </div>
@@ -670,6 +773,28 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aa9318eedaca27830346d87686a53aeac" name="aa9318eedaca27830346d87686a53aeac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9318eedaca27830346d87686a53aeac">&#9670;&#160;</a></span>kSizeWindowN</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr int OrderTracker::kSizeWindowN = 500</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a5e599e33ced4cda6fcc2c7cf708cb880" name="a5e599e33ced4cda6fcc2c7cf708cb880"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5e599e33ced4cda6fcc2c7cf708cb880">&#9670;&#160;</a></span>market_</h2>
 
@@ -716,6 +841,28 @@ Private Attributes</h2></td></tr>
           <td class="memname"><a class="el" href="classOrderTracker.html#a7115b901140b944ce344f676d0f27fd2">PendingVolumeMap</a> OrderTracker::pending_volume_map_ {}</td>
         </tr>
       </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aaf338fdd4cabe8c035676ee2be962e68" name="aaf338fdd4cabe8c035676ee2be962e68"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf338fdd4cabe8c035676ee2be962e68">&#9670;&#160;</a></span>size_window_</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::deque&lt;uint32_t&gt; OrderTracker::size_window_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>

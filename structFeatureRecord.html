@@ -117,11 +117,25 @@ Public Attributes</h2></td></tr>
 <tr class="memdesc:a4599b4a07059e202ebbddc8f758fa3aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">\Delta \mathcal{I}_i  <br /></td></tr>
 <tr class="separator:a4599b4a07059e202ebbddc8f758fa3aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b5b401e64b4f9e9b18f32aff6aa7efa" id="r_a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a5b5b401e64b4f9e9b18f32aff6aa7efa">volume_ahead</a></td></tr>
-<tr class="memdesc:a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total volume between order and BBO at add-time.  <br /></td></tr>
 <tr class="separator:a5b5b401e64b4f9e9b18f32aff6aa7efa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a90336fe4c3e14b5e2107d5aa174933a9" id="r_a90336fe4c3e14b5e2107d5aa174933a9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a90336fe4c3e14b5e2107d5aa174933a9">relative_size</a></td></tr>
+<tr class="memdesc:a90336fe4c3e14b5e2107d5aa174933a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">order size / rolling median size (last 500 adds)  <br /></td></tr>
+<tr class="separator:a90336fe4c3e14b5e2107d5aa174933a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06f8805a160464f65f99518114399b6c" id="r_a06f8805a160464f65f99518114399b6c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a06f8805a160464f65f99518114399b6c">price_distance_ticks</a></td></tr>
+<tr class="memdesc:a06f8805a160464f65f99518114399b6c"><td class="mdescLeft">&#160;</td><td class="mdescRight">|order_price - same-side touch| in ticks at add-time  <br /></td></tr>
+<tr class="separator:a06f8805a160464f65f99518114399b6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ade2f97e6aa745138d5fea4f52578640f" id="r_ade2f97e6aa745138d5fea4f52578640f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="order__tracker_8hpp.html#a58515bb0dcb14aae4d7e612fd891f49d">CancelType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#ade2f97e6aa745138d5fea4f52578640f">cancel_type</a></td></tr>
 <tr class="memdesc:ade2f97e6aa745138d5fea4f52578640f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pure cancellation or fill-induced cancel.  <br /></td></tr>
 <tr class="separator:ade2f97e6aa745138d5fea4f52578640f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3716e9aed518cd34e57bdcb21230689c" id="r_a3716e9aed518cd34e57bdcb21230689c"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a3716e9aed518cd34e57bdcb21230689c">ts_recv</a> {0}</td></tr>
+<tr class="memdesc:a3716e9aed518cd34e57bdcb21230689c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancel timestamp (nanoseconds since epoch)  <br /></td></tr>
+<tr class="separator:a3716e9aed518cd34e57bdcb21230689c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a521a05c506de578fed28f430a76b4939" id="r_a521a05c506de578fed28f430a76b4939"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#a521a05c506de578fed28f430a76b4939">spread_bps</a> {0.0}</td></tr>
+<tr class="memdesc:a521a05c506de578fed28f430a76b4939"><td class="mdescLeft">&#160;</td><td class="mdescRight">(ask - bid) / mid * 10000 at cancel time  <br /></td></tr>
+<tr class="separator:a521a05c506de578fed28f430a76b4939"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5d962d8c644efcd192eb5b0bda85ce6" id="r_ab5d962d8c644efcd192eb5b0bda85ce6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structFeatureRecord.html#ab5d962d8c644efcd192eb5b0bda85ce6">mid_price</a> {0.0}</td></tr>
+<tr class="memdesc:ab5d962d8c644efcd192eb5b0bda85ce6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mid-price in USD at cancel time (for event study)  <br /></td></tr>
+<tr class="separator:ab5d962d8c644efcd192eb5b0bda85ce6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Feature vector x_i for a single order lifecycle. </p>
@@ -174,6 +188,86 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="ab5d962d8c644efcd192eb5b0bda85ce6" name="ab5d962d8c644efcd192eb5b0bda85ce6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5d962d8c644efcd192eb5b0bda85ce6">&#9670;&#160;</a></span>mid_price</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double FeatureRecord::mid_price {0.0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Mid-price in USD at cancel time (for event study) </p>
+
+</div>
+</div>
+<a id="a06f8805a160464f65f99518114399b6c" name="a06f8805a160464f65f99518114399b6c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06f8805a160464f65f99518114399b6c">&#9670;&#160;</a></span>price_distance_ticks</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double FeatureRecord::price_distance_ticks</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>|order_price - same-side touch| in ticks at add-time </p>
+
+</div>
+</div>
+<a id="a90336fe4c3e14b5e2107d5aa174933a9" name="a90336fe4c3e14b5e2107d5aa174933a9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a90336fe4c3e14b5e2107d5aa174933a9">&#9670;&#160;</a></span>relative_size</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double FeatureRecord::relative_size</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>order size / rolling median size (last 500 adds) </p>
+
+</div>
+</div>
+<a id="a521a05c506de578fed28f430a76b4939" name="a521a05c506de578fed28f430a76b4939"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a521a05c506de578fed28f430a76b4939">&#9670;&#160;</a></span>spread_bps</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double FeatureRecord::spread_bps {0.0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>(ask - bid) / mid * 10000 at cancel time </p>
+
+</div>
+</div>
+<a id="a3716e9aed518cd34e57bdcb21230689c" name="a3716e9aed518cd34e57bdcb21230689c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3716e9aed518cd34e57bdcb21230689c">&#9670;&#160;</a></span>ts_recv</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t FeatureRecord::ts_recv {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cancel timestamp (nanoseconds since epoch) </p>
+
+</div>
+</div>
 <a id="a5b5b401e64b4f9e9b18f32aff6aa7efa" name="a5b5b401e64b4f9e9b18f32aff6aa7efa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5b5b401e64b4f9e9b18f32aff6aa7efa">&#9670;&#160;</a></span>volume_ahead</h2>
 
@@ -185,8 +279,7 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-
-<p>Total volume between order and BBO at add-time. </p>
+<p>Total volume between order and BBO at add-time (computed by <a class="el" href="classBook.html#aa9ecf1e194bed13a5219a8617da58670" title="Calculates total volume between this order and the BBO.">Book::GetVolumeAhead</a>) </p>
 
 </div>
 </div>

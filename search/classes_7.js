@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['market_0',['Market',['../classMarket.html',1,'']]],
-  ['marketsnapshot_1',['MarketSnapshot',['../structMarketSnapshot.html',1,'']]]
+  ['order_0',['Order',['../structOrder.html',1,'']]],
+  ['orderevent_1',['OrderEvent',['../structOrderEvent.html',1,'']]],
+  ['ordertracker_2',['OrderTracker',['../classOrderTracker.html',1,'']]]
 ];

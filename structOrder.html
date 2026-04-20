@@ -128,6 +128,12 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a58e195e86d561597c4b2dcb3e20ca651"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73f69ceb32e13e8e131621797392408a" id="r_a73f69ceb32e13e8e131621797392408a"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structOrder.html#a73f69ceb32e13e8e131621797392408a">volume_ahead</a></td></tr>
 <tr class="separator:a73f69ceb32e13e8e131621797392408a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1cd784bdeaba050cf579e8a09ede571" id="r_ab1cd784bdeaba050cf579e8a09ede571"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structOrder.html#ab1cd784bdeaba050cf579e8a09ede571">relative_size</a></td></tr>
+<tr class="memdesc:ab1cd784bdeaba050cf579e8a09ede571"><td class="mdescLeft">&#160;</td><td class="mdescRight">size / rolling median size at add-time  <br /></td></tr>
+<tr class="separator:ab1cd784bdeaba050cf579e8a09ede571"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0ff46bb3f58efc65f77363877613d86" id="r_ac0ff46bb3f58efc65f77363877613d86"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structOrder.html#ac0ff46bb3f58efc65f77363877613d86">price_distance_ticks</a> {0.0}</td></tr>
+<tr class="memdesc:ac0ff46bb3f58efc65f77363877613d86"><td class="mdescLeft">&#160;</td><td class="mdescRight">|order_price - same-side touch| in ticks at add-time  <br /></td></tr>
+<tr class="separator:ac0ff46bb3f58efc65f77363877613d86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Data Documentation</h2>
 <a id="a0a3fb1dde48830be279a7bb6a25dac5e" name="a0a3fb1dde48830be279a7bb6a25dac5e"></a>
@@ -199,6 +205,38 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac0ff46bb3f58efc65f77363877613d86" name="ac0ff46bb3f58efc65f77363877613d86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac0ff46bb3f58efc65f77363877613d86">&#9670;&#160;</a></span>price_distance_ticks</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Order::price_distance_ticks {0.0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>|order_price - same-side touch| in ticks at add-time </p>
+
+</div>
+</div>
+<a id="ab1cd784bdeaba050cf579e8a09ede571" name="ab1cd784bdeaba050cf579e8a09ede571"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1cd784bdeaba050cf579e8a09ede571">&#9670;&#160;</a></span>relative_size</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Order::relative_size</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>size / rolling median size at add-time </p>
 
 </div>
 </div>

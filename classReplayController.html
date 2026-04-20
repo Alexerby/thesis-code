@@ -97,6 +97,7 @@ $(document).ready(function(){initNavTree('classReplayController.html',''); initR
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pri-methods">Private Member Functions</a> &#124;
 <a href="#pri-attribs">Private Attributes</a> &#124;
@@ -111,6 +112,11 @@ $(document).ready(function(){initNavTree('classReplayController.html',''); initR
 
 <p><code>#include &lt;<a class="el" href="replay__controller_8hpp_source.html">replay_controller.hpp</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structReplayController_1_1RangeHighlight.html">RangeHighlight</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ac1c44ac0a78ae2594e9a9644ce11ad41" id="r_ac1c44ac0a78ae2594e9a9644ce11ad41"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#ac1c44ac0a78ae2594e9a9644ce11ad41">ReplayController</a> (const std::string &amp;data_path, uint32_t focus_instrument)</td></tr>
@@ -127,12 +133,14 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ae08a246813f500a6440d972e73aa7ca9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5867907af39fffac9fb306c226e38bd2" id="r_a5867907af39fffac9fb306c226e38bd2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a5867907af39fffac9fb306c226e38bd2">RequestStep</a> ()</td></tr>
 <tr class="separator:a5867907af39fffac9fb306c226e38bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27e50916fbb02a9ead59569d543f5b6a" id="r_a27e50916fbb02a9ead59569d543f5b6a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a27e50916fbb02a9ead59569d543f5b6a">SetSpeed</a> (int sleep_micros)</td></tr>
-<tr class="separator:a27e50916fbb02a9ead59569d543f5b6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a70ed504e5387eaabd9d9ee042113f454" id="r_a70ed504e5387eaabd9d9ee042113f454"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a70ed504e5387eaabd9d9ee042113f454">GetSpeed</a> () const</td></tr>
-<tr class="separator:a70ed504e5387eaabd9d9ee042113f454"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a261b9831f317f2157a78f400806079e2" id="r_a261b9831f317f2157a78f400806079e2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a261b9831f317f2157a78f400806079e2">SetSpeedMultiplier</a> (float s)</td></tr>
+<tr class="separator:a261b9831f317f2157a78f400806079e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a09928fe302794b137195d6b4146f7b52" id="r_a09928fe302794b137195d6b4146f7b52"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a09928fe302794b137195d6b4146f7b52">GetSpeedMultiplier</a> () const</td></tr>
+<tr class="separator:a09928fe302794b137195d6b4146f7b52"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acfbeb00cd7edc702bc60f1d7f013a366" id="r_acfbeb00cd7edc702bc60f1d7f013a366"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#acfbeb00cd7edc702bc60f1d7f013a366">SeekToTime</a> (uint64_t target_ts)</td></tr>
 <tr class="separator:acfbeb00cd7edc702bc60f1d7f013a366"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0fbfe6f1b9ca973722a185f05d6bb81" id="r_aa0fbfe6f1b9ca973722a185f05d6bb81"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#aa0fbfe6f1b9ca973722a185f05d6bb81">PlayRange</a> (uint64_t start_ts, uint64_t end_ts)</td></tr>
+<tr class="separator:aa0fbfe6f1b9ca973722a185f05d6bb81"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0d19f795fcf1e32b64544a4e85d9b980" id="r_a0d19f795fcf1e32b64544a4e85d9b980"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structSessionStats.html">SessionStats</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a0d19f795fcf1e32b64544a4e85d9b980">GetSessionStats</a> ()</td></tr>
 <tr class="separator:a0d19f795fcf1e32b64544a4e85d9b980"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3f37005f9316575fca99cafdd4ec945" id="r_ae3f37005f9316575fca99cafdd4ec945"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#ae3f37005f9316575fca99cafdd4ec945">SetFocusInstrument</a> (uint32_t instrument_id)</td></tr>
@@ -147,6 +155,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ac35dd16ff3af623bc51ff3956dae6f25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6fdc68bd6815c693f66bffbc622b8a86" id="r_a6fdc68bd6815c693f66bffbc622b8a86"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structOrderEvent.html">OrderEvent</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a6fdc68bd6815c693f66bffbc622b8a86">GetOrderEvents</a> ()</td></tr>
 <tr class="separator:a6fdc68bd6815c693f66bffbc622b8a86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8267dd9eb0500ea7c7164fe0b0147fa" id="r_ac8267dd9eb0500ea7c7164fe0b0147fa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structReplayController_1_1RangeHighlight.html">RangeHighlight</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#ac8267dd9eb0500ea7c7164fe0b0147fa">GetRangeHighlight</a> () const</td></tr>
+<tr class="separator:ac8267dd9eb0500ea7c7164fe0b0147fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
@@ -171,12 +181,20 @@ Private Attributes</h2></td></tr>
 <tr class="separator:ac3dc449753cc021d46f3fe23c81a33f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac12409dbc2aa6b656900e04504105ae7" id="r_ac12409dbc2aa6b656900e04504105ae7"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#ac12409dbc2aa6b656900e04504105ae7">m_step_requested</a> {false}</td></tr>
 <tr class="separator:ac12409dbc2aa6b656900e04504105ae7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a642811e4bd1daab4566cd8f21c7a11" id="r_a6a642811e4bd1daab4566cd8f21c7a11"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a6a642811e4bd1daab4566cd8f21c7a11">m_sleep_micros</a> {100}</td></tr>
-<tr class="separator:a6a642811e4bd1daab4566cd8f21c7a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91d2185279b13005b941984397436491" id="r_a91d2185279b13005b941984397436491"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a91d2185279b13005b941984397436491">m_speed_multiplier</a> {1.0f}</td></tr>
+<tr class="separator:a91d2185279b13005b941984397436491"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a16e2a3cb90c30c872b255ca07b76766e" id="r_a16e2a3cb90c30c872b255ca07b76766e"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a16e2a3cb90c30c872b255ca07b76766e">m_recalibrate</a> {false}</td></tr>
+<tr class="separator:a16e2a3cb90c30c872b255ca07b76766e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7375eb2a98dd5948d2c4f4a4abab22ca" id="r_a7375eb2a98dd5948d2c4f4a4abab22ca"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a7375eb2a98dd5948d2c4f4a4abab22ca">m_target_ts</a> {0}</td></tr>
 <tr class="separator:a7375eb2a98dd5948d2c4f4a4abab22ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7dec9a38923f2c801cbc8fdf37840aff" id="r_a7dec9a38923f2c801cbc8fdf37840aff"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a7dec9a38923f2c801cbc8fdf37840aff">m_is_warping</a> {false}</td></tr>
 <tr class="separator:a7dec9a38923f2c801cbc8fdf37840aff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc2f4789a0344c3d7084e2901b9600e5" id="r_acc2f4789a0344c3d7084e2901b9600e5"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#acc2f4789a0344c3d7084e2901b9600e5">m_range_end_ts</a> {0}</td></tr>
+<tr class="separator:acc2f4789a0344c3d7084e2901b9600e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7ff0921242f2eefa7ef3f29de7096db" id="r_ac7ff0921242f2eefa7ef3f29de7096db"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#ac7ff0921242f2eefa7ef3f29de7096db">m_range_highlight_start</a> {0}</td></tr>
+<tr class="separator:ac7ff0921242f2eefa7ef3f29de7096db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed9af40353260f8394f41cd3acf3f970" id="r_aed9af40353260f8394f41cd3acf3f970"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#aed9af40353260f8394f41cd3acf3f970">m_range_highlight_end</a> {0}</td></tr>
+<tr class="separator:aed9af40353260f8394f41cd3acf3f970"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03ef12b024fdb97a83a9d009a3ed033b" id="r_a03ef12b024fdb97a83a9d009a3ed033b"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; std::thread &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#a03ef12b024fdb97a83a9d009a3ed033b">m_thread</a></td></tr>
 <tr class="separator:a03ef12b024fdb97a83a9d009a3ed033b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa116faad35cc89c3c9f504c49ad13fc1" id="r_aa116faad35cc89c3c9f504c49ad13fc1"><td class="memItemLeft" align="right" valign="top">std::mutex&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classReplayController.html#aa116faad35cc89c3c9f504c49ad13fc1">m_mutex</a></td></tr>
@@ -363,6 +381,23 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="ac8267dd9eb0500ea7c7164fe0b0147fa" name="ac8267dd9eb0500ea7c7164fe0b0147fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac8267dd9eb0500ea7c7164fe0b0147fa">&#9670;&#160;</a></span>GetRangeHighlight()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structReplayController_1_1RangeHighlight.html">ReplayController::RangeHighlight</a> ReplayController::GetRangeHighlight </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a0d19f795fcf1e32b64544a4e85d9b980" name="a0d19f795fcf1e32b64544a4e85d9b980"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0d19f795fcf1e32b64544a4e85d9b980">&#9670;&#160;</a></span>GetSessionStats()</h2>
 
@@ -380,8 +415,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a70ed504e5387eaabd9d9ee042113f454" name="a70ed504e5387eaabd9d9ee042113f454"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a70ed504e5387eaabd9d9ee042113f454">&#9670;&#160;</a></span>GetSpeed()</h2>
+<a id="a09928fe302794b137195d6b4146f7b52" name="a09928fe302794b137195d6b4146f7b52"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a09928fe302794b137195d6b4146f7b52">&#9670;&#160;</a></span>GetSpeedMultiplier()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -390,7 +425,7 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int ReplayController::GetSpeed </td>
+          <td class="memname">float ReplayController::GetSpeedMultiplier </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -416,6 +451,34 @@ Static Private Attributes</h2></td></tr>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa0fbfe6f1b9ca973722a185f05d6bb81" name="aa0fbfe6f1b9ca973722a185f05d6bb81"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0fbfe6f1b9ca973722a185f05d6bb81">&#9670;&#160;</a></span>PlayRange()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ReplayController::PlayRange </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>start_ts</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>end_ts</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -578,8 +641,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a27e50916fbb02a9ead59569d543f5b6a" name="a27e50916fbb02a9ead59569d543f5b6a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a27e50916fbb02a9ead59569d543f5b6a">&#9670;&#160;</a></span>SetSpeed()</h2>
+<a id="a261b9831f317f2157a78f400806079e2" name="a261b9831f317f2157a78f400806079e2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a261b9831f317f2157a78f400806079e2">&#9670;&#160;</a></span>SetSpeedMultiplier()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -588,10 +651,10 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void ReplayController::SetSpeed </td>
+          <td class="memname">void ReplayController::SetSpeedMultiplier </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>sleep_micros</em></td><td>)</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>s</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -989,6 +1052,94 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="acc2f4789a0344c3d7084e2901b9600e5" name="acc2f4789a0344c3d7084e2901b9600e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc2f4789a0344c3d7084e2901b9600e5">&#9670;&#160;</a></span>m_range_end_ts</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;uint64_t&gt; ReplayController::m_range_end_ts {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aed9af40353260f8394f41cd3acf3f970" name="aed9af40353260f8394f41cd3acf3f970"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed9af40353260f8394f41cd3acf3f970">&#9670;&#160;</a></span>m_range_highlight_end</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;uint64_t&gt; ReplayController::m_range_highlight_end {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac7ff0921242f2eefa7ef3f29de7096db" name="ac7ff0921242f2eefa7ef3f29de7096db"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac7ff0921242f2eefa7ef3f29de7096db">&#9670;&#160;</a></span>m_range_highlight_start</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;uint64_t&gt; ReplayController::m_range_highlight_start {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a16e2a3cb90c30c872b255ca07b76766e" name="a16e2a3cb90c30c872b255ca07b76766e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a16e2a3cb90c30c872b255ca07b76766e">&#9670;&#160;</a></span>m_recalibrate</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;bool&gt; ReplayController::m_recalibrate {false}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a47bbcf3746e582e6e80df1eae24eb0f2" name="a47bbcf3746e582e6e80df1eae24eb0f2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a47bbcf3746e582e6e80df1eae24eb0f2">&#9670;&#160;</a></span>m_running</h2>
 
@@ -1033,8 +1184,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a6a642811e4bd1daab4566cd8f21c7a11" name="a6a642811e4bd1daab4566cd8f21c7a11"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a642811e4bd1daab4566cd8f21c7a11">&#9670;&#160;</a></span>m_sleep_micros</h2>
+<a id="a91d2185279b13005b941984397436491" name="a91d2185279b13005b941984397436491"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91d2185279b13005b941984397436491">&#9670;&#160;</a></span>m_speed_multiplier</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1043,7 +1194,7 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::atomic&lt;int&gt; ReplayController::m_sleep_micros {100}</td>
+          <td class="memname">std::atomic&lt;float&gt; ReplayController::m_speed_multiplier {1.0f}</td>
         </tr>
       </table>
   </td>

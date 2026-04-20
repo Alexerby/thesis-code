@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['replaycontroller_0',['ReplayController',['../classReplayController.html',1,'']]],
-  ['replayengine_1',['ReplayEngine',['../classReplayEngine.html',1,'']]],
-  ['restartsummary_2',['RestartSummary',['../structRestartSummary.html',1,'']]]
+  ['sessionstats_0',['SessionStats',['../structSessionStats.html',1,'']]],
+  ['spreadpoint_1',['SpreadPoint',['../structSpreadPoint.html',1,'']]]
 ];

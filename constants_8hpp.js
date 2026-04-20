@@ -5,7 +5,9 @@ var constants_8hpp =
     [ "NS_TO_MS", "constants_8hpp.html#ad6b9eaf461e2dceec2e0b86d68f2bb88", null ],
     [ "NS_TO_S", "constants_8hpp.html#a855428ded6441d5743f9c72b4dc5ca56", null ],
     [ "NS_TO_US", "constants_8hpp.html#ad9d60a18dbeed2af5c69145c6eb305db", null ],
+    [ "PRICE_SCALE", "constants_8hpp.html#ac4ac58e2d8fe93d9c6e19147b5b30099", null ],
     [ "US_PER_MIN", "constants_8hpp.html#a0997db43a17ab703920d7b73b04b434f", null ],
     [ "US_PER_MS", "constants_8hpp.html#afd9bfdab2fc7a874d653c4f4e57447fb", null ],
-    [ "US_PER_S", "constants_8hpp.html#a32317c46b9433ad76e4c8b2b3a122827", null ]
+    [ "US_PER_S", "constants_8hpp.html#a32317c46b9433ad76e4c8b2b3a122827", null ],
+    [ "XNAS_TICK_SIZE", "constants_8hpp.html#a97e0dd7ccf49c3e4cc56d79acc281704", null ]
 ];

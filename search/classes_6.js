@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['logger_0',['Logger',['../classLogger.html',1,'']]]
+  ['market_0',['Market',['../classMarket.html',1,'']]],
+  ['marketsnapshot_1',['MarketSnapshot',['../structMarketSnapshot.html',1,'']]]
 ];

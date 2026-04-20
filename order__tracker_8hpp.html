@@ -153,7 +153,7 @@ Variables</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Tracks individual order lifetimes and emits per-order feature records. </p>
 <p>MBO messages are noisy: a single logical order book event is often split across multiple messages. <a class="el" href="classOrderTracker.html">OrderTracker</a> reconstructs the full lifecycle of each order — from placement through cancellation or fill, by maintaining a live map of open orders keyed by order ID.</p>
-<p>When an order is fully cancelled (pure cancellation, no fills), its lifetime snapshot is used to compute a <a class="el" href="structFeatureRecord.html" title="Feature vector x_i for a single order lifecycle.">FeatureRecord</a> x_i and appended to feature_records_. These records are the primary input to the <a class="el" href="classGMM.html" title="Fits a two-component Gaussian Mixture Model via the EM algorithm.">GMM</a> classifier.</p>
+<p>When an order is fully cancelled (pure cancellation, no fills), its lifetime snapshot is used to compute a <a class="el" href="structFeatureRecord.html" title="Feature vector x_i for a single order lifecycle.">FeatureRecord</a> x_i and appended to feature_records_.</p>
 <p><a class="el" href="structFeatureRecord.html" title="Feature vector x_i for a single order lifecycle.">FeatureRecord</a> is a direct output of the tracking process; it cannot be produced without the order state accumulated during the lifetime of an order. </p>
 </div><h2 class="groupheader">Typedef Documentation</h2>
 <a id="ac15bccd88a33ab83e817b772d990a307" name="ac15bccd88a33ab83e817b772d990a307"></a>
@@ -246,12 +246,15 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line">= {</div>
-<div class="line">    {<span class="stringliteral">&quot;delta_t&quot;</span>, </div>
-<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.delta_t; }},</div>
-<div class="line">    {<span class="stringliteral">&quot;induced_imbalance&quot;</span>,</div>
-<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.induced_imbalance; }},</div>
+<div class="line">    {<span class="stringliteral">&quot;delta_t&quot;</span>, [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.delta_t; }},  </div>
 <div class="line">    {<span class="stringliteral">&quot;volume_ahead&quot;</span>,</div>
-<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.volume_ahead; }},</div>
+<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.volume_ahead; }},  </div>
+<div class="line">    {<span class="stringliteral">&quot;induced_imbalance&quot;</span>,</div>
+<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.induced_imbalance; }},  </div>
+<div class="line">    {<span class="stringliteral">&quot;relative_size&quot;</span>,</div>
+<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.relative_size; }},  </div>
+<div class="line">    {<span class="stringliteral">&quot;price_distance_ticks&quot;</span>,</div>
+<div class="line">     [](<span class="keyword">const</span> <a class="code hl_struct" href="structFeatureRecord.html">FeatureRecord</a> &amp;r) { <span class="keywordflow">return</span> r.price_distance_ticks; }},  </div>
 <div class="line">}</div>
 <div class="ttc" id="astructFeatureRecord_html"><div class="ttname"><a href="structFeatureRecord.html">FeatureRecord</a></div><div class="ttdoc">Feature vector x_i for a single order lifecycle.</div><div class="ttdef"><b>Definition</b> order_tracker.hpp:47</div></div>
 </div><!-- fragment -->

@@ -7,10 +7,6 @@ var annotated_dup =
     [ "Dashboard", "classDashboard.html", "classDashboard" ],
     [ "FeatureDef", "structFeatureDef.html", "structFeatureDef" ],
     [ "FeatureRecord", "structFeatureRecord.html", "structFeatureRecord" ],
-    [ "FitOptions", "structFitOptions.html", "structFitOptions" ],
-    [ "GMM", "classGMM.html", "classGMM" ],
-    [ "GMMParams", "structGMMParams.html", "structGMMParams" ],
-    [ "GMMResult", "structGMMResult.html", "structGMMResult" ],
     [ "Logger", "classLogger.html", "classLogger" ],
     [ "Market", "classMarket.html", "classMarket" ],
     [ "MarketSnapshot", "structMarketSnapshot.html", "structMarketSnapshot" ],
@@ -20,7 +16,6 @@ var annotated_dup =
     [ "PriceLevel", "structPriceLevel.html", "structPriceLevel" ],
     [ "ReplayController", "classReplayController.html", "classReplayController" ],
     [ "ReplayEngine", "classReplayEngine.html", "classReplayEngine" ],
-    [ "RestartSummary", "structRestartSummary.html", "structRestartSummary" ],
     [ "SessionStats", "structSessionStats.html", "structSessionStats" ],
     [ "SpreadPoint", "structSpreadPoint.html", "structSpreadPoint" ],
     [ "TradeExecution", "structTradeExecution.html", "structTradeExecution" ]

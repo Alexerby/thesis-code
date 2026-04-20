@@ -15,5 +15,6 @@ var classDashboard =
     [ "m_show_fills", "classDashboard.html#a5b668a8c9e9b8e14c32bca5041038bdd", null ],
     [ "m_spread_follow", "classDashboard.html#ae2138d59c96a1ba59f3a6a81c6cd114f", null ],
     [ "m_use_cumulative", "classDashboard.html#a66c48942ee203eba42bcebfc024fce27", null ],
+    [ "m_window_secs", "classDashboard.html#af1d5afe1bebe300ce4f91493b0ddb3c8", null ],
     [ "m_y_range", "classDashboard.html#af2430155c531df618868baea3b37fd8a", null ]
 ];

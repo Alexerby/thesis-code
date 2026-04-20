@@ -11,9 +11,12 @@ var classOrderTracker =
     [ "EmitFeatureRecord", "classOrderTracker.html#a4b67ee1fc376faa5aaaf9601fc15848b", null ],
     [ "Fill", "classOrderTracker.html#a86bd0a068c2050a3cd6a33acaec3888d", null ],
     [ "Modify", "classOrderTracker.html#a79f39fe9619013bed7ec1be96715dd98", null ],
+    [ "OrderDeltaT", "classOrderTracker.html#a87f40447abf9dbbd35df57701c1d0ae9", null ],
     [ "OrderInducedImbalance", "classOrderTracker.html#a2a6bc895613e5861c26f93077d0b2431", null ],
+    [ "OrderPriceDistance", "classOrderTracker.html#acf77fa4e87bc401b2cc79525bed8c975", null ],
     [ "PruneZombies", "classOrderTracker.html#a2e8c56ae2dc9eeb47c4f9e73c76bbb29", null ],
     [ "Reconcile", "classOrderTracker.html#ac1c23cdeea34eb130e3cdd0002a3d1a1", null ],
+    [ "RollingMedianSize", "classOrderTracker.html#a0510002f83268a33891f936dbb69a4b4", null ],
     [ "Router", "classOrderTracker.html#a735f7a0031d9aacb5e3be787c9e34a1b", null ],
     [ "base_dir_", "classOrderTracker.html#ad406ccbdd3e7dfad457f2a57dbd1dace", null ],
     [ "expiry_queue_", "classOrderTracker.html#a3a4e9e5957a7a2d397ccb77697a14183", null ],
@@ -22,5 +25,6 @@ var classOrderTracker =
     [ "instrument_id_", "classOrderTracker.html#a16dc9dd82a524fe36a1d1ef2d9fc8096", null ],
     [ "market_", "classOrderTracker.html#a5e599e33ced4cda6fcc2c7cf708cb880", null ],
     [ "order_map", "classOrderTracker.html#a21372bd61b20788432d386459bda74a7", null ],
-    [ "pending_volume_map_", "classOrderTracker.html#abbafbf133d53b6bd4db6ab32407f8669", null ]
+    [ "pending_volume_map_", "classOrderTracker.html#abbafbf133d53b6bd4db6ab32407f8669", null ],
+    [ "size_window_", "classOrderTracker.html#aaf338fdd4cabe8c035676ee2be962e68", null ]
 ];

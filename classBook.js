@@ -24,6 +24,8 @@ var classBook =
     [ "GetQueuePos", "classBook.html#a159afc3ec436a7bd9d8f78b998a6bc39", null ],
     [ "GetSideLevels", "classBook.html#a45eaa9e293da92eaec45412a11bf59eb", null ],
     [ "GetSnapshot", "classBook.html#a8c6e97b7a619e9214537c0f31c0f0175", null ],
+    [ "GetTopNDepth", "classBook.html#a921fe89e0f9d164787d8049b11fb4d65", null ],
+    [ "GetTopNDepthExcluding", "classBook.html#a83081809382d9ec23218affecaa4aae8", null ],
     [ "GetTotalTradeVolume", "classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9", null ],
     [ "GetVolumeAhead", "classBook.html#aa9ecf1e194bed13a5219a8617da58670", null ],
     [ "Modify", "classBook.html#a5cd247a8c2b957eddf01678981ebd895", null ],

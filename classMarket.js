@@ -2,7 +2,9 @@ var classMarket =
 [
     [ "PublisherBook", "structMarket_1_1PublisherBook.html", "structMarket_1_1PublisherBook" ],
     [ "Market", "classMarket.html#a7b678beab2a684fac89dd6df04f88ea9", null ],
+    [ "AggregatedAskLevel", "classMarket.html#a1f1be88c761903ae4ca3ec75f7d55e2b", null ],
     [ "AggregatedBbo", "classMarket.html#a42a4827b7b15a74d19758d459e35e424", null ],
+    [ "AggregatedBidLevel", "classMarket.html#a05414d497323e430487a43eaa4ec5d74", null ],
     [ "AggregatedImbalance", "classMarket.html#abb014026b6e87c610471dab42bfd5724", null ],
     [ "AggregatedLevelVolume", "classMarket.html#aafaeac9677713a7392760e633562310d", null ],
     [ "AggregatedSideVolume", "classMarket.html#a08ac49ee14730517891c1175fae7a2ea", null ],
@@ -13,6 +15,8 @@ var classMarket =
     [ "GetBooksByPub", "classMarket.html#a463b333212bba10776ec710ea01bac4c", null ],
     [ "GetLastTrade", "classMarket.html#a586ac86d214e2f4c0da3eed22b45ecb3", null ],
     [ "GetSnapshot", "classMarket.html#ae58b2f0eb10190dfb7d29a12b3a744d4", null ],
+    [ "GetTopNDepth", "classMarket.html#a70649ec2368dcda09aa8bc47615649e7", null ],
+    [ "GetTopNDepthExcluding", "classMarket.html#aaafd833e11602a0369bd7dc1a466ecca", null ],
     [ "GetVolumeAhead", "classMarket.html#a0885a207097ecceba19f59de0008066c", null ],
     [ "Imbalance", "classMarket.html#ae13a178155cae6d7911d7fb314fed968", null ],
     [ "books_", "classMarket.html#aa8b6d41efffc4f9ca80e0c3c8853c1cc", null ],

@@ -98,8 +98,7 @@ $(document).ready(function(){initNavTree('main_8cpp.html',''); initResizable(); 
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#func-members">Functions</a> &#124;
-<a href="#var-members">Variables</a>  </div>
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">main.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -109,7 +108,6 @@ $(document).ready(function(){initNavTree('main_8cpp.html',''); initResizable(); 
 <code>#include &lt;databento/historical.hpp&gt;</code><br />
 <code>#include &lt;databento/symbol_map.hpp&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
-<code>#include &lt;fstream&gt;</code><br />
 <code>#include &lt;iomanip&gt;</code><br />
 <code>#include &lt;iostream&gt;</code><br />
 <code>#include &lt;sstream&gt;</code><br />
@@ -117,11 +115,10 @@ $(document).ready(function(){initNavTree('main_8cpp.html',''); initResizable(); 
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &quot;<a class="el" href="gui__application_8hpp_source.html">app/gui_application.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="visualizer_8hpp_source.html">app/visualizer.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="market_8hpp_source.html">data/market.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="replay__engine_8hpp_source.html">data/replay_engine.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="csv_8hpp_source.html">features/csv.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="order__tracker_8hpp_source.html">features/order_tracker.hpp</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="gmm_8hpp_source.html">model/gmm.hpp</a>&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
@@ -136,21 +133,14 @@ Functions</h2></td></tr>
 <tr class="separator:a57f862d132c46e953434435079ad431f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e955e2bfefa081cc8f803e4d3c32a6f" id="r_a4e955e2bfefa081cc8f803e4d3c32a6f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#a4e955e2bfefa081cc8f803e4d3c32a6f">run_info</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
 <tr class="separator:a4e955e2bfefa081cc8f803e4d3c32a6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab4fdd5f7cd8b92a3118ded5c278a0866" id="r_ab4fdd5f7cd8b92a3118ded5c278a0866"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#ab4fdd5f7cd8b92a3118ded5c278a0866">run_plot</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
-<tr class="separator:ab4fdd5f7cd8b92a3118ded5c278a0866"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2e988ba794b4023a8ece371be0c32c6c" id="r_a2e988ba794b4023a8ece371be0c32c6c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#a2e988ba794b4023a8ece371be0c32c6c">run_gmm</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
-<tr class="separator:a2e988ba794b4023a8ece371be0c32c6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1dd9951bf9df75297489ff63ef13e87" id="r_af1dd9951bf9df75297489ff63ef13e87"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#af1dd9951bf9df75297489ff63ef13e87">run_extract_features</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
+<tr class="separator:af1dd9951bf9df75297489ff63ef13e87"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a305da31c8ef9e6f9bcd2c27684eaf46b" id="r_a305da31c8ef9e6f9bcd2c27684eaf46b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#a305da31c8ef9e6f9bcd2c27684eaf46b">run_gui_application</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
 <tr class="separator:a305da31c8ef9e6f9bcd2c27684eaf46b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a071fd2a92a5d0bb0c8f4c651a9f273fc" id="r_a071fd2a92a5d0bb0c8f4c651a9f273fc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#a071fd2a92a5d0bb0c8f4c651a9f273fc">run_downloader</a> (const <a class="el" href="structConfig.html">Config</a> &amp;cfg)</td></tr>
 <tr class="separator:a071fd2a92a5d0bb0c8f4c651a9f273fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3c04138a5bfe5d72780bb7e82a18e627" id="r_a3c04138a5bfe5d72780bb7e82a18e627"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627">main</a> (int argc, char **argv)</td></tr>
 <tr class="separator:a3c04138a5bfe5d72780bb7e82a18e627"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
-Variables</h2></td></tr>
-<tr class="memitem:aa4275f9910c127453e76944cdd096662" id="r_aa4275f9910c127453e76944cdd096662"><td class="memItemLeft" align="right" valign="top">const uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8cpp.html#aa4275f9910c127453e76944cdd096662">MAX_MSGS</a> = 2'000'000</td></tr>
-<tr class="separator:aa4275f9910c127453e76944cdd096662"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a3c04138a5bfe5d72780bb7e82a18e627" name="a3c04138a5bfe5d72780bb7e82a18e627"></a>
@@ -244,14 +234,14 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a2e988ba794b4023a8ece371be0c32c6c" name="a2e988ba794b4023a8ece371be0c32c6c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2e988ba794b4023a8ece371be0c32c6c">&#9670;&#160;</a></span>run_gmm()</h2>
+<a id="af1dd9951bf9df75297489ff63ef13e87" name="af1dd9951bf9df75297489ff63ef13e87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af1dd9951bf9df75297489ff63ef13e87">&#9670;&#160;</a></span>run_extract_features()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void run_gmm </td>
+          <td class="memname">void run_extract_features </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="structConfig.html">Config</a> &amp;&#160;</td>
           <td class="paramname"><em>cfg</em></td><td>)</td>
@@ -292,39 +282,6 @@ Variables</h2></td></tr>
           <td class="paramtype">const <a class="el" href="structConfig.html">Config</a> &amp;&#160;</td>
           <td class="paramname"><em>cfg</em></td><td>)</td>
           <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ab4fdd5f7cd8b92a3118ded5c278a0866" name="ab4fdd5f7cd8b92a3118ded5c278a0866"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab4fdd5f7cd8b92a3118ded5c278a0866">&#9670;&#160;</a></span>run_plot()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void run_plot </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structConfig.html">Config</a> &amp;&#160;</td>
-          <td class="paramname"><em>cfg</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<h2 class="groupheader">Variable Documentation</h2>
-<a id="aa4275f9910c127453e76944cdd096662" name="aa4275f9910c127453e76944cdd096662"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa4275f9910c127453e76944cdd096662">&#9670;&#160;</a></span>MAX_MSGS</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const uint64_t MAX_MSGS = 2'000'000</td>
         </tr>
       </table>
 </div><div class="memdoc">

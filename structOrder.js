@@ -5,6 +5,8 @@ var structOrder =
     [ "induced_imbalance", "structOrder.html#a6f1b601ccd1d1e63b9a625632066a229", null ],
     [ "order_id", "structOrder.html#a849ff155b8b2b26743ce2b4fa83d847e", null ],
     [ "price", "structOrder.html#a0f5be1bc13672c3def07d57c73662d13", null ],
+    [ "price_distance_ticks", "structOrder.html#ac0ff46bb3f58efc65f77363877613d86", null ],
+    [ "relative_size", "structOrder.html#ab1cd784bdeaba050cf579e8a09ede571", null ],
     [ "side", "structOrder.html#a8ec831878ee418ae726b8894aeebfcdb", null ],
     [ "size", "structOrder.html#afe908a32dd5304486facc73c680fc220", null ],
     [ "total_filled", "structOrder.html#a58e195e86d561597c4b2dcb3e20ca651", null ],

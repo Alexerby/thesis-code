@@ -156,6 +156,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a12857b93810ed4a332cc05f5853537cb" id="r_a12857b93810ed4a332cc05f5853537cb"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a12857b93810ed4a332cc05f5853537cb">CalculateDeepImbalance</a> (std::size_t depth) const</td></tr>
 <tr class="memdesc:a12857b93810ed4a332cc05f5853537cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates imbalance across multiple price levels for smoother signals.  <br /></td></tr>
 <tr class="separator:a12857b93810ed4a332cc05f5853537cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a921fe89e0f9d164787d8049b11fb4d65" id="r_a921fe89e0f9d164787d8049b11fb4d65"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a921fe89e0f9d164787d8049b11fb4d65">GetTopNDepth</a> (int n) const</td></tr>
+<tr class="memdesc:a921fe89e0f9d164787d8049b11fb4d65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns total bid and ask volume summed over the top <code>n</code> price levels on each side.  <br /></td></tr>
+<tr class="separator:a921fe89e0f9d164787d8049b11fb4d65"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83081809382d9ec23218affecaa4aae8" id="r_a83081809382d9ec23218affecaa4aae8"><td class="memItemLeft" align="right" valign="top">std::pair&lt; double, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a83081809382d9ec23218affecaa4aae8">GetTopNDepthExcluding</a> (int n, int64_t order_price, uint32_t order_size, <a class="el" href="types_8hpp.html#a850d91564117e01028bb9cbac40132e0">Side</a> order_side) const</td></tr>
+<tr class="memdesc:a83081809382d9ec23218affecaa4aae8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as GetTopNDepth but subtracts one order's contribution from its side, giving the pre-add depth state. If the order's price is not among the top <code>n</code> levels its contribution is zero and the result is identical to GetTopNDepth.  <br /></td></tr>
+<tr class="separator:a83081809382d9ec23218affecaa4aae8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0efddbc1766c444447ccc6854d544301" id="r_a0efddbc1766c444447ccc6854d544301"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structTradeExecution.html">TradeExecution</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classBook.html#a0efddbc1766c444447ccc6854d544301">GetLastExecution</a> () const</td></tr>
 <tr class="separator:a0efddbc1766c444447ccc6854d544301"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">Getters</div></td></tr>
@@ -901,6 +907,68 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a921fe89e0f9d164787d8049b11fb4d65" name="a921fe89e0f9d164787d8049b11fb4d65"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a921fe89e0f9d164787d8049b11fb4d65">&#9670;&#160;</a></span>GetTopNDepth()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::pair&lt; double, double &gt; Book::GetTopNDepth </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns total bid and ask volume summed over the top <code>n</code> price levels on each side. </p>
+
+</div>
+</div>
+<a id="a83081809382d9ec23218affecaa4aae8" name="a83081809382d9ec23218affecaa4aae8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83081809382d9ec23218affecaa4aae8">&#9670;&#160;</a></span>GetTopNDepthExcluding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::pair&lt; double, double &gt; Book::GetTopNDepthExcluding </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int64_t&#160;</td>
+          <td class="paramname"><em>order_price</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>order_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8hpp.html#a850d91564117e01028bb9cbac40132e0">Side</a>&#160;</td>
+          <td class="paramname"><em>order_side</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Same as GetTopNDepth but subtracts one order's contribution from its side, giving the pre-add depth state. If the order's price is not among the top <code>n</code> levels its contribution is zero and the result is identical to GetTopNDepth. </p>
+
+</div>
+</div>
 <a id="a6a99b8e454f0c2ac55908c5edec4c9c9" name="a6a99b8e454f0c2ac55908c5edec4c9c9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6a99b8e454f0c2ac55908c5edec4c9c9">&#9670;&#160;</a></span>GetTotalTradeVolume()</h2>
 
@@ -959,7 +1027,7 @@ Private Attributes</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Total volume ahead of this order. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Total volume ahead of this order (feature: <code>volume_ahead</code> in <a class="el" href="structFeatureRecord.html" title="Feature vector x_i for a single order lifecycle.">FeatureRecord</a>). </dd></dl>
 
 </div>
 </div>

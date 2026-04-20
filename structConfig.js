@@ -6,7 +6,9 @@ var structConfig =
     [ "dataset", "structConfig.html#ae518884ba03a1989b3a1e501e6b36fcf", null ],
     [ "depths", "structConfig.html#a911a471af612aaf94fe391886f772bbf", null ],
     [ "end_time", "structConfig.html#a1bae7f460be599bf3f4d8f06583e1c9b", null ],
+    [ "fetch_output_path", "structConfig.html#ac2b0f6ad9e9c9d5cf115f607ed5c2949", null ],
     [ "focus_instrument", "structConfig.html#a0f38d392fca9e7be731320be2ada4367", null ],
+    [ "limit", "structConfig.html#a510d0db6080921935ecbcfa9a8331b91", null ],
     [ "output_path", "structConfig.html#a197d0e00e0a4d9cd71384b7a6bb49140", null ],
     [ "start_time", "structConfig.html#a357ec553cdbc813aa27da855ca8c6777", null ],
     [ "symbols", "structConfig.html#a3a452841e7511dc35ee50e493a93443f", null ]

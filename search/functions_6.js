@@ -20,12 +20,15 @@ var searchData=
   ['getplaybackstate_17',['GetPlaybackState',['../classReplayController.html#ae08a246813f500a6440d972e73aa7ca9',1,'ReplayController']]],
   ['getpricelevel_18',['GetPriceLevel',['../classBook.html#a9dc4f77b72af157a8de3a53b6b687eb8',1,'Book']]],
   ['getqueuepos_19',['GetQueuePos',['../classBook.html#a159afc3ec436a7bd9d8f78b998a6bc39',1,'Book']]],
-  ['getsessionstats_20',['GetSessionStats',['../classReplayController.html#a0d19f795fcf1e32b64544a4e85d9b980',1,'ReplayController']]],
-  ['getsidelevels_21',['GetSideLevels',['../classBook.html#a45eaa9e293da92eaec45412a11bf59eb',1,'Book']]],
-  ['getsnapshot_22',['getsnapshot',['../classBook.html#a8c6e97b7a619e9214537c0f31c0f0175',1,'Book::GetSnapshot()'],['../classMarket.html#ae58b2f0eb10190dfb7d29a12b3a744d4',1,'Market::GetSnapshot()']]],
-  ['getspeed_23',['GetSpeed',['../classReplayController.html#a70ed504e5387eaabd9d9ee042113f454',1,'ReplayController']]],
-  ['getspreadhistory_24',['GetSpreadHistory',['../classReplayController.html#ac35dd16ff3af623bc51ff3956dae6f25',1,'ReplayController']]],
-  ['getsymbolmap_25',['GetSymbolMap',['../classReplayEngine.html#ab12415a108eb47df7b82f33c0924f33c',1,'ReplayEngine']]],
-  ['gettotaltradevolume_26',['GetTotalTradeVolume',['../classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9',1,'Book']]],
-  ['getvolumeahead_27',['getvolumeahead',['../classBook.html#aa9ecf1e194bed13a5219a8617da58670',1,'Book::GetVolumeAhead()'],['../classMarket.html#a0885a207097ecceba19f59de0008066c',1,'Market::GetVolumeAhead()']]]
+  ['getrangehighlight_20',['GetRangeHighlight',['../classReplayController.html#ac8267dd9eb0500ea7c7164fe0b0147fa',1,'ReplayController']]],
+  ['getsessionstats_21',['GetSessionStats',['../classReplayController.html#a0d19f795fcf1e32b64544a4e85d9b980',1,'ReplayController']]],
+  ['getsidelevels_22',['GetSideLevels',['../classBook.html#a45eaa9e293da92eaec45412a11bf59eb',1,'Book']]],
+  ['getsnapshot_23',['getsnapshot',['../classBook.html#a8c6e97b7a619e9214537c0f31c0f0175',1,'Book::GetSnapshot()'],['../classMarket.html#ae58b2f0eb10190dfb7d29a12b3a744d4',1,'Market::GetSnapshot()']]],
+  ['getspeedmultiplier_24',['GetSpeedMultiplier',['../classReplayController.html#a09928fe302794b137195d6b4146f7b52',1,'ReplayController']]],
+  ['getspreadhistory_25',['GetSpreadHistory',['../classReplayController.html#ac35dd16ff3af623bc51ff3956dae6f25',1,'ReplayController']]],
+  ['getsymbolmap_26',['GetSymbolMap',['../classReplayEngine.html#ab12415a108eb47df7b82f33c0924f33c',1,'ReplayEngine']]],
+  ['gettopndepth_27',['gettopndepth',['../classBook.html#a921fe89e0f9d164787d8049b11fb4d65',1,'Book::GetTopNDepth()'],['../classMarket.html#a70649ec2368dcda09aa8bc47615649e7',1,'Market::GetTopNDepth()']]],
+  ['gettopndepthexcluding_28',['gettopndepthexcluding',['../classBook.html#a83081809382d9ec23218affecaa4aae8',1,'Book::GetTopNDepthExcluding()'],['../classMarket.html#aaafd833e11602a0369bd7dc1a466ecca',1,'Market::GetTopNDepthExcluding()']]],
+  ['gettotaltradevolume_29',['GetTotalTradeVolume',['../classBook.html#a6a99b8e454f0c2ac55908c5edec4c9c9',1,'Book']]],
+  ['getvolumeahead_30',['getvolumeahead',['../classBook.html#aa9ecf1e194bed13a5219a8617da58670',1,'Book::GetVolumeAhead()'],['../classMarket.html#a0885a207097ecceba19f59de0008066c',1,'Market::GetVolumeAhead()']]]
 ];

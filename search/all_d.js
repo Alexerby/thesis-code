@@ -10,11 +10,13 @@ var searchData=
   ['order_5fmap_7',['order_map',['../classOrderTracker.html#a21372bd61b20788432d386459bda74a7',1,'OrderTracker']]],
   ['order_5ftracker_2ecpp_8',['order_tracker.cpp',['../order__tracker_8cpp.html',1,'']]],
   ['order_5ftracker_2ehpp_9',['order_tracker.hpp',['../order__tracker_8hpp.html',1,'']]],
-  ['orderevent_10',['OrderEvent',['../structOrderEvent.html',1,'']]],
-  ['orderinducedimbalance_11',['OrderInducedImbalance',['../classOrderTracker.html#a2a6bc895613e5861c26f93077d0b2431',1,'OrderTracker']]],
-  ['ordermap_12',['OrderMap',['../classOrderTracker.html#a8605f3f6e715a5a4b956882c08d105d7',1,'OrderTracker']]],
-  ['orders_13',['Orders',['../classBook.html#a318eb76e07f8cafd42f6cf09695a8c83',1,'Book']]],
-  ['orders_5fby_5fid_5f_14',['orders_by_id_',['../classBook.html#ae14b68173ea4f62093aaaa4d2e87a737',1,'Book']]],
-  ['ordertracker_15',['ordertracker',['../classOrderTracker.html',1,'OrderTracker'],['../classOrderTracker.html#aab78a1a7964396797dc503b3a1154600',1,'OrderTracker::OrderTracker()']]],
-  ['output_5fpath_16',['output_path',['../structConfig.html#a197d0e00e0a4d9cd71384b7a6bb49140',1,'Config']]]
+  ['orderdeltat_10',['OrderDeltaT',['../classOrderTracker.html#a87f40447abf9dbbd35df57701c1d0ae9',1,'OrderTracker']]],
+  ['orderevent_11',['OrderEvent',['../structOrderEvent.html',1,'']]],
+  ['orderinducedimbalance_12',['OrderInducedImbalance',['../classOrderTracker.html#a2a6bc895613e5861c26f93077d0b2431',1,'OrderTracker']]],
+  ['ordermap_13',['OrderMap',['../classOrderTracker.html#a8605f3f6e715a5a4b956882c08d105d7',1,'OrderTracker']]],
+  ['orderpricedistance_14',['OrderPriceDistance',['../classOrderTracker.html#acf77fa4e87bc401b2cc79525bed8c975',1,'OrderTracker']]],
+  ['orders_15',['Orders',['../classBook.html#a318eb76e07f8cafd42f6cf09695a8c83',1,'Book']]],
+  ['orders_5fby_5fid_5f_16',['orders_by_id_',['../classBook.html#ae14b68173ea4f62093aaaa4d2e87a737',1,'Book']]],
+  ['ordertracker_17',['ordertracker',['../classOrderTracker.html',1,'OrderTracker'],['../classOrderTracker.html#aab78a1a7964396797dc503b3a1154600',1,'OrderTracker::OrderTracker()']]],
+  ['output_5fpath_18',['output_path',['../structConfig.html#a197d0e00e0a4d9cd71384b7a6bb49140',1,'Config']]]
 ];
