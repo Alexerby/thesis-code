@@ -63,6 +63,7 @@ class ReplayController {
 
   // Navigation
   void SeekToTime(uint64_t target_ts);
+  void PlayRange(uint64_t start_ts, uint64_t end_ts);
   SessionStats GetSessionStats();
 
   // Instrument Management
@@ -75,6 +76,13 @@ class ReplayController {
   MarketSnapshot GetLatestSnapshot();
   std::vector<SpreadPoint> GetSpreadHistory();
   std::vector<OrderEvent> GetOrderEvents();
+
+  struct RangeHighlight {
+    double start_s = 0.0;
+    double end_s   = 0.0;
+    bool   active  = false;
+  };
+  RangeHighlight GetRangeHighlight() const;
 
  private:
   void ReplayLoop();
@@ -94,6 +102,9 @@ class ReplayController {
   // Navigation state
   std::atomic<uint64_t> m_target_ts{0};
   std::atomic<bool> m_is_warping{false};
+  std::atomic<uint64_t> m_range_end_ts{0};
+  std::atomic<uint64_t> m_range_highlight_start{0};
+  std::atomic<uint64_t> m_range_highlight_end{0};
 
   std::unique_ptr<std::thread> m_thread;
 

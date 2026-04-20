@@ -15,7 +15,7 @@ namespace {  // make anonymous
 constexpr uint64_t NANOS_1S = 1'000'000'000ULL;
 
 constexpr float HEADER_HEIGHT = 50.0f;
-constexpr float CONTROLS_HEIGHT = 80.0f;
+constexpr float CONTROLS_HEIGHT = 110.0f;
 constexpr float SPREAD_GRAPH_HEIGHT = 480.0f;
 constexpr float ORDERBOOK_DEPTH_HEIGHT = 160.0f;
 
@@ -28,22 +28,37 @@ void TextCentered(const char *text, float width) {
   ImGui::Text("%s", text);
 }
 
-// Convert HH:MM:SS to nanoseconds offset from start of day
+// Convert HH:MM:SS[.ffffff] to nanoseconds; supports sub-second precision
 uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
-  std::tm t = {};
-  std::istringstream ss(time_str);
-  ss >> std::get_time(&t, "%H:%M:%S");
-  if (ss.fail()) return 0;
+  int h = 0, m = 0, s = 0;
+  if (std::sscanf(time_str.c_str(), "%d:%d:%d", &h, &m, &s) != 3) return 0;
 
-  // reference_ts is unix nanos. We need the date part from it.
+  uint64_t frac_ns = 0;
+  auto dot = time_str.find('.');
+  if (dot != std::string::npos) {
+    std::string frac = time_str.substr(dot + 1);
+    frac.resize(9, '0');  // pad to nanoseconds
+    frac_ns = static_cast<uint64_t>(std::stoull(frac));
+  }
+
   std::time_t ref_secs = reference_ts / NANOS_1S;
   std::tm *ref_tm = std::gmtime(&ref_secs);
+  ref_tm->tm_hour = h;
+  ref_tm->tm_min = m;
+  ref_tm->tm_sec = s;
+  return static_cast<uint64_t>(timegm(ref_tm)) * NANOS_1S + frac_ns;
+}
 
-  ref_tm->tm_hour = t.tm_hour;
-  ref_tm->tm_min = t.tm_min;
-  ref_tm->tm_sec = t.tm_sec;
-
-  return static_cast<uint64_t>(timegm(ref_tm)) * NANOS_1S;
+static int TimeAxisFormatter(double value, char *buff, int size, void *) {
+  std::time_t secs = static_cast<std::time_t>(value);
+  double frac = value - static_cast<double>(secs);
+  if (frac < 0.0) { frac += 1.0; --secs; }
+  std::tm *t = std::gmtime(&secs);
+  if (!t) return std::snprintf(buff, size, "??:??:??");
+  int ms = static_cast<int>(frac * 1000.0 + 0.5);
+  if (ms >= 1000) ms = 999;
+  return std::snprintf(buff, size, "%02d:%02d:%02d.%03d",
+                       t->tm_hour, t->tm_min, t->tm_sec, ms);
 }
 }  // namespace
 
@@ -72,7 +87,7 @@ void Dashboard::Render(const MarketSnapshot &snapshot,
   {
     const float avail_x = ImGui::GetContentRegionAvail().x;
     const float avail_y = ImGui::GetContentRegionAvail().y;
-    const float sidebar_w = 320.0f;
+    const float sidebar_w = 400.0f;
     const float graph_w = avail_x - sidebar_w - ImGui::GetStyle().ItemSpacing.x;
     
     // Main Area: Spread Graph
@@ -83,7 +98,7 @@ void Dashboard::Render(const MarketSnapshot &snapshot,
     // Sidebar Area: Events (Top) and Book (Bottom)
     ImGui::BeginGroup();
     const float spacing = ImGui::GetStyle().ItemSpacing.y;
-    const float sidebar_h_top = avail_y * 0.70f;
+    const float sidebar_h_top = avail_y * 0.65f;
     const float sidebar_h_bottom = avail_y - sidebar_h_top - spacing;
     
     RenderOrderEventList(controller, sidebar_w, sidebar_h_top);
@@ -113,8 +128,8 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
 
   // Jump to Time
   ImGui::SameLine(0, 20);
-  static char jump_time[16] = "14:30:00";
-  ImGui::SetNextItemWidth(100);
+  static char jump_time[24] = "14:30:00.000000";
+  ImGui::SetNextItemWidth(140);
   ImGui::InputText("##JumpTime", jump_time, IM_ARRAYSIZE(jump_time));
   ImGui::SameLine();
   if (ImGui::Button("Jump to Time")) {
@@ -128,6 +143,28 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   float speed = controller.GetSpeedMultiplier();
   if (ImGui::SliderFloat("Speed", &speed, 0.1f, 5.0f, "%.1fx"))
     controller.SetSpeedMultiplier(speed);
+
+  // Range playback
+  static char range_start[24] = "14:26:10.000000";
+  static char range_end[24]   = "14:28:10.000000";
+  ImGui::SetNextItemWidth(140);
+  ImGui::InputText("##RangeStart", range_start, IM_ARRAYSIZE(range_start));
+  ImGui::SameLine(0, 4);
+  ImGui::TextDisabled("→");
+  ImGui::SameLine(0, 4);
+  ImGui::SetNextItemWidth(140);
+  ImGui::InputText("##RangeEnd", range_end, IM_ARRAYSIZE(range_end));
+  ImGui::SameLine(0, 10);
+  if (ImGui::Button("Play Range")) {
+    uint64_t t0 = TimeStringToNanos(range_start, stats.start_ts);
+    uint64_t t1 = TimeStringToNanos(range_end,   stats.start_ts);
+    if (t0 > 0 && t1 > t0) {
+      controller.PlayRange(t0, t1);
+      float range_secs = static_cast<float>((t1 - t0) / 1e9);
+      m_window_secs  = 120.0f + range_secs + 120.0f + 10.0f;
+      m_spread_follow = true;
+    }
+  }
 
   // Timeline
   float progress = 0.0f;
@@ -202,9 +239,8 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   }
 
   // Rolling window: show last 30 seconds of market time
-  constexpr double kWindowSecs = 30.0;
   const double t_latest = history.back().ts;
-  const double t_min_window = t_latest - kWindowSecs;
+  const double t_min_window = t_latest - m_window_secs;
 
   // Filter to only points in (or just before) the window for tight y-autofit
   std::vector<double> times, bids, asks;
@@ -247,15 +283,11 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   SessionStats stats = controller.GetSessionStats();
   double current_ts_s = static_cast<double>(stats.current_ts) / 1e9;
 
-  // Calculate local price bounds for framing (ignore 0.0)
+  // Y bounds driven only by BBO lines — event markers can be at deep prices
+  // (e.g. $5.00 asks) that would blow out the scale if included here.
   double min_p = 1e18, max_p = -1e18;
   for (double b : bids) if (b > 0) min_p = std::min(min_p, b);
   for (double a : asks) if (a > 0) max_p = std::max(max_p, a);
-
-  // Also check event prices to ensure they fit
-  for (double p : fill_px) if (p > 0) { min_p = std::min(min_p, p); max_p = std::max(max_p, p); }
-  for (double p : cancel_px) if (p > 0) { min_p = std::min(min_p, p); max_p = std::max(max_p, p); }
-  for (double p : add_px) if (p > 0) { min_p = std::min(min_p, p); max_p = std::max(max_p, p); }
 
   if (min_p > max_p) { min_p = 0; max_p = 100; } // Fallback
 
@@ -264,8 +296,11 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   if (!m_spread_follow) {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(120);
-    ImGui::SliderFloat("Y-Range ($)", &m_y_range, 0.1f, 100.0f, "%.1f");
   }
+  ImGui::SameLine(0, 20);
+  ImGui::SetNextItemWidth(120);
+
+  ImGui::SliderFloat("Window (s)", &m_window_secs, 10.0f, 600.0f, "%.0fs");
   ImGui::SameLine();
   ImGui::Checkbox("Fills", &m_show_fills);
   ImGui::SameLine();
@@ -282,11 +317,12 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus)) {
     ImPlot::SetupAxes("Time", "Price (USD)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+    ImPlot::SetupAxisFormat(ImAxis_X1, TimeAxisFormatter);
     ImPlot::SetupAxisLimits(ImAxis_X1, t_min_window, t_latest + 0.5, x_cond);
 
     if (m_spread_follow) {
       double padding = (max_p - min_p) * 0.1;
-      if (padding < 0.01) padding = 0.5;
+      if (padding < 1e-6) padding = (max_p > 0 ? max_p : 1.0) * 0.001;
       ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - padding, max_p + padding, ImGuiCond_Always);
     } else if (!times.empty()) {
       double mid = (bids.back() + asks.back()) * 0.5;
@@ -296,11 +332,11 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
     const int n = static_cast<int>(times.size());
 
     // Shading: Red above Ask, Green below Bid
-    if (n > 0) {
-      ImPlotRect limits = ImPlot::GetPlotLimits();
-      double plot_min = limits.Y.Min;
-      double plot_max = limits.Y.Max;
+    ImPlotRect limits = ImPlot::GetPlotLimits();
+    double plot_min = limits.Y.Min;
+    double plot_max = limits.Y.Max;
 
+    if (n > 0) {
       std::vector<double> y_top(n, plot_max);
       std::vector<double> y_bottom(n, plot_min);
 
@@ -309,6 +345,20 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
 
       ImPlot::SetNextFillStyle(ImVec4(0.15f, 0.85f, 0.3f, 0.15f));
       ImPlot::PlotShaded("##BidShade", times.data(), bids.data(), y_bottom.data(), n);
+    }
+
+    // Range highlight band
+    auto hl = controller.GetRangeHighlight();
+    if (hl.active) {
+      double xs[]    = {hl.start_s, hl.end_s};
+      double y_bot[] = {plot_min, plot_min};
+      double y_top[] = {plot_max, plot_max};
+      ImPlot::SetNextFillStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.10f));
+      ImPlot::PlotShaded("##RangeHL", xs, y_bot, y_top, 2);
+      ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.60f), 1.5f);
+      ImPlot::PlotInfLines("##RangeStart", &hl.start_s, 1);
+      ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.60f), 1.5f);
+      ImPlot::PlotInfLines("##RangeEnd", &hl.end_s, 1);
     }
 
     // Bid (green)
@@ -369,6 +419,35 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
     return;
   }
 
+  // Filter toggles: A=Add, C=Cancel, F=Fill, T=Trade, X=Clear
+  static bool show_add    = true;
+  static bool show_cancel = true;
+  static bool show_fill   = true;
+  static bool show_trade  = true;
+  static bool show_clear  = false;
+
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3, 2));
+  ImGui::Checkbox("A", &show_add);    ImGui::SameLine();
+  ImGui::Checkbox("C", &show_cancel); ImGui::SameLine();
+  ImGui::Checkbox("F", &show_fill);   ImGui::SameLine();
+  ImGui::Checkbox("T", &show_trade);  ImGui::SameLine();
+  ImGui::Checkbox("X", &show_clear);
+  ImGui::PopStyleVar();
+  ImGui::Separator();
+
+  // Build filtered index list (reverse order: latest first)
+  std::vector<int> filtered;
+  filtered.reserve(events.size());
+  for (int i = static_cast<int>(events.size()) - 1; i >= 0; --i) {
+    char a = events[i].action;
+    if (a == 'A' && !show_add)    continue;
+    if (a == 'C' && !show_cancel) continue;
+    if ((a == 'F') && !show_fill) continue;
+    if (a == 'T' && !show_trade)  continue;
+    if (a == 'X' && !show_clear)  continue;
+    filtered.push_back(i);
+  }
+
   static ImGuiTableFlags flags =
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
       ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV |
@@ -376,29 +455,28 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
       ImGuiTableFlags_Hideable;
 
   if (ImGui::BeginTable("EventTable", 4, flags, ImVec2(0, 0))) {
-    ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 75.0f);
-    ImGui::TableSetupColumn("Act", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+    ImGui::TableSetupColumn("Time",  ImGuiTableColumnFlags_WidthFixed,   115.0f);
+    ImGui::TableSetupColumn("Act",   ImGuiTableColumnFlags_WidthFixed,    40.0f);
     ImGui::TableSetupColumn("Price", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 45.0f);
+    ImGui::TableSetupColumn("Size",  ImGuiTableColumnFlags_WidthFixed,    55.0f);
     ImGui::TableHeadersRow();
 
-    // Use Clipper to only render what's visible on screen (prevents O(N) overhead)
     ImGuiListClipper clipper;
-    clipper.Begin(static_cast<int>(events.size()));
+    clipper.Begin(static_cast<int>(filtered.size()));
     while (clipper.Step()) {
       for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-        // Reverse index to show latest first
-        int idx = static_cast<int>(events.size()) - 1 - i;
-        const auto &e = events[idx];
+        const auto &e = events[filtered[i]];
         ImGui::TableNextRow();
 
-        // Time (HH:MM:SS)
+        // Time (HH:MM:SS.ffffff)
         ImGui::TableSetColumnIndex(0);
         std::time_t secs = static_cast<std::time_t>(e.ts);
+        double frac = e.ts - static_cast<double>(secs);
+        if (frac < 0.0) { frac += 1.0; --secs; }
         std::tm *tm_info = std::gmtime(&secs);
         if (tm_info) {
-          ImGui::Text("%02d:%02d:%02d", tm_info->tm_hour, tm_info->tm_min,
-                      tm_info->tm_sec);
+          ImGui::Text("%02d:%02d:%02d.%06d", tm_info->tm_hour, tm_info->tm_min,
+                      tm_info->tm_sec, static_cast<int>(frac * 1e6 + 0.5));
         } else {
           ImGui::Text("??:??:??");
         }
@@ -417,7 +495,7 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
 
         // Price
         ImGui::TableSetColumnIndex(2);
-        ImGui::Text("%.2f", e.price);
+        ImGui::Text("%.4f", e.price);
 
         // Size
         ImGui::TableSetColumnIndex(3);
@@ -433,56 +511,101 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
 void Dashboard::RenderOrderBookDepth(const MarketSnapshot &snapshot, float width, float height) {
   ImGui::BeginChild("Order book depth", ImVec2(width, height), true);
 
-  const std::vector<float> &left_data =
-      m_use_cumulative ? snapshot.bid_volumes_cum : snapshot.bid_volumes;
-  const std::vector<float> &right_data =
-      m_use_cumulative ? snapshot.ask_volumes_cum : snapshot.ask_volumes;
-
-  if (left_data.empty() || right_data.empty()) {
+  if (snapshot.bid_volumes.empty() || snapshot.ask_volumes.empty()) {
     ImGui::TextDisabled("Waiting for depth data...");
-  } else {
-    // Stats Header
-    ImGui::Columns(2, "BookStats", false);
-    ImGui::Text("Last Px");
-    ImGui::TextColored(ImVec4(1, 1, 0, 1), "%.2f", snapshot.last_price);
-    ImGui::NextColumn();
-    ImGui::Checkbox("Cumulative", &m_use_cumulative);
-    ImGui::Columns(1);
-    
-    ImVec4 imb_color = ImVec4(1, 1, 1, 1);
-    if (snapshot.imbalance > 0.1f) imb_color = ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
-    else if (snapshot.imbalance < -0.1f) imb_color = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
-    ImGui::Text("Imbalance:"); ImGui::SameLine();
-    ImGui::TextColored(imb_color, "%.3f", snapshot.imbalance);
-    ImGui::Separator();
-
-    float max_vol = 0.1f;
-    for (float v : left_data) if (v > max_vol) max_vol = v;
-    for (float v : right_data) if (v > max_vol) max_vol = v;
-
-    const float bar_h = 10.0f;
-    const float label_w = 30.0f;
-    const float plot_w = width - label_w - 30.0f;
-
-    // Asks (Red)
-    for (int i = 4; i >= 0; --i) { // Only show top 5 levels
-        if (i >= (int)right_data.size()) continue;
-        ImGui::Text("L%d", i+1); ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-        ImGui::ProgressBar(right_data[i] / max_vol, ImVec2(plot_w, bar_h), "");
-        ImGui::PopStyleColor();
-    }
-
-    ImGui::Separator();
-    
-    // Bids (Green)
-    for (int i = 0; i < 5; ++i) { // Only show top 5 levels
-        if (i >= (int)left_data.size()) continue;
-        ImGui::Text("L%d", i+1); ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.8f, 0.2f, 0.8f));
-        ImGui::ProgressBar(left_data[i] / max_vol, ImVec2(plot_w, bar_h), "");
-        ImGui::PopStyleColor();
-    }
+    ImGui::EndChild();
+    return;
   }
+
+  // Stats header
+  ImGui::Columns(2, "BookStats", false);
+  ImGui::Text("Last Px");
+  ImGui::TextColored(ImVec4(1, 1, 0, 1), "%.4f", snapshot.last_price);
+  ImGui::NextColumn();
+  ImGui::Checkbox("Cumulative", &m_use_cumulative);
+  ImGui::Columns(1);
+
+  ImVec4 imb_color = ImVec4(1, 1, 1, 1);
+  if (snapshot.imbalance > 0.1f) imb_color = ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
+  else if (snapshot.imbalance < -0.1f) imb_color = ImVec4(0.9f, 0.3f, 0.3f, 1.0f);
+  ImGui::Text("Imbalance:"); ImGui::SameLine();
+  ImGui::TextColored(imb_color, "%.3f", snapshot.imbalance);
+  ImGui::Separator();
+
+  // LOB ladder table: Orders | Size | Price | Price | Size | Orders
+  static ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit;
+  if (ImGui::BeginTable("LOBTable", 6, tflags, ImVec2(0, 0))) {
+    ImGui::TableSetupColumn("Ord##B",  ImGuiTableColumnFlags_WidthFixed, 35.0f);
+    ImGui::TableSetupColumn("Size##B", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+    ImGui::TableSetupColumn("Bid",     ImGuiTableColumnFlags_WidthFixed, 60.0f);
+    ImGui::TableSetupColumn("Ask",     ImGuiTableColumnFlags_WidthFixed, 60.0f);
+    ImGui::TableSetupColumn("Size##A", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+    ImGui::TableSetupColumn("Ord##A",  ImGuiTableColumnFlags_WidthFixed, 35.0f);
+    ImGui::TableHeadersRow();
+
+    const int n_levels = 5;
+    const auto &bid_vol = m_use_cumulative ? snapshot.bid_volumes_cum : snapshot.bid_volumes;
+    const auto &ask_vol = m_use_cumulative ? snapshot.ask_volumes_cum : snapshot.ask_volumes;
+
+    // Ask levels (worst to best, so L5 first)
+    for (int i = n_levels - 1; i >= 0; --i) {
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0); ImGui::TextDisabled("-");
+      ImGui::TableSetColumnIndex(1); ImGui::TextDisabled("-");
+      ImGui::TableSetColumnIndex(2); ImGui::TextDisabled("-");
+
+      ImGui::TableSetColumnIndex(3);
+      if (i < (int)snapshot.ask_prices.size() && snapshot.ask_prices[i] > 0.0)
+        ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.35f, 1.0f), "%.4f", snapshot.ask_prices[i]);
+      else
+        ImGui::TextDisabled("---");
+
+      ImGui::TableSetColumnIndex(4);
+      if (i < (int)ask_vol.size())
+        ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.35f, 1.0f), "%.0f", ask_vol[i]);
+      else
+        ImGui::TextDisabled("-");
+
+      ImGui::TableSetColumnIndex(5);
+      if (i < (int)snapshot.ask_counts.size() && snapshot.ask_counts[i] > 0)
+        ImGui::TextColored(ImVec4(0.9f, 0.35f, 0.35f, 1.0f), "%u", snapshot.ask_counts[i]);
+      else
+        ImGui::TextDisabled("-");
+    }
+
+    // Separator row
+    ImGui::TableNextRow();
+    for (int c = 0; c < 6; ++c) { ImGui::TableSetColumnIndex(c); ImGui::Separator(); }
+
+    // Bid levels (best to worst, L1 first)
+    for (int i = 0; i < n_levels; ++i) {
+      ImGui::TableNextRow();
+
+      ImGui::TableSetColumnIndex(0);
+      if (i < (int)snapshot.bid_counts.size() && snapshot.bid_counts[i] > 0)
+        ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "%u", snapshot.bid_counts[i]);
+      else
+        ImGui::TextDisabled("-");
+
+      ImGui::TableSetColumnIndex(1);
+      if (i < (int)bid_vol.size())
+        ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "%.0f", bid_vol[i]);
+      else
+        ImGui::TextDisabled("-");
+
+      ImGui::TableSetColumnIndex(2);
+      if (i < (int)snapshot.bid_prices.size() && snapshot.bid_prices[i] > 0.0)
+        ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "%.4f", snapshot.bid_prices[i]);
+      else
+        ImGui::TextDisabled("---");
+
+      ImGui::TableSetColumnIndex(3); ImGui::TextDisabled("-");
+      ImGui::TableSetColumnIndex(4); ImGui::TextDisabled("-");
+      ImGui::TableSetColumnIndex(5); ImGui::TextDisabled("-");
+    }
+
+    ImGui::EndTable();
+  }
+
   ImGui::EndChild();
 }

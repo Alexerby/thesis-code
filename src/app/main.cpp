@@ -45,7 +45,7 @@ void print_usage() {
       << "  extract-features <data_path> Run order tracking and write feature CSV\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
       << "Options (gui / extract-features):\n"
-      << "  --symbol <id>                Focus instrument ID (required)\n\n"
+      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n\n"
       << "Options (extract-features):\n"
       << "  --limit  <N>                 Stop after N MBO messages (default: all)\n"
       << "  --output <path>              Output CSV path (default: features/records.csv)\n\n"
@@ -123,8 +123,8 @@ Config parse_args(int argc, char **argv) {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
     }
-    if ((cfg.command == "gui" || cfg.command == "extract-features") && !symbol_set)
-      throw std::runtime_error("--symbol <id> is required for '" + cfg.command + "'. Run 'info' first to list instrument IDs.");
+    if (cfg.command == "extract-features" && !symbol_set)
+      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'info' first to list instrument IDs.");
     if (cfg.command == "extract-features" && cfg.output_path.empty())
       cfg.output_path = "features/records.csv";
   }

@@ -9,6 +9,8 @@
 
 A C++ implementation of a spoofing detection framework for limit order book (LOB) markets. This project reconstructs full order lifecycles from raw L3/MBO data and extracts per-order features to separate strategic cancellations from genuine liquidity withdrawals.
 
+![Market Visualizer](assets/REAMDE_SCREENSHOT_VISUALIZER.png)
+
 [**Read the Documentation &raquo;**](https://alexerby.github.io/thesis-code/)
 
 ---

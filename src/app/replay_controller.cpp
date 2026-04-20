@@ -47,7 +47,20 @@ MarketSnapshot ReplayController::GetLatestSnapshot() {
 
 std::vector<SpreadPoint> ReplayController::GetSpreadHistory() {
   std::lock_guard<std::mutex> lock(m_mutex);
-  return {m_spread_history.begin(), m_spread_history.end()};
+  std::vector<SpreadPoint> result(m_spread_history.begin(), m_spread_history.end());
+
+  // Append a synthetic point at current market time so the chart line
+  // extends smoothly to "now" even when no new messages have arrived
+  if (!result.empty() && m_session_stats.current_ts > 0) {
+    double live_ts = static_cast<double>(m_session_stats.current_ts) / 1e9;
+    if (live_ts > result.back().ts) {
+      SpreadPoint live = result.back();
+      live.ts = live_ts;
+      live.action = '\0';  // no event marker
+      result.push_back(live);
+    }
+  }
+  return result;
 }
 
 std::vector<OrderEvent> ReplayController::GetOrderEvents() {
@@ -55,7 +68,26 @@ std::vector<OrderEvent> ReplayController::GetOrderEvents() {
   return {m_order_events.begin(), m_order_events.end()};
 }
 
+void ReplayController::PlayRange(uint64_t start_ts, uint64_t end_ts) {
+  constexpr uint64_t kPreBufferNs  = 120ULL * 1'000'000'000ULL;
+  constexpr uint64_t kPostBufferNs = 120ULL * 1'000'000'000ULL;
+  m_range_highlight_start = start_ts;
+  m_range_highlight_end   = end_ts;
+  uint64_t seek_to  = (start_ts > kPreBufferNs) ? start_ts - kPreBufferNs : start_ts;
+  uint64_t pause_at = end_ts + kPostBufferNs;
+  SeekToTime(seek_to);   // clears m_range_end_ts
+  m_range_end_ts = pause_at;
+}
+
+ReplayController::RangeHighlight ReplayController::GetRangeHighlight() const {
+  uint64_t s = m_range_highlight_start.load();
+  uint64_t e = m_range_highlight_end.load();
+  if (s == 0 || e == 0) return {};
+  return {static_cast<double>(s) / 1e9, static_cast<double>(e) / 1e9, true};
+}
+
 void ReplayController::SeekToTime(uint64_t target_ts) {
+  m_range_end_ts = 0;  // cancel any active range so warp always pauses on arrival
   uint64_t current;
   {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -152,7 +184,8 @@ void ReplayController::ReplayLoop() {
         return true;
       } else {
         m_is_warping = false;
-        m_playback_state = PlaybackState::Paused;
+        if (m_range_end_ts == 0)
+          m_playback_state = PlaybackState::Paused;
         clock_initialized = false;
       }
     }
@@ -177,9 +210,8 @@ void ReplayController::ReplayLoop() {
 
     bool stepping = m_step_requested.exchange(false);
 
-    // Delta-T synchronization: process all messages whose market time has
-    // elapsed on the wall clock; sleep only when we are ahead of real time.
-    if (!stepping) {
+    // Delta-T synchronization: skip entirely during range playback (max speed).
+    if (!stepping && m_range_end_ts == 0) {
       if (m_recalibrate || !clock_initialized) {
         recalibrate(current_ts);
       } else {
@@ -192,9 +224,25 @@ void ReplayController::ReplayLoop() {
                  m_playback_state == PlaybackState::Playing &&
                  std::chrono::steady_clock::now() < scheduled) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            // Interpolate current_ts from wall clock so the chart advances
+            // smoothly between message bursts instead of freezing
+            auto wall_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now() - s_start_wall).count();
+            uint64_t interp_ts = t_start_market +
+                static_cast<uint64_t>(static_cast<double>(wall_ns) * speed);
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_session_stats.current_ts = interp_ts;
           }
         }
       }
+    }
+
+    // Auto-pause at range end
+    uint64_t range_end = m_range_end_ts.load();
+    if (range_end > 0 && current_ts >= range_end) {
+      m_playback_state = PlaybackState::Paused;
+      m_range_end_ts = 0;
+      clock_initialized = false;
     }
 
     if (is_focus) {
