@@ -13,6 +13,8 @@
  *
  * FeatureRecord is a direct output of the tracking process; it cannot be
  * produced without the order state accumulated during the lifetime of an order.
+ *
+ * https://databento.com/docs/venues-and-datasets/xnas-itch#mbo-normalization?historical=python&live=python&reference=python
  */
 
 #pragma once

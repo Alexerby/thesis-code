@@ -29,6 +29,8 @@ struct Config {
   std::string api_key;
   // databento-fetch options
   std::string dataset = "XNAS.ITCH";
+  std::string schema  = "mbo";
+  std::string stype   = "raw_symbol";
   std::vector<std::string> symbols;
   std::string start_time;
   std::string end_time;
@@ -52,6 +54,8 @@ void print_usage() {
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
+      << "  --schema  <schema>           Schema (default: mbo; e.g. trades, tbbo, mbp-1)\n"
+      << "  --stype   <stype>            Symbol type (default: raw_symbol; e.g. parent, continuous)\n"
       << "  --symbols <A,B,...>          Comma-separated symbols (required)\n"
       << "  --start   <ISO8601>          Start time, e.g. 2026-03-18T00:00:00Z\n"
       << "  --end     <ISO8601>          End time,   e.g. 2026-03-19T00:00:00Z\n"
@@ -75,6 +79,10 @@ Config parse_args(int argc, char **argv) {
         cfg.api_key = argv[++i];
       } else if (arg == "--dataset" && i + 1 < argc) {
         cfg.dataset = argv[++i];
+      } else if (arg == "--schema" && i + 1 < argc) {
+        cfg.schema = argv[++i];
+      } else if (arg == "--stype" && i + 1 < argc) {
+        cfg.stype = argv[++i];
       } else if (arg == "--symbols" && i + 1 < argc) {
         std::stringstream ss(argv[++i]);
         std::string sym;
@@ -290,10 +298,33 @@ void run_downloader(const Config &cfg) {
   if (out_path.has_parent_path())
     fs::create_directories(out_path.parent_path());
 
+  databento::Schema schema = databento::Schema::Mbo;
+  if      (cfg.schema == "trades")     schema = databento::Schema::Trades;
+  else if (cfg.schema == "tbbo")       schema = databento::Schema::Tbbo;
+  else if (cfg.schema == "mbp-1")      schema = databento::Schema::Mbp1;
+  else if (cfg.schema == "mbp-10")     schema = databento::Schema::Mbp10;
+  else if (cfg.schema == "bbo-1s")     schema = databento::Schema::Bbo1S;
+  else if (cfg.schema == "bbo-1m")     schema = databento::Schema::Bbo1M;
+  else if (cfg.schema == "ohlcv-1s")   schema = databento::Schema::Ohlcv1S;
+  else if (cfg.schema == "ohlcv-1m")   schema = databento::Schema::Ohlcv1M;
+  else if (cfg.schema == "ohlcv-1h")   schema = databento::Schema::Ohlcv1H;
+  else if (cfg.schema == "ohlcv-1d")   schema = databento::Schema::Ohlcv1D;
+  else if (cfg.schema == "imbalance")  schema = databento::Schema::Imbalance;
+  else if (cfg.schema == "definition") schema = databento::Schema::Definition;
+  else if (cfg.schema == "statistics") schema = databento::Schema::Statistics;
+  else if (cfg.schema != "mbo")
+    throw std::runtime_error("Unknown schema: " + cfg.schema);
+
+  databento::SType stype_in = databento::SType::RawSymbol;
+  if      (cfg.stype == "parent")     stype_in = databento::SType::Parent;
+  else if (cfg.stype == "continuous") stype_in = databento::SType::Continuous;
+  else if (cfg.stype != "raw_symbol")
+    throw std::runtime_error("Unknown stype: " + cfg.stype);
+
   std::cout << "\nDownloading...\n";
   client.TimeseriesGetRangeToFile(
-      cfg.dataset, range, cfg.symbols, databento::Schema::Mbo,
-      databento::SType::RawSymbol, databento::SType::InstrumentId, 0,
+      cfg.dataset, range, cfg.symbols, schema,
+      stype_in, databento::SType::InstrumentId, 0,
       cfg.fetch_output_path);
   std::cout << "Success!\n";
 }

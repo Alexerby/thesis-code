@@ -141,7 +141,7 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::SameLine(0, 40);
   ImGui::SetNextItemWidth(150);
   float speed = controller.GetSpeedMultiplier();
-  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 5.0f, "%.1fx"))
+  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 10.0f, "%.1fx"))
     controller.SetSpeedMultiplier(speed);
 
   // Range playback
