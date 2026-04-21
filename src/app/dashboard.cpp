@@ -17,7 +17,7 @@ using namespace std::chrono;
 
 constexpr uint64_t NANOS_1S = 1'000'000'000ULL;
 
-constexpr float HEADER_HEIGHT = 50.0f;
+constexpr float HEADER_HEIGHT = 70.0f;
 constexpr float CONTROLS_HEIGHT = 110.0f;
 constexpr float SPREAD_GRAPH_HEIGHT = 480.0f;
 constexpr float ORDERBOOK_DEPTH_HEIGHT = 160.0f;
@@ -31,55 +31,78 @@ void TextCentered(const char *text, float width) {
   ImGui::Text("%s", text);
 }
 
-// Convert HH:MM:SS[.ffffff] (Eastern Time) to UTC nanoseconds since epoch.
-// The date is inferred from reference_ts (also UTC nanoseconds).
+// Convert YYYY-MM-DD HH:MM:SS[.ffffff] (Eastern Time) to UTC nanoseconds since epoch.
 uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
-  int h = 0, m = 0, s = 0;
-  if (std::sscanf(time_str.c_str(), "%d:%d:%d", &h, &m, &s) != 3) return 0;
+  int y = 0, month = 0, d = 0, h = 0, m = 0, s = 0;
+  bool has_date = false;
+
+  if (std::sscanf(time_str.c_str(), "%d-%d-%d %d:%d:%d", &y, &month, &d, &h, &m,
+                  &s) == 6) {
+    has_date = true;
+  } else if (std::sscanf(time_str.c_str(), "%d:%d:%d", &h, &m, &s) != 3) {
+    return 0;
+  }
 
   uint64_t frac_ns = 0;
   auto dot = time_str.find('.');
   if (dot != std::string::npos) {
     std::string frac = time_str.substr(dot + 1);
     frac.resize(9, '0');
-    frac_ns = static_cast<uint64_t>(std::stoull(frac));
+    try {
+      frac_ns = static_cast<uint64_t>(std::stoull(frac));
+    } catch (...) {
+    }
   }
 
-  // Use the UTC calendar date from reference_ts as the trading day.
-  // For US equities, market hours (13:30–20:00 UTC) are within one UTC day,
-  // so the UTC date always matches the ET trading date.
-  auto ref_day_utc = floor<days>(system_clock::time_point{nanoseconds(reference_ts)});
-  local_time<seconds> target_local{
-      local_days{ref_day_utc.time_since_epoch()} + hours(h) + minutes(m) + seconds(s)};
-  auto target_utc = zoned_time{"America/New_York", target_local}.get_sys_time();
+  sys_time<nanoseconds> target_utc;
+  if (has_date) {
+    local_days ld{year{y} / month / d};
+    local_time<seconds> target_local{ld + hours(h) + minutes(m) + seconds(s)};
+    target_utc = zoned_time{"America/New_York", target_local}.get_sys_time();
+  } else {
+    auto ref_day_utc =
+        floor<days>(system_clock::time_point{nanoseconds(reference_ts)});
+    local_time<seconds> target_local{local_days{ref_day_utc.time_since_epoch()} +
+                                     hours(h) + minutes(m) + seconds(s)};
+    target_utc = zoned_time{"America/New_York", target_local}.get_sys_time();
+  }
 
   return static_cast<uint64_t>(
-      duration_cast<nanoseconds>(target_utc.time_since_epoch()).count()) + frac_ns;
+             duration_cast<nanoseconds>(target_utc.time_since_epoch()).count()) +
+         frac_ns;
 }
 
 // Decompose a double epoch-seconds value into ET wall-clock components.
-struct ETTime { int h, m, s, ms; };
+struct ETTime {
+  int y, mon, d, h, m, s, ms;
+};
 static ETTime ToET(double epoch_seconds) {
   using namespace std::chrono;
-  auto tp = system_clock::time_point{
-      duration_cast<system_clock::duration>(duration<double>(epoch_seconds))};
-  auto zt  = zoned_time{"America/New_York", tp};
-  auto lt  = zt.get_local_time();
-  auto sec = floor<seconds>(lt);
-  auto day = floor<days>(lt);
-  hh_mm_ss hms{sec - day};
-  int ms = (int)duration_cast<milliseconds>(lt - sec).count();
-  return {(int)hms.hours().count(), (int)hms.minutes().count(),
+  auto tp = system_clock::time_point{duration_cast<system_clock::duration>(
+      nanoseconds(static_cast<int64_t>(epoch_seconds * 1e9)))};
+  auto zt = zoned_time{"America/New_York", tp};
+  auto lt = zt.get_local_time();
+  auto day_tp = floor<days>(lt);
+  year_month_day ymd{day_tp};
+  hh_mm_ss hms{lt - day_tp};
+  int ms = (int)duration_cast<milliseconds>(lt - floor<seconds>(lt)).count();
+  return {int(ymd.year()), unsigned(ymd.month()), unsigned(ymd.day()),
+          (int)hms.hours().count(), (int)hms.minutes().count(),
           (int)hms.seconds().count(), ms};
 }
 
 static int TimeAxisFormatter(double value, char *buff, int size, void *) {
   auto t = ToET(value);
-  return std::snprintf(buff, size, "%02d:%02d:%02d.%03d", t.h, t.m, t.s, t.ms);
+  return std::snprintf(buff, size, "%04d-%02d-%02d\n%02d:%02d:%02d", t.y, t.mon,
+                       t.d, t.h, t.m, t.s);
 }
 }  // namespace
 
-Dashboard::Dashboard() {}
+Dashboard::Dashboard() {
+  std::snprintf(m_jump_time, sizeof(m_jump_time), "2023-05-30 09:30:00");
+  std::snprintf(m_range_start, sizeof(m_range_start), "2023-05-30 09:30:00");
+  std::snprintf(m_range_end, sizeof(m_range_end), "2023-05-30 09:35:00");
+}
 Dashboard::~Dashboard() {}
 
 void Dashboard::Render(const MarketSnapshot &snapshot,
@@ -143,38 +166,36 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
 
   // Jump to Time
   ImGui::SameLine(0, 20);
-  static char jump_time[24] = "09:30:00.000000";
-  ImGui::SetNextItemWidth(140);
-  ImGui::InputText("##JumpTime", jump_time, IM_ARRAYSIZE(jump_time));
+  ImGui::SetNextItemWidth(170);
+  ImGui::InputText("##JumpTime", m_jump_time, IM_ARRAYSIZE(m_jump_time));
   ImGui::SameLine();
   if (ImGui::Button("Jump to Time")) {
     uint64_t anchor = stats.current_ts ? stats.current_ts : stats.start_ts;
-    uint64_t target = TimeStringToNanos(jump_time, anchor);
+    uint64_t target = TimeStringToNanos(m_jump_time, anchor);
     if (target > 0) controller.SeekToTime(target);
   }
 
   // Speed Multiplier
   ImGui::SameLine(0, 40);
-  ImGui::SetNextItemWidth(150);
+  ImGui::SetNextItemWidth(120);
   float speed = controller.GetSpeedMultiplier();
   if (ImGui::SliderFloat("Speed", &speed, 0.1f, 20.0f, "%.1fx"))
     controller.SetSpeedMultiplier(speed);
 
   // Range playback
-  static char range_start[24] = "12:34:00.000000";
-  static char range_end[24]   = "12:34:00.000000";
-  ImGui::SetNextItemWidth(140);
-  ImGui::InputText("##RangeStart", range_start, IM_ARRAYSIZE(range_start));
+  ImGui::SameLine(0, 20);
+  ImGui::SetNextItemWidth(170);
+  ImGui::InputText("##RangeStart", m_range_start, IM_ARRAYSIZE(m_range_start));
   ImGui::SameLine(0, 4);
   ImGui::TextDisabled("→");
   ImGui::SameLine(0, 4);
-  ImGui::SetNextItemWidth(140);
-  ImGui::InputText("##RangeEnd", range_end, IM_ARRAYSIZE(range_end));
+  ImGui::SetNextItemWidth(170);
+  ImGui::InputText("##RangeEnd", m_range_end, IM_ARRAYSIZE(m_range_end));
   ImGui::SameLine(0, 10);
   if (ImGui::Button("Play Range")) {
     uint64_t anchor = stats.current_ts ? stats.current_ts : stats.start_ts;
-    uint64_t t0 = TimeStringToNanos(range_start, anchor);
-    uint64_t t1 = TimeStringToNanos(range_end,   anchor);
+    uint64_t t0 = TimeStringToNanos(m_range_start, anchor);
+    uint64_t t1 = TimeStringToNanos(m_range_end,   anchor);
     if (t0 > 0 && t1 > t0) {
       controller.PlayRange(t0, t1);
       float range_secs = static_cast<float>((t1 - t0) / 1e9);
@@ -198,8 +219,8 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
                              ReplayController &controller) {
   ImGui::BeginChild("Header", ImVec2(0, HEADER_HEIGHT), true);
   ImGui::Columns(4, "HeaderColumns", false);
-  ImGui::SetColumnWidth(0, 250);
-  ImGui::SetColumnWidth(1, ImGui::GetWindowWidth() - 550);
+  ImGui::SetColumnWidth(0, 270);
+  ImGui::SetColumnWidth(1, ImGui::GetWindowWidth() - 570);
   ImGui::SetColumnWidth(2, 200);
   ImGui::SetColumnWidth(3, 100);
 
@@ -217,6 +238,14 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
     }
     ImGui::EndCombo();
   }
+
+  const auto &meta = controller.GetMetadata();
+  auto t0 = ToET(static_cast<double>(meta.start.time_since_epoch().count()) / 1e9);
+  auto t1 = ToET(static_cast<double>(meta.end.time_since_epoch().count()) / 1e9);
+
+  ImGui::Text("Start: %04d-%02d-%02d %02d:%02d:%02d ET", t0.y, t0.mon, t0.d, t0.h, t0.m, t0.s);
+  ImGui::Text("End:   %04d-%02d-%02d %02d:%02d:%02d ET", t1.y, t1.mon, t1.d, t1.h, t1.m, t1.s);
+
   ImGui::NextColumn();
 
   ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));

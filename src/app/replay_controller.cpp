@@ -75,6 +75,10 @@ void ReplayController::Stop() {
   }
 }
 
+const databento::Metadata& ReplayController::GetMetadata() const {
+  return m_engine->GetMetadata();
+}
+
 MarketSnapshot ReplayController::GetLatestSnapshot() {
   std::lock_guard<std::mutex> lock(m_mutex);
   return m_latest_snapshot;

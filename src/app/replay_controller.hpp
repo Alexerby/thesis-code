@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <databento/dbn_file_store.hpp>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -81,6 +82,7 @@ class ReplayController {
   }
 
   uint64_t GetFileStartTs() const { return m_file_start_ts; }
+  const databento::Metadata& GetMetadata() const;
   MarketSnapshot GetLatestSnapshot();
   std::vector<SpreadPoint> GetSpreadHistory();
   std::vector<OrderEvent> GetOrderEvents();
