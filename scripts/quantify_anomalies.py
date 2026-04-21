@@ -2,7 +2,7 @@
 Quantify Anomaly Density and Visualize against Ground Truth.
 
 Usage:
-    python scripts/quantify_anomalies.py --input output/features/MULN_OCT25_SCORES_T4.csv --target-date 2022-10-25
+    python scripts/quantify_anomalies.py --input output/features/MULN_20221025_SCORES_T4.csv --target-date 2022-10-25
 """
 
 import argparse
@@ -14,10 +14,12 @@ from datetime import datetime
 def parse_args():
     p = argparse.ArgumentParser(description="Quantify Anomaly Density")
     p.add_argument("--input", required=True, help="Path to scored CSV")
-    p.add_argument("--output", default="output/plots/MULN_OCT25_DENSITY.png", help="Path to save the plot")
+    p.add_argument("--output", default="output/plots/MULN_20221025_DENSITY.png", help="Path to save the plot")
     p.add_argument("--bin-size", default="1min", help="Pandas frequency string (e.g. '1min', '5min')")
     p.add_argument("--target-date", help="The date of the manipulation (YYYY-MM-DD)")
-    p.add_argument("--fp-threshold-mult", type=float, default=1.1, 
+    p.add_argument("--window-start", help="Start of spoofing window (HH:MM:SS), e.g. 14:26:10")
+    p.add_argument("--window-end",   help="End   of spoofing window (HH:MM:SS), e.g. 14:28:10")
+    p.add_argument("--fp-threshold-mult", type=float, default=1.1,
                    help="Only mark FP dots if they are X times higher than intraday average (default 1.1)")
     return p.parse_args()
 
@@ -56,8 +58,10 @@ def main():
     
     if args.target_date:
         target_dt = pd.to_datetime(args.target_date).date()
-        win_start = pd.Timestamp.combine(target_dt, datetime.strptime("14:26:10", "%H:%M:%S").time())
-        win_end = pd.Timestamp.combine(target_dt, datetime.strptime("14:28:10", "%H:%M:%S").time())
+        ws = args.window_start or "14:26:10"
+        we = args.window_end   or "14:28:10"
+        win_start = pd.Timestamp.combine(target_dt, datetime.strptime(ws, "%H:%M:%S").time())
+        win_end   = pd.Timestamp.combine(target_dt, datetime.strptime(we, "%H:%M:%S").time())
         
         in_window_mask = (density.index >= (win_start - pd.Timedelta(bin_freq))) & (density.index <= win_end)
         
@@ -119,8 +123,8 @@ def main():
         day_data = density[density.index.date == target_dt_obj]
         
         # Define the exact start/end of the spoofing window
-        w_start_dt = pd.Timestamp.combine(target_dt_obj, datetime.strptime("14:26:10", "%H:%M:%S").time())
-        w_end_dt = pd.Timestamp.combine(target_dt_obj, datetime.strptime("14:28:10", "%H:%M:%S").time())
+        w_start_dt = win_start
+        w_end_dt   = win_end
         
         # Find all bins that OVERLAP with the spoofing window
         window_bins = day_data[(day_data.index >= (w_start_dt - pd.Timedelta(bin_freq))) & 
@@ -129,7 +133,7 @@ def main():
         outside_bins = day_data[~day_data.index.isin(window_bins.index)]
         
         print(f"\n--- Statistics for {args.target_date} ---")
-        print(f"Total Anomalies in Window (Bins Overlapping 14:26-14:28): {int(window_bins['anomalies'].sum())}")
+        print(f"Total Anomalies in Window (Bins Overlapping {ws}-{we}): {int(window_bins['anomalies'].sum())}")
         print(f"Avg Anomalies (In Window Bins):  {window_bins['anomalies'].mean():.2f}")
         print(f"Avg Anomalies (Outside Bins):    {outside_bins['anomalies'].mean():.2f}")
         
