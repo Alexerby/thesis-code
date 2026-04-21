@@ -161,6 +161,24 @@ for tier in range(1, 5):
     plt.savefig(out, dpi=150)
     plt.close()
     print(f"  Saved {out}")
+
+# SHAP grid (T4 only)
+fig, axes = plt.subplots(2, 2, figsize=(20, 10))
+fig.suptitle("SHAP Feature Importance — T4 across all confirmed spoofing events", fontsize=14, fontweight="bold")
+for ax, date, label in zip(axes.flat, events, labels):
+    path = f"output/MULN_{date}/SHAP_T4.png"
+    try:
+        img = mpimg.imread(path)
+        ax.imshow(img)
+    except FileNotFoundError:
+        ax.text(0.5, 0.5, f"Missing:\n{path}", ha="center", va="center",
+                transform=ax.transAxes, color="red")
+    ax.set_title(label, fontsize=11)
+    ax.axis("off")
+plt.tight_layout()
+plt.savefig("output/GRID_SHAP_T4.png", dpi=150)
+plt.close()
+print("  Saved output/GRID_SHAP_T4.png")
 EOF
 
 echo ""
