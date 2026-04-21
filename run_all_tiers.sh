@@ -31,9 +31,11 @@ for TIER in 1 2 3 4; do
       --save-model ${MODEL}
 
     # 2. Score
+    # Tighten threshold to 1.0% for better selectivity
     python3 scripts/isolation_forest.py \
       --test output/features/MULN_MANIPULATED_OCT25.csv \
       --load-model ${MODEL} \
+      --threshold-pct 1.0 \
       --output ${SCORES}
 
     # 3. Quantify & Append to Comparison
@@ -47,8 +49,8 @@ for TIER in 1 2 3 4; do
     # Parsing the output from quantify_anomalies.py
     # We use grep and awk to find the exact value in the output
     TOTAL_WIN=$(echo "$STATS" | grep "Total Anomalies in Window" | awk -F': ' '{print $NF}')
-    AVG_IN=$(echo "$STATS" | grep "Avg Anomalies (In Window)" | awk -F': ' '{print $NF}' | awk '{print $1}')
-    AVG_OUT=$(echo "$STATS" | grep "Avg Anomalies (Outside)" | awk -F': ' '{print $NF}' | awk '{print $1}')
+    AVG_IN=$(echo "$STATS" | grep "Avg Anomalies (In Window Bins)" | awk -F': ' '{print $NF}' | awk '{print $1}')
+    AVG_OUT=$(echo "$STATS" | grep "Avg Anomalies (Outside Bins)" | awk -F': ' '{print $NF}' | awk '{print $1}')
     SNR=$(echo "$STATS" | grep "Signal-to-Noise Ratio" | awk -F': ' '{print $NF}' | sed 's/x//' | awk '{print $1}')
 
     # If SNR is empty or not a number, set to N/A

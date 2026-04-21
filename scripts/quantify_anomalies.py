@@ -86,9 +86,11 @@ def main():
     plt.xlabel("Time (Eastern Time)")
     
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    plt.gca().xaxis.set_minor_locator(mdates.MinuteLocator(byminute=[0, 10, 20, 30, 40, 50]))
     plt.xticks(rotation=45)
     plt.legend(loc='upper left', fontsize=9)
-    plt.grid(alpha=0.2, linestyle='--')
+    plt.grid(alpha=0.2, which='major', linestyle='-')
+    plt.grid(alpha=0.1, which='minor', linestyle='--')
     plt.tight_layout()
     
     plt.savefig(args.output, dpi=150)
