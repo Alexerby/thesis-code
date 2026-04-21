@@ -11,7 +11,7 @@ var searchData=
   ['bid_5fvolumes_8',['bid_volumes',['../structMarketSnapshot.html#a82462fdfaff8be3d491de94daf280256',1,'MarketSnapshot']]],
   ['bid_5fvolumes_5fcum_9',['bid_volumes_cum',['../structMarketSnapshot.html#ac0f2d6c52c9f56d21f96a45ef108e2b3',1,'MarketSnapshot']]],
   ['bids_5f_10',['bids_',['../classBook.html#a7338480d8f5e500bcea8ae4503321ef6',1,'Book']]],
-  ['book_11',['book',['../classBook.html',1,'Book'],['../classBook.html#abd5e47b4a9c08476ea47b0c8fbc8598c',1,'Book::Book()'],['../structMarket_1_1PublisherBook.html#ab76badb660f9bc4d95ef440c5abab1c0',1,'Market::PublisherBook::book']]],
+  ['book_11',['book',['../classBook.html',1,'Book'],['../structMarket_1_1PublisherBook.html#ab76badb660f9bc4d95ef440c5abab1c0',1,'Market::PublisherBook::book'],['../classBook.html#abd5e47b4a9c08476ea47b0c8fbc8598c',1,'Book::Book()']]],
   ['book_2ecpp_12',['book.cpp',['../book_8cpp.html',1,'']]],
   ['book_2ehpp_13',['book.hpp',['../book_8hpp.html',1,'']]],
   ['books_5f_14',['books_',['../classMarket.html#aa8b6d41efffc4f9ca80e0c3c8853c1cc',1,'Market']]]

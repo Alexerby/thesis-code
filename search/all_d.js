@@ -17,6 +17,6 @@ var searchData=
   ['orderpricedistance_14',['OrderPriceDistance',['../classOrderTracker.html#acf77fa4e87bc401b2cc79525bed8c975',1,'OrderTracker']]],
   ['orders_15',['Orders',['../classBook.html#a318eb76e07f8cafd42f6cf09695a8c83',1,'Book']]],
   ['orders_5fby_5fid_5f_16',['orders_by_id_',['../classBook.html#ae14b68173ea4f62093aaaa4d2e87a737',1,'Book']]],
-  ['ordertracker_17',['ordertracker',['../classOrderTracker.html',1,'OrderTracker'],['../classOrderTracker.html#aab78a1a7964396797dc503b3a1154600',1,'OrderTracker::OrderTracker()']]],
+  ['ordertracker_17',['ordertracker',['../classOrderTracker.html',1,'OrderTracker'],['../classOrderTracker.html#a254ed56063d5e46785d8c223ddc8ce1c',1,'OrderTracker::OrderTracker()']]],
   ['output_5fpath_18',['output_path',['../structConfig.html#a197d0e00e0a4d9cd71384b7a6bb49140',1,'Config']]]
 ];

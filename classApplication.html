@@ -137,6 +137,10 @@ Private Member Functions</h2></td></tr>
 <tr class="separator:a0cb21213c763a4ba8361690a38fbe9e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a817892cf56c1c333d53be31e73e8c2f8" id="r_a817892cf56c1c333d53be31e73e8c2f8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#a817892cf56c1c333d53be31e73e8c2f8">Shutdown</a> ()</td></tr>
 <tr class="separator:a817892cf56c1c333d53be31e73e8c2f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaba51f24e3621ce2b03a92f0b2978668" id="r_aaba51f24e3621ce2b03a92f0b2978668"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#aaba51f24e3621ce2b03a92f0b2978668">LoadFile</a> (const std::string &amp;path)</td></tr>
+<tr class="separator:aaba51f24e3621ce2b03a92f0b2978668"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25c6cad6655615b310f8de0338c2d3fe" id="r_a25c6cad6655615b310f8de0338c2d3fe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#a25c6cad6655615b310f8de0338c2d3fe">RenderFilePicker</a> ()</td></tr>
+<tr class="separator:a25c6cad6655615b310f8de0338c2d3fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
@@ -148,6 +152,10 @@ Private Attributes</h2></td></tr>
 <tr class="separator:a8c5db9f352ca74e1aaf736fa402eb212"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac95a1bde5d6641bb1f7dfe8177078674" id="r_ac95a1bde5d6641bb1f7dfe8177078674"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="classDashboard.html">Dashboard</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#ac95a1bde5d6641bb1f7dfe8177078674">m_dashboard</a></td></tr>
 <tr class="separator:ac95a1bde5d6641bb1f7dfe8177078674"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad91b3c658139ef04ca7eb48f637ac7d8" id="r_ad91b3c658139ef04ca7eb48f637ac7d8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#ad91b3c658139ef04ca7eb48f637ac7d8">m_file_loaded</a> = false</td></tr>
+<tr class="separator:ad91b3c658139ef04ca7eb48f637ac7d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5674ccf039703c7a9066cae128b6432c" id="r_a5674ccf039703c7a9066cae128b6432c"><td class="memItemLeft" align="right" valign="top">char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classApplication.html#a5674ccf039703c7a9066cae128b6432c">m_path_buf</a> [512] = {}</td></tr>
+<tr class="separator:a5674ccf039703c7a9066cae128b6432c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Main application shell that manages windowing and orchestration. </p>
@@ -264,6 +272,32 @@ Private Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aaba51f24e3621ce2b03a92f0b2978668" name="aaba51f24e3621ce2b03a92f0b2978668"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaba51f24e3621ce2b03a92f0b2978668">&#9670;&#160;</a></span>LoadFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Application::LoadFile </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a4bddd891168e3adc56dfd505ac41af7f" name="a4bddd891168e3adc56dfd505ac41af7f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4bddd891168e3adc56dfd505ac41af7f">&#9670;&#160;</a></span>operator=()</h2>
 
@@ -284,6 +318,31 @@ Private Attributes</h2></td></tr>
   </td>
   <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel">delete</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a25c6cad6655615b310f8de0338c2d3fe" name="a25c6cad6655615b310f8de0338c2d3fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25c6cad6655615b310f8de0338c2d3fe">&#9670;&#160;</a></span>RenderFilePicker()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Application::RenderFilePicker </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -388,6 +447,50 @@ Private Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">std::unique_ptr&lt;<a class="el" href="classDashboard.html">Dashboard</a>&gt; Application::m_dashboard</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad91b3c658139ef04ca7eb48f637ac7d8" name="ad91b3c658139ef04ca7eb48f637ac7d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad91b3c658139ef04ca7eb48f637ac7d8">&#9670;&#160;</a></span>m_file_loaded</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Application::m_file_loaded = false</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5674ccf039703c7a9066cae128b6432c" name="a5674ccf039703c7a9066cae128b6432c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5674ccf039703c7a9066cae128b6432c">&#9670;&#160;</a></span>m_path_buf</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">char Application::m_path_buf[512] = {}</td>
         </tr>
       </table>
   </td>

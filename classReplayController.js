@@ -25,7 +25,7 @@ var classReplayController =
     [ "has_fill", "classReplayController.html#a6cfbc6374b0ca976edb40b57c3a8187f", null ],
     [ "has_trade", "classReplayController.html#a8d9a9e9da69e0714cfa6ecda69d496df", null ],
     [ "m_available_instruments", "classReplayController.html#a792e51267c7b2c707139e0523a896dc6", null ],
-    [ "m_current_event", "classReplayController.html#ac7be42fe91c91f31fb822fd6305bfe6c", null ],
+    [ "m_current_event", "classReplayController.html#a52fe6f1b479d45e621ea50dc63ea1150", null ],
     [ "m_data_path", "classReplayController.html#ad0ce3ded0d6bac32f128aca4fcbf02eb", null ],
     [ "m_engine", "classReplayController.html#ad844bbbda4a94a3591393380a5b6267b", null ],
     [ "m_focus_instrument", "classReplayController.html#a2dee7ab697a4a39810f571808bfd8e34", null ],

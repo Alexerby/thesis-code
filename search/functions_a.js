@@ -7,5 +7,5 @@ var searchData=
   ['orderdeltat_4',['OrderDeltaT',['../classOrderTracker.html#a87f40447abf9dbbd35df57701c1d0ae9',1,'OrderTracker']]],
   ['orderinducedimbalance_5',['OrderInducedImbalance',['../classOrderTracker.html#a2a6bc895613e5861c26f93077d0b2431',1,'OrderTracker']]],
   ['orderpricedistance_6',['OrderPriceDistance',['../classOrderTracker.html#acf77fa4e87bc401b2cc79525bed8c975',1,'OrderTracker']]],
-  ['ordertracker_7',['OrderTracker',['../classOrderTracker.html#aab78a1a7964396797dc503b3a1154600',1,'OrderTracker']]]
+  ['ordertracker_7',['OrderTracker',['../classOrderTracker.html#a254ed56063d5e46785d8c223ddc8ce1c',1,'OrderTracker']]]
 ];

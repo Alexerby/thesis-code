@@ -121,8 +121,8 @@ Public Types</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aab78a1a7964396797dc503b3a1154600" id="r_aab78a1a7964396797dc503b3a1154600"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#aab78a1a7964396797dc503b3a1154600">OrderTracker</a> (uint32_t instrument_id, <a class="el" href="order__tracker_8hpp.html#acd2d92d4ca9b9d3a8b1650833ceb090b">FeedType</a> feed_type, <a class="el" href="classMarket.html">Market</a> &amp;market)</td></tr>
-<tr class="separator:aab78a1a7964396797dc503b3a1154600"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a254ed56063d5e46785d8c223ddc8ce1c" id="r_a254ed56063d5e46785d8c223ddc8ce1c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a254ed56063d5e46785d8c223ddc8ce1c">OrderTracker</a> (std::set&lt; uint32_t &gt; instrument_ids, <a class="el" href="order__tracker_8hpp.html#acd2d92d4ca9b9d3a8b1650833ceb090b">FeedType</a> feed_type, <a class="el" href="classMarket.html">Market</a> &amp;market)</td></tr>
+<tr class="separator:a254ed56063d5e46785d8c223ddc8ce1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a735f7a0031d9aacb5e3be787c9e34a1b" id="r_a735f7a0031d9aacb5e3be787c9e34a1b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a735f7a0031d9aacb5e3be787c9e34a1b">Router</a> (const db::MboMsg &amp;mbo)</td></tr>
 <tr class="separator:a735f7a0031d9aacb5e3be787c9e34a1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a87745cce3a95064e76b0bb6d29467a31" id="r_a87745cce3a95064e76b0bb6d29467a31"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a87745cce3a95064e76b0bb6d29467a31">DumpOrders</a> (const std::string &amp;filename) const</td></tr>
@@ -174,8 +174,8 @@ Private Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
 Private Attributes</h2></td></tr>
-<tr class="memitem:a16dc9dd82a524fe36a1d1ef2d9fc8096" id="r_a16dc9dd82a524fe36a1d1ef2d9fc8096"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#a16dc9dd82a524fe36a1d1ef2d9fc8096">instrument_id_</a></td></tr>
-<tr class="separator:a16dc9dd82a524fe36a1d1ef2d9fc8096"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa2a621b1505314d32048c309be95cf5" id="r_aaa2a621b1505314d32048c309be95cf5"><td class="memItemLeft" align="right" valign="top">std::set&lt; uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#aaa2a621b1505314d32048c309be95cf5">instrument_ids_</a></td></tr>
+<tr class="separator:aaa2a621b1505314d32048c309be95cf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9a43b3cf8b7742d4914b1c0df2cee3e" id="r_ad9a43b3cf8b7742d4914b1c0df2cee3e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="order__tracker_8hpp.html#acd2d92d4ca9b9d3a8b1650833ceb090b">FeedType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#ad9a43b3cf8b7742d4914b1c0df2cee3e">feed_type_</a></td></tr>
 <tr class="separator:ad9a43b3cf8b7742d4914b1c0df2cee3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad406ccbdd3e7dfad457f2a57dbd1dace" id="r_ad406ccbdd3e7dfad457f2a57dbd1dace"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOrderTracker.html#ad406ccbdd3e7dfad457f2a57dbd1dace">base_dir_</a></td></tr>
@@ -234,8 +234,8 @@ Static Private Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aab78a1a7964396797dc503b3a1154600" name="aab78a1a7964396797dc503b3a1154600"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aab78a1a7964396797dc503b3a1154600">&#9670;&#160;</a></span>OrderTracker()</h2>
+<a id="a254ed56063d5e46785d8c223ddc8ce1c" name="a254ed56063d5e46785d8c223ddc8ce1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a254ed56063d5e46785d8c223ddc8ce1c">&#9670;&#160;</a></span>OrderTracker()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -246,8 +246,8 @@ Static Private Attributes</h2></td></tr>
         <tr>
           <td class="memname">OrderTracker::OrderTracker </td>
           <td>(</td>
-          <td class="paramtype">uint32_t&#160;</td>
-          <td class="paramname"><em>instrument_id</em>, </td>
+          <td class="paramtype">std::set&lt; uint32_t &gt;&#160;</td>
+          <td class="paramname"><em>instrument_ids</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -751,8 +751,8 @@ Static Private Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a16dc9dd82a524fe36a1d1ef2d9fc8096" name="a16dc9dd82a524fe36a1d1ef2d9fc8096"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a16dc9dd82a524fe36a1d1ef2d9fc8096">&#9670;&#160;</a></span>instrument_id_</h2>
+<a id="aaa2a621b1505314d32048c309be95cf5" name="aaa2a621b1505314d32048c309be95cf5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa2a621b1505314d32048c309be95cf5">&#9670;&#160;</a></span>instrument_ids_</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -761,7 +761,7 @@ Static Private Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t OrderTracker::instrument_id_</td>
+          <td class="memname">std::set&lt;uint32_t&gt; OrderTracker::instrument_ids_</td>
         </tr>
       </table>
   </td>
