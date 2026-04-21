@@ -1,6 +1,7 @@
 #include "app/dashboard.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
@@ -12,6 +13,8 @@
 #include "implot.h"
 
 namespace {  // make anonymous
+using namespace std::chrono;
+
 constexpr uint64_t NANOS_1S = 1'000'000'000ULL;
 
 constexpr float HEADER_HEIGHT = 50.0f;
@@ -28,7 +31,8 @@ void TextCentered(const char *text, float width) {
   ImGui::Text("%s", text);
 }
 
-// Convert HH:MM:SS[.ffffff] to nanoseconds; supports sub-second precision
+// Convert HH:MM:SS[.ffffff] (Eastern Time) to UTC nanoseconds since epoch.
+// The date is inferred from reference_ts (also UTC nanoseconds).
 uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
   int h = 0, m = 0, s = 0;
   if (std::sscanf(time_str.c_str(), "%d:%d:%d", &h, &m, &s) != 3) return 0;
@@ -37,28 +41,41 @@ uint64_t TimeStringToNanos(const std::string &time_str, uint64_t reference_ts) {
   auto dot = time_str.find('.');
   if (dot != std::string::npos) {
     std::string frac = time_str.substr(dot + 1);
-    frac.resize(9, '0');  // pad to nanoseconds
+    frac.resize(9, '0');
     frac_ns = static_cast<uint64_t>(std::stoull(frac));
   }
 
-  std::time_t ref_secs = reference_ts / NANOS_1S;
-  std::tm *ref_tm = std::gmtime(&ref_secs);
-  ref_tm->tm_hour = h;
-  ref_tm->tm_min = m;
-  ref_tm->tm_sec = s;
-  return static_cast<uint64_t>(timegm(ref_tm)) * NANOS_1S + frac_ns;
+  // Use the UTC calendar date from reference_ts as the trading day.
+  // For US equities, market hours (13:30–20:00 UTC) are within one UTC day,
+  // so the UTC date always matches the ET trading date.
+  auto ref_day_utc = floor<days>(system_clock::time_point{nanoseconds(reference_ts)});
+  local_time<seconds> target_local{
+      local_days{ref_day_utc.time_since_epoch()} + hours(h) + minutes(m) + seconds(s)};
+  auto target_utc = zoned_time{"America/New_York", target_local}.get_sys_time();
+
+  return static_cast<uint64_t>(
+      duration_cast<nanoseconds>(target_utc.time_since_epoch()).count()) + frac_ns;
+}
+
+// Decompose a double epoch-seconds value into ET wall-clock components.
+struct ETTime { int h, m, s, ms; };
+static ETTime ToET(double epoch_seconds) {
+  using namespace std::chrono;
+  auto tp = system_clock::time_point{
+      duration_cast<system_clock::duration>(duration<double>(epoch_seconds))};
+  auto zt  = zoned_time{"America/New_York", tp};
+  auto lt  = zt.get_local_time();
+  auto sec = floor<seconds>(lt);
+  auto day = floor<days>(lt);
+  hh_mm_ss hms{sec - day};
+  int ms = (int)duration_cast<milliseconds>(lt - sec).count();
+  return {(int)hms.hours().count(), (int)hms.minutes().count(),
+          (int)hms.seconds().count(), ms};
 }
 
 static int TimeAxisFormatter(double value, char *buff, int size, void *) {
-  std::time_t secs = static_cast<std::time_t>(value);
-  double frac = value - static_cast<double>(secs);
-  if (frac < 0.0) { frac += 1.0; --secs; }
-  std::tm *t = std::gmtime(&secs);
-  if (!t) return std::snprintf(buff, size, "??:??:??");
-  int ms = static_cast<int>(frac * 1000.0 + 0.5);
-  if (ms >= 1000) ms = 999;
-  return std::snprintf(buff, size, "%02d:%02d:%02d.%03d",
-                       t->tm_hour, t->tm_min, t->tm_sec, ms);
+  auto t = ToET(value);
+  return std::snprintf(buff, size, "%02d:%02d:%02d.%03d", t.h, t.m, t.s, t.ms);
 }
 }  // namespace
 
@@ -141,7 +158,7 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::SameLine(0, 40);
   ImGui::SetNextItemWidth(150);
   float speed = controller.GetSpeedMultiplier();
-  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 5.0f, "%.1fx"))
+  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 10.0f, "%.1fx"))
     controller.SetSpeedMultiplier(speed);
 
   // Range playback
@@ -316,7 +333,6 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
 
   if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus)) {
     ImPlot::SetupAxes("Time", "Price (USD)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
-    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
     ImPlot::SetupAxisFormat(ImAxis_X1, TimeAxisFormatter);
     ImPlot::SetupAxisLimits(ImAxis_X1, t_min_window, t_latest + 0.5, x_cond);
 
@@ -468,17 +484,21 @@ void Dashboard::RenderOrderEventList(ReplayController &controller,
         const auto &e = events[filtered[i]];
         ImGui::TableNextRow();
 
-        // Time (HH:MM:SS.ffffff)
+        // Time (HH:MM:SS.ffffff ET)
         ImGui::TableSetColumnIndex(0);
-        std::time_t secs = static_cast<std::time_t>(e.ts);
-        double frac = e.ts - static_cast<double>(secs);
-        if (frac < 0.0) { frac += 1.0; --secs; }
-        std::tm *tm_info = std::gmtime(&secs);
-        if (tm_info) {
-          ImGui::Text("%02d:%02d:%02d.%06d", tm_info->tm_hour, tm_info->tm_min,
-                      tm_info->tm_sec, static_cast<int>(frac * 1e6 + 0.5));
-        } else {
-          ImGui::Text("??:??:??");
+        {
+          using namespace std::chrono;
+          auto tp  = system_clock::time_point{
+              duration_cast<system_clock::duration>(duration<double>(e.ts))};
+          auto zt  = zoned_time{"America/New_York", tp};
+          auto lt  = zt.get_local_time();
+          auto sec = floor<seconds>(lt);
+          auto day = floor<days>(lt);
+          hh_mm_ss hms{sec - day};
+          int us = (int)duration_cast<microseconds>(lt - sec).count();
+          ImGui::Text("%02d:%02d:%02d.%06d",
+                      (int)hms.hours().count(), (int)hms.minutes().count(),
+                      (int)hms.seconds().count(), us);
         }
 
         // Action / Side

@@ -13,6 +13,8 @@
  *
  * FeatureRecord is a direct output of the tracking process; it cannot be
  * produced without the order state accumulated during the lifetime of an order.
+ *
+ * https://databento.com/docs/venues-and-datasets/xnas-itch#mbo-normalization?historical=python&live=python&reference=python
  */
 
 #pragma once
@@ -20,6 +22,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -111,10 +114,14 @@ class OrderTracker {
   using ExpiryQueue =
       std::deque<std::pair<uint64_t, std::chrono::steady_clock::time_point>>;
 
-  explicit OrderTracker(uint32_t instrument_id, FeedType feed_type,
+  explicit OrderTracker(std::set<uint32_t> instrument_ids, FeedType feed_type,
                         Market &market)
-      : instrument_id_(instrument_id), feed_type_(feed_type), market_(market) {
-    base_dir_ = "features/" + std::to_string(instrument_id_);
+      : instrument_ids_(std::move(instrument_ids)),
+        feed_type_(feed_type),
+        market_(market) {
+    if (!instrument_ids_.empty()) {
+      base_dir_ = "features/" + std::to_string(*instrument_ids_.begin());
+    }
   }
 
   void Router(const db::MboMsg &mbo);
@@ -128,7 +135,7 @@ class OrderTracker {
   std::vector<FeatureRecord> feature_records_{};
 
  private:
-  uint32_t instrument_id_;
+  std::set<uint32_t> instrument_ids_;
   FeedType feed_type_;
   std::string base_dir_;
   Market &market_;

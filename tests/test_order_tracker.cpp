@@ -28,7 +28,7 @@ db::MboMsg create_mock_mbo(uint64_t order_id, int64_t price, uint32_t size,
 
 TEST_CASE("OrderTracker Clear Logic", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   // Add five orders and route them
   for (int i = 1; i <= 5; ++i) {
@@ -50,7 +50,7 @@ TEST_CASE("OrderTracker Clear Logic", "[order_tracker]") {
 
 TEST_CASE("OrderTracker ignores wrong instrument", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   // Message for a different instrument should be silently dropped
   tracker.Router(
@@ -61,7 +61,7 @@ TEST_CASE("OrderTracker ignores wrong instrument", "[order_tracker]") {
 
 TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   SECTION("Adding a new order") {
     db::MboMsg add_msg =
@@ -76,7 +76,7 @@ TEST_CASE("OrderTracker Add Logic", "[order_tracker]") {
 
 TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   SECTION("Pruning expired orders") {
     // Add an order and create a partial fill
@@ -109,7 +109,7 @@ TEST_CASE("OrderTracker Zombie Pruning", "[order_tracker]") {
 
 TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   SECTION("Dumping orders to CSV") {
     tracker.Router(create_mock_mbo(1001, 100000, 50, db::Action::Add));
@@ -126,7 +126,7 @@ TEST_CASE("OrderTracker CSV Dump", "[order_tracker][slow]") {
 
 TEST_CASE("CancelType classification", "[order_tracker]") {
   Market market;
-  OrderTracker tracker(1234, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker({1234}, FeedType::XNAS_ITCH, market);
 
   SECTION("Pure cancel emits CancelType::Pure") {
     tracker.Router(create_mock_mbo(1, 100, 1000, db::Action::Add));

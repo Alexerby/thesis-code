@@ -1,9 +1,28 @@
 #include "app/replay_controller.hpp"
 
 #include <chrono>
+#include <cstdio>
 #include <iostream>
 
 #include "data/replay_engine.hpp"
+
+namespace {
+// Format a databento UnixNanos timestamp as "HH:MM:SS.mmm ET"
+std::string FormatET(databento::UnixNanos ts) {
+  using namespace std::chrono;
+  auto zt  = zoned_time{"America/New_York", ts};
+  auto lt  = zt.get_local_time();
+  auto sec = floor<seconds>(lt);
+  auto day = floor<days>(lt);
+  hh_mm_ss hms{sec - day};
+  int ms = (int)duration_cast<milliseconds>(lt - sec).count();
+  char buf[24];
+  std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d.%03d ET",
+                (int)hms.hours().count(), (int)hms.minutes().count(),
+                (int)hms.seconds().count(), ms);
+  return buf;
+}
+}  // namespace
 
 ReplayController::ReplayController(const std::string &data_path,
                                    uint32_t focus_instrument)
@@ -172,7 +191,7 @@ void ReplayController::ReplayLoop() {
         static uint64_t last_warp_ui_update = 0;
         if (is_focus && ++last_warp_ui_update >= 2000) {
           MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
-          snap.timestamp = db::ToIso8601(mbo.ts_recv);
+          snap.timestamp = FormatET(mbo.ts_recv);
           snap.msg_count = m_msg_count;
           {
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -195,7 +214,7 @@ void ReplayController::ReplayLoop() {
     if (++last_stats_update >= 10000) {
       std::lock_guard<std::mutex> lock(m_mutex);
       m_session_stats.current_ts = current_ts;
-      m_latest_snapshot.timestamp = db::ToIso8601(mbo.ts_recv);
+      m_latest_snapshot.timestamp = FormatET(mbo.ts_recv);
       last_stats_update = 0;
     }
 
@@ -249,7 +268,7 @@ void ReplayController::ReplayLoop() {
       m_msg_count++;
       MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
       snap.msg_count = m_msg_count;
-      snap.timestamp = db::ToIso8601(mbo.ts_recv);
+      snap.timestamp = FormatET(mbo.ts_recv);
 
       RecordEvent(mbo, snap);
 

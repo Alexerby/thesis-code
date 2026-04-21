@@ -20,21 +20,21 @@ A C++ implementation of a spoofing detection framework for limit order book (LOB
 - **Order Life-Cycle Reconstruction**: Efficiently tracks individual orders from `Add` to `Fill` or `Cancel` using raw MBO (Market-By-Order) data.
 - **Real-time Visualization**: OpenGL-based market visualizer for inspecting order book dynamics and liquidity clusters.
 - **L3/MBO Support**: Native support for Databento's DBN format and XNAS.ITCH schema.
-- **Performance-Oriented**: Core logic implemented in C++17.
+- **Performance-Oriented**: Core logic implemented in C++20.
 
 ## Requirements
 
 | Dependency | Version |
 |---|---|
 | CMake | 3.24+ |
-| C++ compiler | C++17+ (GCC 11+ / Clang 14+) |
+| C++ compiler | C++20 (GCC 13+) |
 | zstd | system package |
 | OpenGL | system package |
 
 ```bash
 sudo apt update
 sudo apt install -y \
-    build-essential cmake git \
+    build-essential cmake git gcc-13 g++-13 \
     libzstd-dev libgl1-mesa-dev mesa-common-dev \
     libx11-dev libxrandr-dev libxinerama-dev \
     libxcursor-dev libxi-dev libxkbcommon-dev
@@ -42,47 +42,70 @@ sudo apt install -y \
 
 All other dependencies (Databento SDK, ImGui, GLFW, Catch2) are fetched automatically via CMake's `FetchContent`.
 
-## Build
+## Build & Install
+
+First-time setup — configure CMake with GCC 13:
 
 ```bash
-chmod +x ./build.sh
-./build.sh
+CXX=g++-13 CC=gcc-13 cmake -B build -DCMAKE_BUILD_TYPE=Release
 ```
 
-To build with debug symbols:
-```bash
-./build.sh -DCMAKE_BUILD_TYPE=Debug
-```
-
-## Usage
-
-```bash
-./dist/thesis <command> [args] [options]
-```
-
-### Commands
+Then use `make` for all subsequent build and install operations:
 
 | Command | Description |
 |---|---|
-| `info` | Print file metadata and instrument ID → ticker map |
-| `gui` | Real-time order book visualizer (OpenGL) |
+| `make` | Rebuild the binary |
+| `make install` | Rebuild and install to `/opt/market-visualizer/`, add to PATH, create desktop entry |
+| `make uninstall` | Remove the installed binary and desktop entry |
+
+`make install` requires `sudo` once to write to `/opt/` and `/usr/local/bin/`. After installation, the visualizer is launchable from the app menu as **Market Visualizer** or from any terminal as `market-visualizer gui`.
+
+The install prefix can be overridden:
+
+```bash
+make install PREFIX=/usr/local
+```
+
+## Detection Pipeline
+
+The Python pipeline runs the full spoofing detection across all four court-confirmed MULN events (Case 1:23-cv-07613):
+
+```bash
+python scripts/pipeline.py            # use cached feature CSVs
+python scripts/pipeline.py --reextract  # re-run C++ feature extraction
+```
+
+This produces per-event density plots, SHAP explanations, grid comparisons, and a formatted Excel workbook at `output/comparison.xlsx`.
+
+## CLI Usage
+
+The binary also supports direct CLI invocation:
+
+```bash
+market-visualizer <command> [args] [options]
+```
+
+| Command | Description |
+|---|---|
+| `gui` | Real-time order book visualizer — launches file picker if no path given |
+| `describe` | Print file metadata and instrument ID → ticker map |
 | `extract-features` | Run order tracking and write feature CSV |
 | `databento-fetch` | Download historical MBO data from Databento |
 
 ### Examples
 
 ```bash
-# Inspect file metadata to find instrument IDs
-./dist/thesis info data/sample.dbn.zst
+# Launch the visualizer with a file picker
+market-visualizer gui
 
-# Launch the market visualizer (--symbol is required)
-./dist/thesis gui data/sample.dbn.zst --symbol 38
+# Launch directly with a specific file
+market-visualizer gui data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst
 
-# Extract features for instrument 38 (process entire file)
-./dist/thesis extract-features data/sample.dbn.zst --symbol 38
+# Inspect file metadata
+market-visualizer describe data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst
 
-# Extract features, cap at 5M messages, write to custom path
-./dist/thesis extract-features data/sample.dbn.zst --symbol 38 --limit 5000000 --output data/features_38.csv
+# Extract features for a ticker
+market-visualizer extract-features data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst --ticker MULN --output output/MULN_20221025/FEATURES.csv
 ```
 
 ## Data
@@ -95,7 +118,7 @@ Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in 
 2. Fetch data:
 
 ```bash
-./dist/thesis databento-fetch \
+market-visualizer databento-fetch \
     --symbols AAPL,MSFT \
     --start 2026-03-18T00:00:00Z \
     --end   2026-03-19T00:00:00Z \
@@ -107,7 +130,5 @@ Market-By-Order (L3) data is sourced from [Databento](https://databento.com) in 
 The project uses [Catch2](https://github.com/catchorg/Catch2) for unit testing.
 
 ```bash
-chmod +x ./run_tests.sh
-./run_tests.sh
+cmake --build build --target unit_tests && ./build/unit_tests
 ```
-

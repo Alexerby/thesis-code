@@ -14,8 +14,8 @@
 namespace db = databento;
 
 void OrderTracker::Router(const db::MboMsg &mbo) {
-  // Only process messages for the requested instrument
-  if (mbo.hd.instrument_id != instrument_id_) {
+  // Only process messages for the requested instrument(s)
+  if (instrument_ids_.find(mbo.hd.instrument_id) == instrument_ids_.end()) {
     return;
   }
 
@@ -107,7 +107,7 @@ void OrderTracker::Add(const db::MboMsg &mbo) {
         mbo.hd.ts_event.time_since_epoch().count(),
         OrderInducedImbalance(mbo),
         0,
-        market_.GetVolumeAhead(instrument_id_, mbo.order_id),
+        market_.GetVolumeAhead(mbo.hd.instrument_id, mbo.order_id),
         rel_size,
         OrderPriceDistance(mbo),
     };
@@ -200,7 +200,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
 
   double spread_bps = 0.0;
   double mid_price = 0.0;
-  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  auto [bid, ask] = market_.AggregatedBbo(mbo.hd.instrument_id);
   if (bid && ask) {
     double mid_raw = static_cast<double>(bid.price + ask.price) / 2.0;
     if (mid_raw > 0.0) {
@@ -246,7 +246,7 @@ void OrderTracker::PruneZombies() {
 }
 
 double OrderTracker::OrderPriceDistance(const db::MboMsg &mbo) {
-  auto [bid, ask] = market_.AggregatedBbo(instrument_id_);
+  auto [bid, ask] = market_.AggregatedBbo(mbo.hd.instrument_id);
   if (!bid || !ask) return 0.0;
 
   // Bid: best_bid - order_price  (0 = at touch, positive = deeper)
@@ -265,13 +265,13 @@ double OrderTracker::OrderInducedImbalance(const db::MboMsg &mbo) {
 
   // Pre-add OBI: top-N depth with this order's contribution removed
   auto [V_b_pre, V_a_pre] = market_.GetTopNDepthExcluding(
-      instrument_id_, N, mbo.price, mbo.size, side);
+      mbo.hd.instrument_id, N, mbo.price, mbo.size, side);
   double denom_pre = V_b_pre + V_a_pre;
   if (denom_pre == 0.0) return 0.0;
   double OBI_before = (V_b_pre - V_a_pre) / denom_pre;
 
   // Post-add OBI: top-N depth including this order
-  auto [V_b, V_a] = market_.GetTopNDepth(instrument_id_, N);
+  auto [V_b, V_a] = market_.GetTopNDepth(mbo.hd.instrument_id, N);
   double denom = V_b + V_a;
   if (denom == 0.0) return 0.0;
   double OBI_after = (V_b - V_a) / denom;

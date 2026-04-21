@@ -23,12 +23,15 @@ struct Config {
   std::string command;
   std::string data_path;
   uint32_t focus_instrument = 0;
+  std::string target_ticker;
   std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
   uint64_t limit = 0;          // extract-features: max MBO messages (0 = all)
   std::string output_path;     // extract-features: output CSV path
   std::string api_key;
   // databento-fetch options
   std::string dataset = "XNAS.ITCH";
+  std::string schema  = "mbo";
+  std::string stype   = "raw_symbol";
   std::vector<std::string> symbols;
   std::string start_time;
   std::string end_time;
@@ -40,18 +43,21 @@ void print_usage() {
       << "Thesis Research suite\n"
       << "Usage: ./thesis [command] [args] [options]\n\n"
       << "Commands:\n"
-      << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
+      << "  describe <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
       << "  extract-features <data_path> Run order tracking and write feature CSV\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
       << "Options (gui / extract-features):\n"
-      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n\n"
+      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n"
+      << "  --ticker <name>              Focus ticker (resolves all IDs in file)\n\n"
       << "Options (extract-features):\n"
       << "  --limit  <N>                 Stop after N MBO messages (default: all)\n"
       << "  --output <path>              Output CSV path (default: features/records.csv)\n\n"
       << "Options (databento-fetch):\n"
       << "  --key     <api_key>          API key (or set DATABENTO_API_KEY)\n"
       << "  --dataset <dataset>          Dataset (default: XNAS.ITCH)\n"
+      << "  --schema  <schema>           Schema (default: mbo; e.g. trades, tbbo, mbp-1)\n"
+      << "  --stype   <stype>            Symbol type (default: raw_symbol; e.g. parent, continuous)\n"
       << "  --symbols <A,B,...>          Comma-separated symbols (required)\n"
       << "  --start   <ISO8601>          Start time, e.g. 2026-03-18T00:00:00Z\n"
       << "  --end     <ISO8601>          End time,   e.g. 2026-03-19T00:00:00Z\n"
@@ -75,6 +81,10 @@ Config parse_args(int argc, char **argv) {
         cfg.api_key = argv[++i];
       } else if (arg == "--dataset" && i + 1 < argc) {
         cfg.dataset = argv[++i];
+      } else if (arg == "--schema" && i + 1 < argc) {
+        cfg.schema = argv[++i];
+      } else if (arg == "--stype" && i + 1 < argc) {
+        cfg.stype = argv[++i];
       } else if (arg == "--symbols" && i + 1 < argc) {
         std::stringstream ss(argv[++i]);
         std::string sym;
@@ -103,17 +113,21 @@ Config parse_args(int argc, char **argv) {
     if (cfg.fetch_output_path.empty())
       cfg.fetch_output_path = "./data/multi_instrument.dbn.zst";
   } else {
-    if (argc < 3) {
+    // gui can run without a file — user picks it inside the app
+    if (cfg.command != "gui" && argc < 3) {
       print_usage();
       throw std::runtime_error("Missing data_path for command: " + cfg.command);
     }
-    cfg.data_path = argv[2];
+    if (argc >= 3) cfg.data_path = argv[2];
 
     bool symbol_set = false;
     for (int i = 3; i < argc; ++i) {
       std::string arg = argv[i];
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
+        symbol_set = true;
+      } else if (arg == "--ticker" && i + 1 < argc) {
+        cfg.target_ticker = argv[++i];
         symbol_set = true;
       } else if (arg == "--limit" && i + 1 < argc) {
         cfg.limit = std::stoull(argv[++i]);
@@ -124,14 +138,14 @@ Config parse_args(int argc, char **argv) {
       }
     }
     if (cfg.command == "extract-features" && !symbol_set)
-      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'info' first to list instrument IDs.");
+      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'describe' first to list instrument IDs.");
     if (cfg.command == "extract-features" && cfg.output_path.empty())
       cfg.output_path = "features/records.csv";
   }
   return cfg;
 }
 
-void run_info(const Config &cfg) {
+void run_describe(const Config &cfg) {
   ReplayEngine engine(cfg.data_path, /*print_metadata=*/false);
   const auto &meta = engine.GetMetadata();
 
@@ -185,8 +199,31 @@ void run_info(const Config &cfg) {
 
 void run_extract_features(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
+  const auto &meta = engine.GetMetadata();
+
+  std::set<uint32_t> instrument_ids;
+  if (!cfg.target_ticker.empty()) {
+    std::cout << "Resolving ticker '" << cfg.target_ticker << "'...\n";
+    for (const auto &mapping : meta.mappings) {
+      if (mapping.raw_symbol == cfg.target_ticker) {
+        for (const auto &interval : mapping.intervals) {
+          uint32_t id = static_cast<uint32_t>(std::stoul(interval.symbol));
+          instrument_ids.insert(id);
+          std::cout << "  Found ID: " << id << " (" << interval.start_date
+                    << " to " << interval.end_date << ")\n";
+        }
+      }
+    }
+  } else {
+    instrument_ids.insert(cfg.focus_instrument);
+  }
+
+  if (instrument_ids.empty()) {
+    throw std::runtime_error("No instrument IDs found for ticker or symbol.");
+  }
+
   Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker(instrument_ids, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
   engine.Run(market, [&](const db::MboMsg &mbo) {
@@ -290,10 +327,33 @@ void run_downloader(const Config &cfg) {
   if (out_path.has_parent_path())
     fs::create_directories(out_path.parent_path());
 
+  databento::Schema schema = databento::Schema::Mbo;
+  if      (cfg.schema == "trades")     schema = databento::Schema::Trades;
+  else if (cfg.schema == "tbbo")       schema = databento::Schema::Tbbo;
+  else if (cfg.schema == "mbp-1")      schema = databento::Schema::Mbp1;
+  else if (cfg.schema == "mbp-10")     schema = databento::Schema::Mbp10;
+  else if (cfg.schema == "bbo-1s")     schema = databento::Schema::Bbo1S;
+  else if (cfg.schema == "bbo-1m")     schema = databento::Schema::Bbo1M;
+  else if (cfg.schema == "ohlcv-1s")   schema = databento::Schema::Ohlcv1S;
+  else if (cfg.schema == "ohlcv-1m")   schema = databento::Schema::Ohlcv1M;
+  else if (cfg.schema == "ohlcv-1h")   schema = databento::Schema::Ohlcv1H;
+  else if (cfg.schema == "ohlcv-1d")   schema = databento::Schema::Ohlcv1D;
+  else if (cfg.schema == "imbalance")  schema = databento::Schema::Imbalance;
+  else if (cfg.schema == "definition") schema = databento::Schema::Definition;
+  else if (cfg.schema == "statistics") schema = databento::Schema::Statistics;
+  else if (cfg.schema != "mbo")
+    throw std::runtime_error("Unknown schema: " + cfg.schema);
+
+  databento::SType stype_in = databento::SType::RawSymbol;
+  if      (cfg.stype == "parent")     stype_in = databento::SType::Parent;
+  else if (cfg.stype == "continuous") stype_in = databento::SType::Continuous;
+  else if (cfg.stype != "raw_symbol")
+    throw std::runtime_error("Unknown stype: " + cfg.stype);
+
   std::cout << "\nDownloading...\n";
   client.TimeseriesGetRangeToFile(
-      cfg.dataset, range, cfg.symbols, databento::Schema::Mbo,
-      databento::SType::RawSymbol, databento::SType::InstrumentId, 0,
+      cfg.dataset, range, cfg.symbols, schema,
+      stype_in, databento::SType::InstrumentId, 0,
       cfg.fetch_output_path);
   std::cout << "Success!\n";
 }
@@ -302,8 +362,8 @@ int main(int argc, char **argv) {
   try {
     Config cfg = parse_args(argc, argv);
 
-    if (cfg.command == "info") {
-      run_info(cfg);
+    if (cfg.command == "describe") {
+      run_describe(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
     } else if (cfg.command == "extract-features") {
