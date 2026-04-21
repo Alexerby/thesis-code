@@ -59,7 +59,7 @@ extract_if_needed() {
 # ---------------------------------------------------------------------------
 mkdir -p output
 COMPARISON_CSV="output/comparison.csv"
-echo "Date,Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR" > "${COMPARISON_CSV}"
+echo "Date,Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR,T_Stat,P_Value" > "${COMPARISON_CSV}"
 
 for DATE_COMPACT in "${EVENTS[@]}"; do
   DATE_ISO="${DATE_COMPACT:0:4}-${DATE_COMPACT:4:2}-${DATE_COMPACT:6:2}"
@@ -114,9 +114,13 @@ for DATE_COMPACT in "${EVENTS[@]}"; do
     AVG_IN=$(echo    "$STATS" | grep "Avg Anomalies (In Window Bins)" | awk -F': ' '{print $NF}' | awk '{print $1}')
     AVG_OUT=$(echo   "$STATS" | grep "Avg Anomalies (Outside Bins)"   | awk -F': ' '{print $NF}' | awk '{print $1}')
     SNR=$(echo       "$STATS" | grep "Signal-to-Noise Ratio"          | awk -F': ' '{print $NF}' | sed 's/x//' | awk '{print $1}')
-    [[ -z "$SNR" ]] && SNR="N/A"
+    T_STAT=$(echo    "$STATS" | grep "T-statistic"                    | awk -F': ' '{print $NF}' | awk '{print $1}')
+    P_VAL=$(echo     "$STATS" | grep "P-value"                        | awk -F': ' '{print $NF}' | awk '{print $1}')
+    [[ -z "$SNR" ]]    && SNR="N/A"
+    [[ -z "$T_STAT" ]] && T_STAT="N/A"
+    [[ -z "$P_VAL" ]]  && P_VAL="N/A"
 
-    echo "${DATE_ISO},${TIER},\"${TIER_FEATURES[$TIER]}\",${TOTAL_WIN},${AVG_IN},${AVG_OUT},${SNR}" >> "${COMPARISON_CSV}"
+    echo "${DATE_ISO},${TIER},\"${TIER_FEATURES[$TIER]}\",${TOTAL_WIN},${AVG_IN},${AVG_OUT},${SNR},${T_STAT},${P_VAL}" >> "${COMPARISON_CSV}"
   done
 
   echo ""

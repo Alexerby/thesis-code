@@ -55,92 +55,77 @@ def thin_border():
     return Border(left=s, right=s, top=s, bottom=s)
 
 
-def write_snr_sheet(wb, df):
-    ws = wb.create_sheet("SNR by Tier")
-
+def _pivot_sheet(wb, df, metric, sheet_name, title_suffix, col_label, avg_label, colour_rule):
+    """Generic helper that builds a pivoted tier×event sheet for any metric."""
+    ws = wb.create_sheet(sheet_name)
     dates  = sorted(df["Date"].unique())
     tiers  = sorted(df["Tier"].unique())
-    snr_df = df.pivot(index="Tier", columns="Date", values="SNR").reindex(index=tiers, columns=dates)
+    pivot  = df.pivot(index="Tier", columns="Date", values=metric).reindex(index=tiers, columns=dates)
 
-    # ---------- header row ----------
     ws.column_dimensions["A"].width = 34
     ws.row_dimensions[1].height = 40
 
     ws["A1"] = "Tier"
-    ws["A1"].font = HEADER_FONT
-    ws["A1"].fill = HEADER_FILL
-    ws["A1"].alignment = CENTER
-    ws["A1"].border = thin_border()
+    ws["A1"].font = HEADER_FONT; ws["A1"].fill = HEADER_FILL
+    ws["A1"].alignment = CENTER; ws["A1"].border = thin_border()
 
     for col_i, date in enumerate(dates, start=2):
         cell = ws.cell(row=1, column=col_i, value=DATE_LABELS.get(date, date))
-        cell.font = HEADER_FONT
-        cell.fill = HEADER_FILL
-        cell.alignment = CENTER
-        cell.border = thin_border()
+        cell.font = HEADER_FONT; cell.fill = HEADER_FILL
+        cell.alignment = CENTER; cell.border = thin_border()
         ws.column_dimensions[get_column_letter(col_i)].width = 20
 
     avg_col = len(dates) + 2
-    avg_cell = ws.cell(row=1, column=avg_col, value="Average SNR")
-    avg_cell.font = HEADER_FONT
-    avg_cell.fill = SUBHEAD_FILL
-    avg_cell.alignment = CENTER
-    avg_cell.border = thin_border()
+    avg_cell = ws.cell(row=1, column=avg_col, value=avg_label)
+    avg_cell.font = HEADER_FONT; avg_cell.fill = SUBHEAD_FILL
+    avg_cell.alignment = CENTER; avg_cell.border = thin_border()
     ws.column_dimensions[get_column_letter(avg_col)].width = 16
 
-    # ---------- data rows ----------
     for row_i, tier in enumerate(tiers, start=2):
         ws.row_dimensions[row_i].height = 38
-
-        label_cell = ws.cell(row=row_i, column=1, value=TIER_LABELS.get(tier, f"T{tier}"))
-        label_cell.font = LABEL_FONT
-        label_cell.fill = LIGHT_FILL if row_i % 2 == 0 else WHITE_FILL
-        label_cell.alignment = LEFT
-        label_cell.border = thin_border()
+        lc = ws.cell(row=row_i, column=1, value=TIER_LABELS.get(tier, f"T{tier}"))
+        lc.font = LABEL_FONT
+        lc.fill = LIGHT_FILL if row_i % 2 == 0 else WHITE_FILL
+        lc.alignment = LEFT; lc.border = thin_border()
 
         row_vals = []
         for col_i, date in enumerate(dates, start=2):
-            val = snr_df.loc[tier, date] if date in snr_df.columns else None
+            val = pivot.loc[tier, date] if date in pivot.columns else None
             try:
-                val = float(val)
+                val = round(float(val), 3)
             except (TypeError, ValueError):
                 val = None
-            cell = ws.cell(row=row_i, column=col_i, value=round(val, 3) if val is not None else "N/A")
+            cell = ws.cell(row=row_i, column=col_i, value=val if val is not None else "N/A")
             cell.font = BODY_FONT
             cell.fill = LIGHT_FILL if row_i % 2 == 0 else WHITE_FILL
-            cell.alignment = CENTER
-            cell.border = thin_border()
+            cell.alignment = CENTER; cell.border = thin_border()
             if val is not None:
                 row_vals.append(val)
 
         avg_val = round(sum(row_vals) / len(row_vals), 3) if row_vals else "N/A"
-        avg = ws.cell(row=row_i, column=avg_col, value=avg_val)
-        avg.font = AVG_FONT
-        avg.fill = AVG_FILL
-        avg.alignment = CENTER
-        avg.border = thin_border()
+        ac = ws.cell(row=row_i, column=avg_col, value=avg_val)
+        ac.font = AVG_FONT; ac.fill = AVG_FILL
+        ac.alignment = CENTER; ac.border = thin_border()
 
-    # ---------- colour scale on SNR data cells ----------
     data_range = f"B2:{get_column_letter(len(dates) + 1)}{len(tiers) + 1}"
-    ws.conditional_formatting.add(
-        data_range,
-        ColorScaleRule(
-            start_type="min", start_color="F8696B",
-            mid_type="percentile", mid_value=50, mid_color="FFEB84",
-            end_type="max", end_color="63BE7B",
-        ),
-    )
-
+    ws.conditional_formatting.add(data_range, colour_rule)
     ws.freeze_panes = "B2"
     ws.sheet_view.showGridLines = False
+
+
+def write_snr_sheet(wb, df):
+    _pivot_sheet(wb, df, "SNR", "SNR by Tier", "SNR", "SNR", "Average SNR",
+                 ColorScaleRule(start_type="min",  start_color="F8696B",
+                                mid_type="percentile", mid_value=50, mid_color="FFEB84",
+                                end_type="max",   end_color="63BE7B"))
 
 
 def write_full_metrics_sheet(wb, df):
     ws = wb.create_sheet("Full Metrics")
 
     cols = ["Date", "Tier", "Features", "Total_Window_Anomalies",
-            "Avg_In_Window", "Avg_Outside_Window", "SNR"]
-    col_widths = [14, 6, 42, 24, 16, 20, 10]
+            "Avg_In_Window", "Avg_Outside_Window", "SNR", "T_Stat", "P_Value"]
+    col_widths = [14, 6, 42, 24, 16, 20, 10, 10, 10]
 
     ws.row_dimensions[1].height = 30
     for col_i, (col, width) in enumerate(zip(cols, col_widths), start=1):
@@ -172,12 +157,24 @@ def main():
     args = p.parse_args()
 
     df = pd.read_csv(args.input)
-    df["SNR"] = pd.to_numeric(df["SNR"], errors="coerce")
-    df["Tier"] = df["Tier"].astype(int)
+    df["SNR"]    = pd.to_numeric(df["SNR"],    errors="coerce")
+    df["T_Stat"] = pd.to_numeric(df["T_Stat"], errors="coerce")
+    df["P_Value"] = pd.to_numeric(df["P_Value"], errors="coerce")
+    df["Tier"]   = df["Tier"].astype(int)
 
     wb = openpyxl.Workbook()
-    wb.remove(wb.active)  # remove default empty sheet
+    wb.remove(wb.active)
     write_snr_sheet(wb, df)
+    # T-statistic sheet — higher is better, green=high
+    _pivot_sheet(wb, df, "T_Stat", "T-Statistic by Tier", "T-Stat", "T-Stat", "Average T-Stat",
+                 ColorScaleRule(start_type="min",  start_color="F8696B",
+                                mid_type="percentile", mid_value=50, mid_color="FFEB84",
+                                end_type="max",   end_color="63BE7B"))
+    # P-value sheet — lower is better, green=low
+    _pivot_sheet(wb, df, "P_Value", "P-Value by Tier", "P-Value", "p-value", "Average p-value",
+                 ColorScaleRule(start_type="min",  start_color="63BE7B",
+                                mid_type="percentile", mid_value=50, mid_color="FFEB84",
+                                end_type="max",   end_color="F8696B"))
     write_full_metrics_sheet(wb, df)
 
     wb.save(args.output)

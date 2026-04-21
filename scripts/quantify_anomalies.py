@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
+from scipy import stats
 
 def parse_args():
     p = argparse.ArgumentParser(description="Quantify Anomaly Density")
@@ -140,6 +141,17 @@ def main():
         if len(outside_bins) > 0 and outside_bins['anomalies'].mean() > 0:
             ratio = window_bins['anomalies'].mean() / outside_bins['anomalies'].mean()
             print(f"Signal-to-Noise Ratio:     {ratio:.2f}x higher in window")
+
+        # Welch's t-test: are window bins significantly elevated vs outside bins?
+        if len(window_bins) >= 2 and len(outside_bins) >= 2:
+            t_stat, p_val = stats.ttest_ind(
+                window_bins['anomalies'].values,
+                outside_bins['anomalies'].values,
+                equal_var=False,  # Welch's — does not assume equal variance
+                alternative='greater',
+            )
+            print(f"T-statistic:               {t_stat:.3f}")
+            print(f"P-value (one-sided):       {p_val:.4f}")
 
 if __name__ == "__main__":
     main()
