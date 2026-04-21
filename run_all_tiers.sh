@@ -139,3 +139,18 @@ echo ""
 echo "=== All Tiers Complete ==="
 echo "Comparison summary: ${COMPARISON_CSV}"
 column -t -s, "${COMPARISON_CSV}"
+
+# ---------------------------------------------------------------------------
+# 4. SHAP explanation for the confirmed spoofing window (T4 only)
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 4: SHAP Explanation (T4, window ${WINDOW_START}–${WINDOW_END}) ---"
+
+# HH:MM of window start — safer than end which can hit the 15:55 cutoff
+SHAP_TIME="${WINDOW_START:0:5}"
+
+python3 scripts/explain_anomalies.py \
+  --model  "${EVENT_DIR}/T4.joblib" \
+  --data   "${EVENT_DIR}/SCORES_T4.csv" \
+  --time   "${SHAP_TIME}" \
+  --output "${EVENT_DIR}/SHAP_T4.png"
