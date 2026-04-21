@@ -23,6 +23,7 @@ struct Config {
   std::string command;
   std::string data_path;
   uint32_t focus_instrument = 0;
+  std::string target_ticker;
   std::vector<std::size_t> depths = {1, 2, 3, 4, 5};
   uint64_t limit = 0;          // extract-features: max MBO messages (0 = all)
   std::string output_path;     // extract-features: output CSV path
@@ -42,12 +43,13 @@ void print_usage() {
       << "Thesis Research suite\n"
       << "Usage: ./thesis [command] [args] [options]\n\n"
       << "Commands:\n"
-      << "  info <data_path>             Print file metadata and instrument ID → ticker map\n"
+      << "  describe <data_path>             Print file metadata and instrument ID → ticker map\n"
       << "  gui <data_path>              Run high-performance GUI visualiser\n"
       << "  extract-features <data_path> Run order tracking and write feature CSV\n"
       << "  databento-fetch              Fetch historical MBO data\n\n"
       << "Options (gui / extract-features):\n"
-      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n\n"
+      << "  --symbol <id>                Focus instrument ID (optional, selectable in-app)\n"
+      << "  --ticker <name>              Focus ticker (resolves all IDs in file)\n\n"
       << "Options (extract-features):\n"
       << "  --limit  <N>                 Stop after N MBO messages (default: all)\n"
       << "  --output <path>              Output CSV path (default: features/records.csv)\n\n"
@@ -123,6 +125,9 @@ Config parse_args(int argc, char **argv) {
       if (arg == "--symbol" && i + 1 < argc) {
         cfg.focus_instrument = static_cast<uint32_t>(std::stoul(argv[++i]));
         symbol_set = true;
+      } else if (arg == "--ticker" && i + 1 < argc) {
+        cfg.target_ticker = argv[++i];
+        symbol_set = true;
       } else if (arg == "--limit" && i + 1 < argc) {
         cfg.limit = std::stoull(argv[++i]);
       } else if (arg == "--output" && i + 1 < argc) {
@@ -132,14 +137,14 @@ Config parse_args(int argc, char **argv) {
       }
     }
     if (cfg.command == "extract-features" && !symbol_set)
-      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'info' first to list instrument IDs.");
+      throw std::runtime_error("--symbol <id> is required for 'extract-features'. Run 'describe' first to list instrument IDs.");
     if (cfg.command == "extract-features" && cfg.output_path.empty())
       cfg.output_path = "features/records.csv";
   }
   return cfg;
 }
 
-void run_info(const Config &cfg) {
+void run_describe(const Config &cfg) {
   ReplayEngine engine(cfg.data_path, /*print_metadata=*/false);
   const auto &meta = engine.GetMetadata();
 
@@ -193,8 +198,31 @@ void run_info(const Config &cfg) {
 
 void run_extract_features(const Config &cfg) {
   ReplayEngine engine(cfg.data_path);
+  const auto &meta = engine.GetMetadata();
+
+  std::set<uint32_t> instrument_ids;
+  if (!cfg.target_ticker.empty()) {
+    std::cout << "Resolving ticker '" << cfg.target_ticker << "'...\n";
+    for (const auto &mapping : meta.mappings) {
+      if (mapping.raw_symbol == cfg.target_ticker) {
+        for (const auto &interval : mapping.intervals) {
+          uint32_t id = static_cast<uint32_t>(std::stoul(interval.symbol));
+          instrument_ids.insert(id);
+          std::cout << "  Found ID: " << id << " (" << interval.start_date
+                    << " to " << interval.end_date << ")\n";
+        }
+      }
+    }
+  } else {
+    instrument_ids.insert(cfg.focus_instrument);
+  }
+
+  if (instrument_ids.empty()) {
+    throw std::runtime_error("No instrument IDs found for ticker or symbol.");
+  }
+
   Market market;
-  OrderTracker tracker(cfg.focus_instrument, FeedType::XNAS_ITCH, market);
+  OrderTracker tracker(instrument_ids, FeedType::XNAS_ITCH, market);
 
   uint64_t msg_count = 0;
   engine.Run(market, [&](const db::MboMsg &mbo) {
@@ -333,8 +361,8 @@ int main(int argc, char **argv) {
   try {
     Config cfg = parse_args(argc, argv);
 
-    if (cfg.command == "info") {
-      run_info(cfg);
+    if (cfg.command == "describe") {
+      run_describe(cfg);
     } else if (cfg.command == "gui") {
       run_gui_application(cfg);
     } else if (cfg.command == "extract-features") {

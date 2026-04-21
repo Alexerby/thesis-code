@@ -64,7 +64,7 @@ To build with debug symbols:
 
 | Command | Description |
 |---|---|
-| `info` | Print file metadata and instrument ID → ticker map |
+| `desribe` | Print file metadata and instrument ID → ticker map |
 | `gui` | Real-time order book visualizer (OpenGL) |
 | `extract-features` | Run order tracking and write feature CSV |
 | `databento-fetch` | Download historical MBO data from Databento |
@@ -73,7 +73,7 @@ To build with debug symbols:
 
 ```bash
 # Inspect file metadata to find instrument IDs
-./dist/thesis info data/sample.dbn.zst
+./dist/thesis describe data/sample.dbn.zst
 
 # Launch the market visualizer (--symbol is required)
 ./dist/thesis gui data/sample.dbn.zst --symbol 38

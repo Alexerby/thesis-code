@@ -21,3 +21,6 @@ active_orders.csv
 coverage.info
 coverage_report/*
 docs/
+
+# Python stuff
+__pycache__
