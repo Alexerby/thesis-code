@@ -1,36 +1,19 @@
 #!/bin/bash
-# Full pipeline for a single MULN event date: extract → train → score → quantify.
+# Full pipeline across all four confirmed MULN spoofing events.
+# For each event: extract → train → score → quantify → SHAP
+# Then produces per-tier grid plots combining all four events.
 #
 # Usage:
-#   ./run_all_tiers.sh <YYYYMMDD> [--reextract]
-#
-# Arguments:
-#   YYYYMMDD      Compact date, e.g. 20221025
+#   ./run_all_tiers.sh [--reextract]
 #
 # Flags:
 #   --reextract   Re-run C++ feature extraction even if CSVs already exist.
-#                 Omit to skip extraction and go straight to train/score/quantify.
-#
-# Examples:
-#   ./run_all_tiers.sh 20221025
-#   ./run_all_tiers.sh 20221215 --reextract
 set -e
 
-DATE_COMPACT="${1}"
 REEXTRACT=false
-
 for arg in "$@"; do
   [[ "$arg" == "--reextract" ]] && REEXTRACT=true
 done
-
-if [[ -z "$DATE_COMPACT" ]]; then
-  echo "Usage: $0 <YYYYMMDD> [--reextract]"
-  echo "  e.g: $0 20221025"
-  exit 1
-fi
-
-# Derive ISO date (YYYY-MM-DD) from compact form
-DATE_ISO="${DATE_COMPACT:0:4}-${DATE_COMPACT:4:2}-${DATE_COMPACT:6:2}"
 
 BINARY="./build/thesis"
 if [[ ! -x "$BINARY" ]]; then
@@ -38,56 +21,16 @@ if [[ ! -x "$BINARY" ]]; then
   exit 1
 fi
 
-EVENT_DIR="output/MULN_${DATE_COMPACT}"
-mkdir -p "$EVENT_DIR"
-
-BASELINE_DBN="data/BASELINE/MULN_${DATE_COMPACT}_BASELINE.dbn.zst"
-EVENT_DBN="data/MANIPULATION_WINDOWS/MULN_${DATE_COMPACT}.dbn.zst"
-BASELINE_FEATURES="${EVENT_DIR}/BASELINE_FEATURES.csv"
-EVENT_FEATURES="${EVENT_DIR}/FEATURES.csv"
-COMPARISON_CSV="${EVENT_DIR}/comparison.csv"
-
 # ---------------------------------------------------------------------------
-# 0. Feature extraction (skipped unless --reextract or CSVs are missing)
+# Event registry — spoofing windows from court documents (Case 1:23-cv-07613)
 # ---------------------------------------------------------------------------
-extract_if_needed() {
-  local dbn="$1" csv="$2" label="$3"
-  if [[ "$REEXTRACT" == true || ! -f "$csv" ]]; then
-    if [[ ! -f "$dbn" ]]; then
-      echo "Error: $label DBN not found: $dbn"
-      exit 1
-    fi
-    echo "  Extracting features: $dbn → $csv"
-    "$BINARY" extract-features "$dbn" --ticker MULN --output "$csv"
-  else
-    echo "  Skipping extraction (CSV exists): $csv"
-  fi
-}
+EVENTS=(20221025 20221215 20230606 20230817)
 
-echo "=== Thesis Pipeline: MULN ${DATE_ISO} ==="
-echo ""
-echo "--- Step 0: Feature Extraction ---"
-extract_if_needed "$BASELINE_DBN" "$BASELINE_FEATURES" "baseline"
-extract_if_needed "$EVENT_DBN"    "$EVENT_FEATURES"    "event"
-
-# ---------------------------------------------------------------------------
-# 1-3. Train → Score → Quantify for each tier
-# ---------------------------------------------------------------------------
-echo "Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR" > "${COMPARISON_CSV}"
-
-# Spoofing windows from court documents (Case 1:23-cv-07613)
 declare -A WIN_START WIN_END
 WIN_START[20221025]="14:26:10"; WIN_END[20221025]="14:28:10"  # Para 112
 WIN_START[20221215]="13:25:30"; WIN_END[20221215]="13:27:30"  # Para 124
 WIN_START[20230606]="15:50:59"; WIN_END[20230606]="15:52:59"  # Para 118
 WIN_START[20230817]="15:53:27"; WIN_END[20230817]="15:55:27"  # Para 130
-
-WINDOW_START="${WIN_START[$DATE_COMPACT]}"
-WINDOW_END="${WIN_END[$DATE_COMPACT]}"
-if [[ -z "$WINDOW_START" ]]; then
-  echo "Error: no spoofing window defined for $DATE_COMPACT"
-  exit 1
-fi
 
 declare -A TIER_FEATURES
 TIER_FEATURES[1]="Patience (delta_t, rel_size)"
@@ -95,7 +38,50 @@ TIER_FEATURES[2]="Safety (delta_t, rel_size, dist, vol_ahead)"
 TIER_FEATURES[3]="Full Model (All Features)"
 TIER_FEATURES[4]="Aggressive Baiting (delta_t, rel_size, imbalance)"
 
-for TIER in 1 2 3 4; do
+# ---------------------------------------------------------------------------
+extract_if_needed() {
+  local dbn="$1" csv="$2" label="$3"
+  if [[ "$REEXTRACT" == true || ! -f "$csv" ]]; then
+    if [[ ! -f "$dbn" ]]; then
+      echo "  Error: $label DBN not found: $dbn"
+      exit 1
+    fi
+    echo "  Extracting: $dbn → $csv"
+    "$BINARY" extract-features "$dbn" --ticker MULN --output "$csv"
+  else
+    echo "  Skipping extraction (CSV exists): $csv"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Steps 0–4 per event
+# ---------------------------------------------------------------------------
+for DATE_COMPACT in "${EVENTS[@]}"; do
+  DATE_ISO="${DATE_COMPACT:0:4}-${DATE_COMPACT:4:2}-${DATE_COMPACT:6:2}"
+  EVENT_DIR="output/MULN_${DATE_COMPACT}"
+  mkdir -p "$EVENT_DIR"
+
+  BASELINE_DBN="data/BASELINE/MULN_${DATE_COMPACT}_BASELINE.dbn.zst"
+  EVENT_DBN="data/MANIPULATION_WINDOWS/MULN_${DATE_COMPACT}.dbn.zst"
+  BASELINE_FEATURES="${EVENT_DIR}/BASELINE_FEATURES.csv"
+  EVENT_FEATURES="${EVENT_DIR}/FEATURES.csv"
+  COMPARISON_CSV="${EVENT_DIR}/comparison.csv"
+  WINDOW_START="${WIN_START[$DATE_COMPACT]}"
+  WINDOW_END="${WIN_END[$DATE_COMPACT]}"
+
+  echo ""
+  echo "======================================================================"
+  echo "=== MULN ${DATE_ISO}  (window ${WINDOW_START}–${WINDOW_END}) ==="
+  echo "======================================================================"
+
+  echo ""
+  echo "--- Step 0: Feature Extraction ---"
+  extract_if_needed "$BASELINE_DBN" "$BASELINE_FEATURES" "baseline"
+  extract_if_needed "$EVENT_DBN"    "$EVENT_FEATURES"    "event"
+
+  echo "Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR" > "${COMPARISON_CSV}"
+
+  for TIER in 1 2 3 4; do
     echo ""
     echo "--- Tier ${TIER}: ${TIER_FEATURES[$TIER]} ---"
 
@@ -103,20 +89,17 @@ for TIER in 1 2 3 4; do
     SCORES="${EVENT_DIR}/SCORES_T${TIER}.csv"
     PLOT="${EVENT_DIR}/DENSITY_T${TIER}.png"
 
-    # 1. Train on the baseline week
     python3 scripts/isolation_forest.py \
       --train "${BASELINE_FEATURES}" \
       --tier ${TIER} \
       --save-model "${MODEL}"
 
-    # 2. Score the event day (1% threshold for selectivity)
     python3 scripts/isolation_forest.py \
       --test "${EVENT_FEATURES}" \
       --load-model "${MODEL}" \
       --threshold-pct 1.0 \
       --output "${SCORES}"
 
-    # 3. Quantify — 2-minute bins to match the SEC window length
     STATS=$(python3 scripts/quantify_anomalies.py \
       --input "${SCORES}" \
       --target-date "${DATE_ISO}" \
@@ -129,28 +112,58 @@ for TIER in 1 2 3 4; do
     AVG_IN=$(echo    "$STATS" | grep "Avg Anomalies (In Window Bins)" | awk -F': ' '{print $NF}' | awk '{print $1}')
     AVG_OUT=$(echo   "$STATS" | grep "Avg Anomalies (Outside Bins)"   | awk -F': ' '{print $NF}' | awk '{print $1}')
     SNR=$(echo       "$STATS" | grep "Signal-to-Noise Ratio"          | awk -F': ' '{print $NF}' | sed 's/x//' | awk '{print $1}')
-
     [[ -z "$SNR" ]] && SNR="N/A"
 
     echo "${TIER},\"${TIER_FEATURES[$TIER]}\",${TOTAL_WIN},${AVG_IN},${AVG_OUT},${SNR}" >> "${COMPARISON_CSV}"
+  done
+
+  echo ""
+  echo "Comparison summary: ${COMPARISON_CSV}"
+  column -t -s, "${COMPARISON_CSV}"
+
+  echo ""
+  echo "--- Step 4: SHAP (T4, ${WINDOW_START:0:5}) ---"
+  python3 scripts/explain_anomalies.py \
+    --model  "${EVENT_DIR}/T4.joblib" \
+    --data   "${EVENT_DIR}/SCORES_T4.csv" \
+    --time   "${WINDOW_START:0:5}" \
+    --output "${EVENT_DIR}/SHAP_T4.png"
 done
 
-echo ""
-echo "=== All Tiers Complete ==="
-echo "Comparison summary: ${COMPARISON_CSV}"
-column -t -s, "${COMPARISON_CSV}"
-
 # ---------------------------------------------------------------------------
-# 4. SHAP explanation for the confirmed spoofing window (T4 only)
+# Step 5: Per-tier grid plots across all four events
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Step 4: SHAP Explanation (T4, window ${WINDOW_START}–${WINDOW_END}) ---"
+echo "--- Step 5: Density Grid Plots (one per tier) ---"
 
-# HH:MM of window start — safer than end which can hit the 15:55 cutoff
-SHAP_TIME="${WINDOW_START:0:5}"
+python3 - <<'EOF'
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
-python3 scripts/explain_anomalies.py \
-  --model  "${EVENT_DIR}/T4.joblib" \
-  --data   "${EVENT_DIR}/SCORES_T4.csv" \
-  --time   "${SHAP_TIME}" \
-  --output "${EVENT_DIR}/SHAP_T4.png"
+events = ["20221025", "20221215", "20230606", "20230817"]
+labels = ["Oct 25 2022", "Dec 15 2022", "Jun 06 2023", "Aug 17 2023"]
+
+for tier in range(1, 5):
+    fig, axes = plt.subplots(2, 2, figsize=(22, 10))
+    fig.suptitle(f"Anomaly Density — Tier {tier} (all confirmed events)", fontsize=15, fontweight="bold")
+    for ax, date, label in zip(axes.flat, events, labels):
+        path = f"output/MULN_{date}/DENSITY_T{tier}.png"
+        try:
+            img = mpimg.imread(path)
+            ax.imshow(img)
+        except FileNotFoundError:
+            ax.text(0.5, 0.5, f"Missing:\n{path}", ha="center", va="center",
+                    transform=ax.transAxes, color="red")
+        ax.set_title(label, fontsize=11)
+        ax.axis("off")
+    plt.tight_layout()
+    out = f"output/GRID_DENSITY_T{tier}.png"
+    plt.savefig(out, dpi=150)
+    plt.close()
+    print(f"  Saved {out}")
+EOF
+
+echo ""
+echo "======================================================================"
+echo "=== Pipeline complete ==="
+echo "======================================================================"
