@@ -17,6 +17,8 @@ def parse_args():
     p.add_argument("--output", default="output/plots/MULN_OCT25_DENSITY.png", help="Path to save the plot")
     p.add_argument("--bin-size", default="1min", help="Pandas frequency string (e.g. '1min', '5min')")
     p.add_argument("--target-date", help="The date of the manipulation (YYYY-MM-DD)")
+    p.add_argument("--fp-threshold-mult", type=float, default=1.1, 
+                   help="Only mark FP dots if they are X times higher than intraday average (default 1.1)")
     return p.parse_args()
 
 def main():
@@ -44,14 +46,14 @@ def main():
     # CRITICAL: Convert index to naive local time for plotting to fix alignment
     density.index = density.index.tz_localize(None)
 
-    # 3. Plotting (Enhanced for False Positive Analysis)
+    # 3. Plotting (Enhanced for Surveillance Decision Logic)
     plt.figure(figsize=(12, 6))
     
-    # Calculate a baseline threshold for "significant" noise
-    # (Median + 3*Std of the intraday activity)
-    threshold_val = density['anomalies'].median() + 3 * density['anomalies'].std()
+    # Calculate intraday average for decision logic
+    avg_anomalies = density['anomalies'].mean()
+    fp_threshold = avg_anomalies * args.fp_threshold_mult
+    sig_threshold_val = density['anomalies'].median() + 3 * density['anomalies'].std()
     
-    # Split data for color coding
     if args.target_date:
         target_dt = pd.to_datetime(args.target_date).date()
         win_start = pd.Timestamp.combine(target_dt, datetime.strptime("14:26:10", "%H:%M:%S").time())
@@ -59,29 +61,44 @@ def main():
         
         in_window_mask = (density.index >= (win_start - pd.Timedelta(bin_freq))) & (density.index <= win_end)
         
-        # Plot True Positives (Green) and False Positives (Orange)
-        plt.scatter(density.index[in_window_mask], density['anomalies'][in_window_mask], 
-                    color='forestgreen', s=10, zorder=5, label='True Positive (In Window)')
-        plt.scatter(density.index[~in_window_mask], density['anomalies'][~in_window_mask], 
-                    color='darkorange', s=5, zorder=4, label='False Positive / Noise')
+        # RULE: Only plot False Positives if they exceed the Decision Threshold
+        is_fp_spike = (~in_window_mask) & (density['anomalies'] >= fp_threshold)
+        is_tp_spike = in_window_mask & (density['anomalies'] > 0)
+        
+        # Plot TPs (Green)
+        plt.scatter(density.index[is_tp_spike], density['anomalies'][is_tp_spike], 
+                    color='forestgreen', s=20, zorder=6, label='True Positive Alert (TP)')
+        
+        # Label each TP bin
+        for idx, row in density[is_tp_spike].iterrows():
+             plt.annotate(f"TP: {idx.strftime('%H:%M')}", (idx, row['anomalies']), 
+                         textcoords="offset points", xytext=(0,10), ha='center', fontsize=8, color='forestgreen', weight='bold')
+
+        # Plot FPs (Orange) - ONLY THE SIGNIFICANT ONES
+        plt.scatter(density.index[is_fp_spike], density['anomalies'][is_fp_spike], 
+                    color='darkorange', s=10, zorder=5, label=f'False Positive Alert (>{args.fp_threshold_mult}x Avg)')
     else:
-        plt.scatter(density.index, density['anomalies'], color='firebrick', s=5)
+        # Simple plot where anomalies > 0
+        pos_anomalies = density['anomalies'] > 0
+        plt.scatter(density.index[pos_anomalies], density['anomalies'][pos_anomalies], 
+                    color='firebrick', s=8)
 
     plt.fill_between(density.index, density['anomalies'], color='gray', alpha=0.1)
-    plt.axhline(threshold_val, color='red', linestyle='--', alpha=0.5, label='Significance Threshold (Median+3σ)')
+    plt.axhline(fp_threshold, color='darkorange', linestyle='--', alpha=0.4, label=f'Decision Threshold ({args.fp_threshold_mult}x Avg)')
+    plt.axhline(sig_threshold_val, color='red', linestyle='--', alpha=0.3, label='Stat. Significance (Median+3σ)')
 
     # Highlight the SEC Window
     if args.target_date:
         plt.axvspan(win_start, win_end, color='yellow', alpha=0.3, label='SEC Spoofing Window')
     
-    # Annotate Top 3 False Positives
+    # Label top 3 significant FPs
     if args.target_date:
-        top_fps = density[~in_window_mask].sort_values('anomalies', ascending=False).head(3)
+        top_fps = density[is_fp_spike].sort_values('anomalies', ascending=False).head(3)
         for idx, row in top_fps.iterrows():
             plt.annotate(f"FP: {idx.strftime('%H:%M')}", (idx, row['anomalies']), 
                          textcoords="offset points", xytext=(0,10), ha='center', fontsize=8, color='darkorange')
 
-    plt.title(f"Anomaly Density & False Positive Analysis (Ticker: MULN, Date: {args.target_date})", fontsize=14)
+    plt.title(f"Anomaly Density & Surveillance Alerts (Ticker: MULN, Date: {args.target_date})", fontsize=14)
     plt.ylabel("Anomalies per Bin")
     plt.xlabel("Time (Eastern Time)")
     
@@ -94,7 +111,7 @@ def main():
     plt.tight_layout()
     
     plt.savefig(args.output, dpi=150)
-    print(f"Enhanced density plot saved to {args.output}")
+    print(f"Enhanced surveillance plot saved to {args.output}")
 
     # 4. Statistical Summary (Local Date only)
     if args.target_date:
@@ -106,7 +123,6 @@ def main():
         w_end_dt = pd.Timestamp.combine(target_dt_obj, datetime.strptime("14:28:10", "%H:%M:%S").time())
         
         # Find all bins that OVERLAP with the spoofing window
-        # This works for any bin size (1min, 5min, etc.)
         window_bins = day_data[(day_data.index >= (w_start_dt - pd.Timedelta(bin_freq))) & 
                                (day_data.index <= w_end_dt)]
         
