@@ -1,5 +1,0 @@
-Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR
-1,"Patience (delta_t, rel_size)",12,6.00,0.70,8.62
-2,"Safety (delta_t, rel_size, dist, vol_ahead)",8,4.00,0.73,5.49
-3,"Full Model (All Features)",3,1.50,0.73,2.04
-4,"Aggressive Baiting (delta_t, rel_size, imbalance)",6,3.00,0.72,4.18

@@ -33,10 +33,11 @@ WIN_START[20230606]="15:50:59"; WIN_END[20230606]="15:52:59"  # Para 118
 WIN_START[20230817]="15:53:27"; WIN_END[20230817]="15:55:27"  # Para 130
 
 declare -A TIER_FEATURES
-TIER_FEATURES[1]="Patience (delta_t, rel_size)"
-TIER_FEATURES[2]="Safety (delta_t, rel_size, dist, vol_ahead)"
-TIER_FEATURES[3]="Full Model (All Features)"
-TIER_FEATURES[4]="Aggressive Baiting (delta_t, rel_size, imbalance)"
+TIER_FEATURES[1]="Baiting signature (rel_size, imbalance)"
+TIER_FEATURES[2]="+ Cancellation timing (+ delta_t)"
+TIER_FEATURES[3]="+ Order book context (+ dist, vol_ahead)"
+TIER_FEATURES[4]="Full model (+ spread_bps)"
+TIER_FEATURES[5]="SHAP-informed (rel_size, imbalance, dist)"
 
 # ---------------------------------------------------------------------------
 extract_if_needed() {
@@ -56,6 +57,10 @@ extract_if_needed() {
 # ---------------------------------------------------------------------------
 # Steps 0–4 per event
 # ---------------------------------------------------------------------------
+mkdir -p output
+COMPARISON_CSV="output/comparison.csv"
+echo "Date,Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR" > "${COMPARISON_CSV}"
+
 for DATE_COMPACT in "${EVENTS[@]}"; do
   DATE_ISO="${DATE_COMPACT:0:4}-${DATE_COMPACT:4:2}-${DATE_COMPACT:6:2}"
   EVENT_DIR="output/MULN_${DATE_COMPACT}"
@@ -65,7 +70,6 @@ for DATE_COMPACT in "${EVENTS[@]}"; do
   EVENT_DBN="data/MANIPULATION_WINDOWS/MULN_${DATE_COMPACT}.dbn.zst"
   BASELINE_FEATURES="${EVENT_DIR}/BASELINE_FEATURES.csv"
   EVENT_FEATURES="${EVENT_DIR}/FEATURES.csv"
-  COMPARISON_CSV="${EVENT_DIR}/comparison.csv"
   WINDOW_START="${WIN_START[$DATE_COMPACT]}"
   WINDOW_END="${WIN_END[$DATE_COMPACT]}"
 
@@ -79,9 +83,7 @@ for DATE_COMPACT in "${EVENTS[@]}"; do
   extract_if_needed "$BASELINE_DBN" "$BASELINE_FEATURES" "baseline"
   extract_if_needed "$EVENT_DBN"    "$EVENT_FEATURES"    "event"
 
-  echo "Tier,Features,Total_Window_Anomalies,Avg_In_Window,Avg_Outside_Window,SNR" > "${COMPARISON_CSV}"
-
-  for TIER in 1 2 3 4; do
+  for TIER in 1 2 3 4 5; do
     echo ""
     echo "--- Tier ${TIER}: ${TIER_FEATURES[$TIER]} ---"
 
@@ -114,15 +116,11 @@ for DATE_COMPACT in "${EVENTS[@]}"; do
     SNR=$(echo       "$STATS" | grep "Signal-to-Noise Ratio"          | awk -F': ' '{print $NF}' | sed 's/x//' | awk '{print $1}')
     [[ -z "$SNR" ]] && SNR="N/A"
 
-    echo "${TIER},\"${TIER_FEATURES[$TIER]}\",${TOTAL_WIN},${AVG_IN},${AVG_OUT},${SNR}" >> "${COMPARISON_CSV}"
+    echo "${DATE_ISO},${TIER},\"${TIER_FEATURES[$TIER]}\",${TOTAL_WIN},${AVG_IN},${AVG_OUT},${SNR}" >> "${COMPARISON_CSV}"
   done
 
   echo ""
-  echo "Comparison summary: ${COMPARISON_CSV}"
-  column -t -s, "${COMPARISON_CSV}"
-
-  echo ""
-  echo "--- Step 4: SHAP (T4, ${WINDOW_START:0:5}) ---"
+  echo "--- Step 4: SHAP (T4 full model, ${WINDOW_START:0:5}) ---"
   python3 scripts/explain_anomalies.py \
     --model  "${EVENT_DIR}/T4.joblib" \
     --data   "${EVENT_DIR}/SCORES_T4.csv" \
@@ -162,9 +160,10 @@ for tier in range(1, 5):
     plt.close()
     print(f"  Saved {out}")
 
-# SHAP grid (T4 only)
-fig, axes = plt.subplots(2, 2, figsize=(20, 10))
-fig.suptitle("SHAP Feature Importance — T4 across all confirmed spoofing events", fontsize=14, fontweight="bold")
+# SHAP grid (T4 full model)
+fig, axes = plt.subplots(2, 2, figsize=(24, 12))
+fig.suptitle("SHAP Feature Importance — T4 (full model) across all confirmed spoofing events",
+             fontsize=14, fontweight="bold")
 for ax, date, label in zip(axes.flat, events, labels):
     path = f"output/MULN_{date}/SHAP_T4.png"
     try:
@@ -182,6 +181,13 @@ print("  Saved output/GRID_SHAP_T4.png")
 EOF
 
 echo ""
+echo "--- Step 6: Comparison Spreadsheet ---"
+python3 scripts/build_comparison_sheet.py \
+  --input  "${COMPARISON_CSV}" \
+  --output "output/comparison.xlsx"
+
+echo ""
 echo "======================================================================"
 echo "=== Pipeline complete ==="
+echo "Comparison table: output/comparison.xlsx"
 echo "======================================================================"

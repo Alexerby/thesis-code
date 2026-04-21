@@ -89,10 +89,10 @@ def get_window(df, time_str):
 
 def make_predictor(ensemble, features):
     def model_predict(X):
+        df = pd.DataFrame(X, columns=features)
         scores = []
         for i, subset in enumerate(ensemble.feature_subsets):
-            idx = [features.index(f) for f in subset]
-            scores.append(ensemble.models[i].decision_function(X[:, idx]))
+            scores.append(ensemble.models[i].decision_function(df[subset]))
         return -np.mean(scores, axis=0)
     return model_predict
 
@@ -103,15 +103,31 @@ def compute_shap(model_predict, background_data, explain_data):
 
 
 def plot_single(shap_values, explain_df, time_str, output_path):
-    plt.figure(figsize=(10, 6))
-    shap.summary_plot(shap_values, explain_df, show=False)
-    plt.title(
-        f"Feature Importance for Anomalies at {time_str} ET\n"
-        "(Positive = Pushes toward Anomaly)",
-        fontsize=12,
-    )
+    fig, (ax_bee, ax_bar) = plt.subplots(1, 2, figsize=(16, max(4, len(explain_df.columns) * 0.55 + 2)),
+                                          gridspec_kw={"width_ratios": [2, 1]})
+
+    # Left: beeswarm
+    plt.sca(ax_bee)
+    shap.summary_plot(shap_values, explain_df, show=False, plot_size=None)
+    ax_bee.set_title(f"SHAP values at {time_str} ET", fontsize=11)
+
+    # Right: mean |SHAP| bar chart, features sorted top-to-bottom matching beeswarm
+    mean_abs = np.abs(shap_values).mean(axis=0)
+    order = np.argsort(mean_abs)          # ascending so top of bar = most important
+    sorted_features = [explain_df.columns[i] for i in order]
+    sorted_vals = mean_abs[order]
+
+    ax_bar.barh(range(len(sorted_features)), sorted_vals, color="#4C72B0", alpha=0.85)
+    ax_bar.set_yticks(range(len(sorted_features)))
+    ax_bar.set_yticklabels(sorted_features, fontsize=10)
+    ax_bar.set_xlabel("mean(|SHAP value|)", fontsize=10)
+    ax_bar.set_title("Average impact magnitude", fontsize=11)
+    ax_bar.grid(axis="x", alpha=0.3)
+
+    fig.suptitle(f"SHAP Feature Importance — All orders at {time_str} ET", fontsize=12, fontweight="bold")
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
+    plt.close()
     print(f"Saved: {output_path}")
 
 
@@ -188,14 +204,8 @@ def main():
             sys.exit(f"Error: No data found at {time_str} ET.")
         print(f"{time_str}: {len(window)} orders total", end="")
 
-        flagged = window[window['anomaly'] == 1]
-        if len(flagged) == 0:
-            print(f"  (no flagged anomalies — using all {len(window)} orders)")
-            flagged = window
-        else:
-            print(f", {len(flagged)} anomalies")
-
-        explain_dfs.append(flagged)
+        print(f"  ({len(window)} orders)")
+        explain_dfs.append(window)
 
     print("Calculating SHAP values (this may take a while)...")
     for flagged in explain_dfs:

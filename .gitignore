@@ -24,3 +24,4 @@ docs/
 
 # Python stuff
 __pycache__
+output/
