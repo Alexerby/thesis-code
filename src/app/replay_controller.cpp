@@ -31,13 +31,29 @@ ReplayController::ReplayController(const std::string &data_path,
   m_engine = std::make_unique<ReplayEngine>(m_data_path, false);
 
   try {
-    const auto &symbol_map = m_engine->GetSymbolMap();
-    for (const auto &entry : symbol_map.Map()) {
-      m_available_instruments[entry.first.second] = *entry.second;
-    }
+    const auto &meta = m_engine->GetMetadata();
+    m_file_start_ts = meta.start.time_since_epoch().count();
 
-    if (m_focus_instrument == 0 && !m_available_instruments.empty()) {
-      m_focus_instrument = m_available_instruments.begin()->first;
+    const auto &symbol_map = m_engine->GetSymbolMap();
+    std::set<std::string> ticker_set;
+    for (const auto &entry : symbol_map.Map()) {
+      uint32_t inst_id = entry.first.second; // databento-cpp: pair(date, id)
+      std::string ticker = *entry.second;
+      m_available_instruments[inst_id] = ticker;
+      auto& ids = m_ticker_to_ids[ticker];
+      if (std::find(ids.begin(), ids.end(), inst_id) == ids.end()) {
+        ids.push_back(inst_id);
+      }
+      ticker_set.insert(ticker);
+    }
+    m_ticker_list = {ticker_set.begin(), ticker_set.end()};
+
+    // Initialize focus ticker based on requested instrument ID
+    if (m_focus_instrument != 0) {
+      auto it = m_available_instruments.find(m_focus_instrument);
+      if (it != m_available_instruments.end()) {
+        SetFocusTicker(it->second);
+      }
     }
   } catch (...) {
     // Handle or log error
@@ -147,10 +163,6 @@ SessionStats ReplayController::GetSessionStats() {
   return m_session_stats;
 }
 
-std::map<uint32_t, std::string> ReplayController::GetAvailableInstruments()
-    const {
-  return m_available_instruments;
-}
 
 void ReplayController::ReplayLoop() {
   Market market;
@@ -178,19 +190,22 @@ void ReplayController::ReplayLoop() {
 
   auto callback = [&](const db::MboMsg &mbo) {
     uint64_t current_ts = mbo.ts_recv.time_since_epoch().count();
-    uint32_t focus_id = m_focus_instrument.load();
-    bool is_focus = (mbo.hd.instrument_id == focus_id);
+    uint32_t inst_id = mbo.hd.instrument_id;
 
-    std::string symbol = "Unknown";
-    auto it = m_available_instruments.find(focus_id);
-    if (it != m_available_instruments.end()) symbol = it->second;
+    int ticker_idx = m_focus_ticker_idx.load();
+    const std::string &focus_ticker = (ticker_idx >= 0 && ticker_idx < (int)m_ticker_list.size())
+        ? m_ticker_list[ticker_idx] : "";
+    const auto &ticker_ids = m_ticker_to_ids.at(focus_ticker);
+
+    auto sym_it = m_available_instruments.find(inst_id);
+    bool is_focus = (sym_it != m_available_instruments.end() && sym_it->second == focus_ticker);
 
     // Warp Logic (Fast-forward to target time)
     if (m_is_warping) {
       if (current_ts < m_target_ts) {
         static uint64_t last_warp_ui_update = 0;
         if (is_focus && ++last_warp_ui_update >= 2000) {
-          MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
+          MarketSnapshot snap = market.GetSnapshot(ticker_ids, focus_ticker, MAX_DEPTH);
           snap.timestamp = FormatET(mbo.ts_recv);
           snap.msg_count = m_msg_count;
           {
@@ -219,18 +234,15 @@ void ReplayController::ReplayLoop() {
     }
 
     // Wait while paused
-    while (m_running && m_playback_state == PlaybackState::Paused &&
-           !m_step_requested) {
+    while (m_running && m_playback_state == PlaybackState::Paused) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       clock_initialized = false;  // Force recalibration on resume
     }
 
     if (!m_running) return false;
 
-    bool stepping = m_step_requested.exchange(false);
-
     // Delta-T synchronization: skip entirely during range playback (max speed).
-    if (!stepping && m_range_end_ts == 0) {
+    if (m_range_end_ts == 0) {
       if (m_recalibrate || !clock_initialized) {
         recalibrate(current_ts);
       } else {
@@ -266,7 +278,7 @@ void ReplayController::ReplayLoop() {
 
     if (is_focus) {
       m_msg_count++;
-      MarketSnapshot snap = market.GetSnapshot(focus_id, symbol, MAX_DEPTH);
+      MarketSnapshot snap = market.GetSnapshot(ticker_ids, focus_ticker, MAX_DEPTH);
       snap.msg_count = m_msg_count;
       snap.timestamp = FormatET(mbo.ts_recv);
 

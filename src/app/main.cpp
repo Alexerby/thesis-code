@@ -273,6 +273,7 @@ void run_gui_application(const Config &cfg) {
   Application::Config gui_cfg;
   gui_cfg.data_path = cfg.data_path;
   gui_cfg.focus_instrument = cfg.focus_instrument;
+  gui_cfg.target_ticker = cfg.target_ticker;
 
   Application app(gui_cfg);
   app.Run();

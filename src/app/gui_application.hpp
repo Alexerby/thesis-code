@@ -17,6 +17,7 @@ class Application {
   struct Config {
     std::string data_path;
     uint32_t focus_instrument;
+    std::string target_ticker;
     int width = 1280;
     int height = 720;
   };

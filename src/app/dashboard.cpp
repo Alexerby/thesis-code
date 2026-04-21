@@ -132,12 +132,10 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   SessionStats stats = controller.GetSessionStats();
   PlaybackState state = controller.GetPlaybackState();
 
-  // Play/Pause/Step
   if (state == PlaybackState::Paused) {
     if (ImGui::Button(" Play "))
       controller.SetPlaybackState(PlaybackState::Playing);
     ImGui::SameLine();
-    if (ImGui::Button(" Step > ")) controller.RequestStep();
   } else {
     if (ImGui::Button(" Pause "))
       controller.SetPlaybackState(PlaybackState::Paused);
@@ -145,12 +143,13 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
 
   // Jump to Time
   ImGui::SameLine(0, 20);
-  static char jump_time[24] = "14:30:00.000000";
+  static char jump_time[24] = "09:30:00.000000";
   ImGui::SetNextItemWidth(140);
   ImGui::InputText("##JumpTime", jump_time, IM_ARRAYSIZE(jump_time));
   ImGui::SameLine();
   if (ImGui::Button("Jump to Time")) {
-    uint64_t target = TimeStringToNanos(jump_time, stats.start_ts);
+    uint64_t anchor = stats.current_ts ? stats.current_ts : stats.start_ts;
+    uint64_t target = TimeStringToNanos(jump_time, anchor);
     if (target > 0) controller.SeekToTime(target);
   }
 
@@ -158,12 +157,12 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::SameLine(0, 40);
   ImGui::SetNextItemWidth(150);
   float speed = controller.GetSpeedMultiplier();
-  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 10.0f, "%.1fx"))
+  if (ImGui::SliderFloat("Speed", &speed, 0.1f, 20.0f, "%.1fx"))
     controller.SetSpeedMultiplier(speed);
 
   // Range playback
-  static char range_start[24] = "14:26:10.000000";
-  static char range_end[24]   = "14:28:10.000000";
+  static char range_start[24] = "12:34:00.000000";
+  static char range_end[24]   = "12:34:00.000000";
   ImGui::SetNextItemWidth(140);
   ImGui::InputText("##RangeStart", range_start, IM_ARRAYSIZE(range_start));
   ImGui::SameLine(0, 4);
@@ -173,8 +172,9 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::InputText("##RangeEnd", range_end, IM_ARRAYSIZE(range_end));
   ImGui::SameLine(0, 10);
   if (ImGui::Button("Play Range")) {
-    uint64_t t0 = TimeStringToNanos(range_start, stats.start_ts);
-    uint64_t t1 = TimeStringToNanos(range_end,   stats.start_ts);
+    uint64_t anchor = stats.current_ts ? stats.current_ts : stats.start_ts;
+    uint64_t t0 = TimeStringToNanos(range_start, anchor);
+    uint64_t t1 = TimeStringToNanos(range_end,   anchor);
     if (t0 > 0 && t1 > t0) {
       controller.PlayRange(t0, t1);
       float range_secs = static_cast<float>((t1 - t0) / 1e9);
@@ -203,23 +203,16 @@ void Dashboard::RenderHeader(const MarketSnapshot &snapshot,
   ImGui::SetColumnWidth(2, 200);
   ImGui::SetColumnWidth(3, 100);
 
-  auto instruments = controller.GetAvailableInstruments();
-  uint32_t current_id = controller.GetFocusInstrument();
+  const auto &tickers = controller.GetAvailableTickers();
+  std::string focus = controller.GetFocusTicker();
+  if (focus.empty() && !tickers.empty()) focus = tickers[0];
 
-  std::string current_label = "Select Symbol";
-  if (instruments.count(current_id)) {
-    current_label =
-        instruments[current_id] + " (" + std::to_string(current_id) + ")";
-  }
-
-  ImGui::SetNextItemWidth(200);
-  if (ImGui::BeginCombo("##SymbolSelector", current_label.c_str())) {
-    for (const auto &[id, sym] : instruments) {
-      bool is_selected = (id == current_id);
-      std::string label = sym + " (" + std::to_string(id) + ")";
-      if (ImGui::Selectable(label.c_str(), is_selected)) {
-        controller.SetFocusInstrument(id);
-      }
+  ImGui::SetNextItemWidth(150);
+  if (ImGui::BeginCombo("##TickerSelector", focus.c_str())) {
+    for (const auto &t : tickers) {
+      bool is_selected = (t == focus);
+      if (ImGui::Selectable(t.c_str(), is_selected))
+        controller.SetFocusTicker(t);
       if (is_selected) ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();

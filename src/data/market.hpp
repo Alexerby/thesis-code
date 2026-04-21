@@ -51,10 +51,18 @@ class Market {
 
   MarketSnapshot GetSnapshot(uint32_t inst_id, const std::string &symbol,
                              std::size_t depth);
+  MarketSnapshot GetSnapshot(const std::vector<uint32_t> &inst_ids,
+                             const std::string &symbol, std::size_t depth);
 
   BestBidOffer AggregatedBbo(uint32_t instrument_id);
+  BestBidOffer AggregatedBbo(const std::vector<uint32_t> &inst_ids);
   PriceLevel AggregatedBidLevel(uint32_t instrument_id, std::size_t depth_idx);
+  PriceLevel AggregatedBidLevel(const std::vector<uint32_t> &inst_ids,
+                                std::size_t depth_idx);
   PriceLevel AggregatedAskLevel(uint32_t instrument_id, std::size_t depth_idx);
+  PriceLevel AggregatedAskLevel(const std::vector<uint32_t> &inst_ids,
+                                std::size_t depth_idx);
+
   uint32_t GetVolumeAhead(uint32_t instrument_id, uint64_t order_id);
   std::pair<double, double> GetTopNDepth(uint32_t instrument_id, int n);
   std::pair<double, double> GetTopNDepthExcluding(uint32_t instrument_id, int n,
@@ -79,6 +87,8 @@ class Market {
    * @return Imbalance \in [-1, 1]
    */
   double AggregatedImbalance(uint32_t instrument_id, std::size_t depth);
+  double AggregatedImbalance(const std::vector<uint32_t> &inst_ids,
+                             std::size_t depth);
 
   /**
    * @brief Aggregates the volume for a given instrument over all publisher
@@ -98,6 +108,8 @@ class Market {
    */
   double AggregatedSideVolume(uint32_t instrument_id, std::size_t depth,
                               bool is_bid);
+  double AggregatedSideVolume(const std::vector<uint32_t> &inst_ids,
+                              std::size_t depth, bool is_bid);
 
   /**
    * @brief Same as AggregateSideVolume but in this function we aggregate at one
@@ -106,6 +118,8 @@ class Market {
    */
   double AggregatedLevelVolume(uint32_t instrument_id, std::size_t depth,
                                bool is_bid);
+  double AggregatedLevelVolume(const std::vector<uint32_t> &inst_ids,
+                               std::size_t depth, bool is_bid);
 
   /**
    * @brief Returns the most recent Trade for a given instrument_id by comparing
@@ -116,4 +130,5 @@ class Market {
    */
 
   TradeExecution GetLastTrade(uint32_t instrument_id) const;
+  TradeExecution GetLastTrade(const std::vector<uint32_t> &inst_ids) const;
 };

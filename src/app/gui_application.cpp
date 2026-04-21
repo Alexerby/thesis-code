@@ -1,5 +1,6 @@
 #include "app/gui_application.hpp"
 
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
@@ -15,6 +16,18 @@
 #include "implot.h"
 
 namespace fs = std::filesystem;
+
+// Compute 09:30 ET (market open) on the calendar day of the given UTC nanosecond timestamp.
+static uint64_t MarketOpenNanos(uint64_t file_start_ns) {
+  using namespace std::chrono;
+  auto tp  = system_clock::time_point{nanoseconds(file_start_ns)};
+  auto zt  = zoned_time{"America/New_York", tp};
+  auto day = floor<days>(zt.get_local_time());
+  local_time<seconds> open{day + hours(9) + minutes(30)};
+  auto open_utc = zoned_time{"America/New_York", open}.get_sys_time();
+  return static_cast<uint64_t>(
+      duration_cast<nanoseconds>(open_utc.time_since_epoch()).count());
+}
 
 // Known event files — shown as quick-pick buttons in the file picker
 static constexpr const char *kDataRoot = "/home/aleri/git-repos/thesis-code/data";
@@ -47,10 +60,15 @@ Application::~Application() {
 
 void Application::LoadFile(const std::string &path) {
   if (m_controller) m_controller->Stop();
-  m_controller = std::make_unique<ReplayController>(path, m_cfg.focus_instrument);
+  m_controller =
+      std::make_unique<ReplayController>(path, m_cfg.focus_instrument);
+  if (!m_cfg.target_ticker.empty()) {
+    m_controller->SetFocusTicker(m_cfg.target_ticker);
+  }
   if (!m_dashboard) m_dashboard = std::make_unique<Dashboard>();
   m_controller->Start();
-  m_controller->SetPlaybackState(PlaybackState::Playing);
+  uint64_t open_ns = MarketOpenNanos(m_controller->GetFileStartTs());
+  m_controller->SeekToTime(open_ns);  // warp to 09:30 ET, pauses on arrival
   m_file_loaded = true;
 }
 

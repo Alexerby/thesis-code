@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -57,7 +59,6 @@ class ReplayController {
   // Playback Control
   void SetPlaybackState(PlaybackState state) { m_playback_state = state; }
   PlaybackState GetPlaybackState() const { return m_playback_state; }
-  void RequestStep() { m_step_requested = true; }
   void SetSpeedMultiplier(float s) { m_speed_multiplier = s; m_recalibrate = true; }
   float GetSpeedMultiplier() const { return m_speed_multiplier; }
 
@@ -66,13 +67,20 @@ class ReplayController {
   void PlayRange(uint64_t start_ts, uint64_t end_ts);
   SessionStats GetSessionStats();
 
-  // Instrument Management
-  void SetFocusInstrument(uint32_t instrument_id) {
-    m_focus_instrument = instrument_id;
+  // Ticker Management (one logical ticker may span multiple instrument IDs across days)
+  const std::vector<std::string>& GetAvailableTickers() const { return m_ticker_list; }
+  std::string GetFocusTicker() const {
+    int idx = m_focus_ticker_idx.load();
+    if (idx >= 0 && idx < (int)m_ticker_list.size()) return m_ticker_list[idx];
+    return "";
   }
-  uint32_t GetFocusInstrument() const { return m_focus_instrument; }
-  std::map<uint32_t, std::string> GetAvailableInstruments() const;
+  void SetFocusTicker(const std::string &ticker) {
+    auto it = std::find(m_ticker_list.begin(), m_ticker_list.end(), ticker);
+    if (it != m_ticker_list.end())
+      m_focus_ticker_idx = (int)(it - m_ticker_list.begin());
+  }
 
+  uint64_t GetFileStartTs() const { return m_file_start_ts; }
   MarketSnapshot GetLatestSnapshot();
   std::vector<SpreadPoint> GetSpreadHistory();
   std::vector<OrderEvent> GetOrderEvents();
@@ -89,13 +97,16 @@ class ReplayController {
   void RecordEvent(const db::MboMsg &mbo, const MarketSnapshot &snap);
 
 
+  uint64_t m_file_start_ts = 0;
+  uint32_t m_focus_instrument = 0;
   std::string m_data_path;
   std::unique_ptr<ReplayEngine> m_engine;
-  std::map<uint32_t, std::string> m_available_instruments;
-  std::atomic<uint32_t> m_focus_instrument;
+  std::map<uint32_t, std::string> m_available_instruments;  // id → ticker
+  std::map<std::string, std::vector<uint32_t>> m_ticker_to_ids; // ticker → [ids]
+  std::vector<std::string> m_ticker_list;                   // sorted unique tickers
+  std::atomic<int> m_focus_ticker_idx{0};
   std::atomic<bool> m_running{false};
   std::atomic<PlaybackState> m_playback_state{PlaybackState::Paused};
-  std::atomic<bool> m_step_requested{false};
   std::atomic<float> m_speed_multiplier{1.0f};
   std::atomic<bool> m_recalibrate{false};
 

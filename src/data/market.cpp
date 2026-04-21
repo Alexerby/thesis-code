@@ -215,16 +215,24 @@ void Market::Apply(const db::MboMsg &mbo_msg) {
 
 MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
                                    std::size_t depth) {
+  return GetSnapshot(std::vector<uint32_t>{inst_id}, symbol, depth);
+}
+
+MarketSnapshot Market::GetSnapshot(const std::vector<uint32_t> &inst_ids,
+                                   const std::string &symbol,
+                                   std::size_t depth) {
   MarketSnapshot snap;
   snap.symbol = symbol;
-  snap.imbalance = AggregatedImbalance(inst_id, 5);
+  snap.imbalance = AggregatedImbalance(inst_ids, 5);
 
-  TradeExecution last_trade = GetLastTrade(inst_id);
+  TradeExecution last_trade = GetLastTrade(inst_ids);
   snap.last_price = static_cast<double>(last_trade.price) / 1e9;
 
-  auto bbo = AggregatedBbo(inst_id);
-  snap.best_bid = bbo.first.IsEmpty() ? 0.0 : static_cast<double>(bbo.first.price) / 1e9;
-  snap.best_ask = bbo.second.IsEmpty() ? 0.0 : static_cast<double>(bbo.second.price) / 1e9;
+  auto bbo = AggregatedBbo(inst_ids);
+  snap.best_bid =
+      bbo.first.IsEmpty() ? 0.0 : static_cast<double>(bbo.first.price) / 1e9;
+  snap.best_ask =
+      bbo.second.IsEmpty() ? 0.0 : static_cast<double>(bbo.second.price) / 1e9;
 
   snap.bid_volumes.resize(depth);
   snap.ask_volumes.resize(depth);
@@ -237,18 +245,20 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
 
   for (std::size_t d = 1; d <= depth; ++d) {
     snap.bid_volumes[d - 1] =
-        static_cast<float>(AggregatedLevelVolume(inst_id, d, true));
+        static_cast<float>(AggregatedLevelVolume(inst_ids, d, true));
     snap.ask_volumes[d - 1] =
-        static_cast<float>(AggregatedLevelVolume(inst_id, d, false));
+        static_cast<float>(AggregatedLevelVolume(inst_ids, d, false));
     snap.bid_volumes_cum[d - 1] =
-        static_cast<float>(AggregatedSideVolume(inst_id, d, true));
+        static_cast<float>(AggregatedSideVolume(inst_ids, d, true));
     snap.ask_volumes_cum[d - 1] =
-        static_cast<float>(AggregatedSideVolume(inst_id, d, false));
+        static_cast<float>(AggregatedSideVolume(inst_ids, d, false));
 
-    PriceLevel bid_lvl = AggregatedBidLevel(inst_id, d - 1);
-    PriceLevel ask_lvl = AggregatedAskLevel(inst_id, d - 1);
-    snap.bid_prices[d - 1] = bid_lvl.IsEmpty() ? 0.0 : static_cast<double>(bid_lvl.price) / 1e9;
-    snap.ask_prices[d - 1] = ask_lvl.IsEmpty() ? 0.0 : static_cast<double>(ask_lvl.price) / 1e9;
+    PriceLevel bid_lvl = AggregatedBidLevel(inst_ids, d - 1);
+    PriceLevel ask_lvl = AggregatedAskLevel(inst_ids, d - 1);
+    snap.bid_prices[d - 1] =
+        bid_lvl.IsEmpty() ? 0.0 : static_cast<double>(bid_lvl.price) / 1e9;
+    snap.ask_prices[d - 1] =
+        ask_lvl.IsEmpty() ? 0.0 : static_cast<double>(ask_lvl.price) / 1e9;
     snap.bid_counts[d - 1] = bid_lvl.count;
     snap.ask_counts[d - 1] = ask_lvl.count;
   }
@@ -256,17 +266,107 @@ MarketSnapshot Market::GetSnapshot(uint32_t inst_id, const std::string &symbol,
   return snap;
 }
 
-TradeExecution Market::GetLastTrade(uint32_t instrument_id) const {
-  TradeExecution latest_exec{};
+BestBidOffer Market::AggregatedBbo(const std::vector<uint32_t> &inst_ids) {
+  return {AggregatedBidLevel(inst_ids, 0), AggregatedAskLevel(inst_ids, 0)};
+}
 
-  auto it = books_.find(instrument_id);
-  if (it != books_.end()) {
+PriceLevel Market::AggregatedBidLevel(const std::vector<uint32_t> &inst_ids,
+                                      std::size_t depth_idx) {
+  std::map<int64_t, PriceLevel, std::greater<int64_t>> aggregated_levels;
+  for (uint32_t id : inst_ids) {
+    auto it = books_.find(id);
+    if (it == books_.end()) continue;
     for (const auto &pub_book : it->second) {
-      const auto &current_exec = pub_book.book.GetLastExecution();
-      if (current_exec.ts_recv > latest_exec.ts_recv) {
-        latest_exec = current_exec;
+      // Need enough depth from each book to ensure we find the top N across all
+      for (std::size_t i = 0; i <= depth_idx + 5; ++i) {
+        PriceLevel lvl = pub_book.book.GetBidLevel(i);
+        if (lvl.IsEmpty()) break;
+        auto &agg = aggregated_levels[lvl.price];
+        if (agg.IsEmpty()) {
+          agg = lvl;
+        } else {
+          agg.size += lvl.size;
+          agg.count += lvl.count;
+        }
+      }
+    }
+  }
+  if (depth_idx >= aggregated_levels.size()) return {};
+  auto it = aggregated_levels.begin();
+  std::advance(it, depth_idx);
+  return it->second;
+}
+
+PriceLevel Market::AggregatedAskLevel(const std::vector<uint32_t> &inst_ids,
+                                      std::size_t depth_idx) {
+  std::map<int64_t, PriceLevel, std::less<int64_t>> aggregated_levels;
+  for (uint32_t id : inst_ids) {
+    auto it = books_.find(id);
+    if (it == books_.end()) continue;
+    for (const auto &pub_book : it->second) {
+      for (std::size_t i = 0; i <= depth_idx + 5; ++i) {
+        PriceLevel lvl = pub_book.book.GetAskLevel(i);
+        if (lvl.IsEmpty()) break;
+        auto &agg = aggregated_levels[lvl.price];
+        if (agg.IsEmpty()) {
+          agg = lvl;
+        } else {
+          agg.size += lvl.size;
+          agg.count += lvl.count;
+        }
+      }
+    }
+  }
+  if (depth_idx >= aggregated_levels.size()) return {};
+  auto it = aggregated_levels.begin();
+  std::advance(it, depth_idx);
+  return it->second;
+}
+
+double Market::AggregatedImbalance(const std::vector<uint32_t> &inst_ids,
+                                   std::size_t depth) {
+  double total_bid_sz = AggregatedSideVolume(inst_ids, depth, true);
+  double total_ask_sz = AggregatedSideVolume(inst_ids, depth, false);
+  double total_vol = total_bid_sz + total_ask_sz;
+  return (total_vol == 0) ? 0.0 : (total_bid_sz - total_ask_sz) / total_vol;
+}
+
+double Market::AggregatedSideVolume(const std::vector<uint32_t> &inst_ids,
+                                    std::size_t depth, bool is_bid) {
+  double total_vol = 0;
+  for (std::size_t d = 0; d < depth; ++d) {
+    PriceLevel lvl = is_bid ? AggregatedBidLevel(inst_ids, d)
+                            : AggregatedAskLevel(inst_ids, d);
+    if (lvl.IsEmpty()) break;
+    total_vol += static_cast<double>(lvl.size);
+  }
+  return total_vol;
+}
+
+double Market::AggregatedLevelVolume(const std::vector<uint32_t> &inst_ids,
+                                     std::size_t depth, bool is_bid) {
+  if (depth == 0) return 0.0;
+  PriceLevel lvl = is_bid ? AggregatedBidLevel(inst_ids, depth - 1)
+                          : AggregatedAskLevel(inst_ids, depth - 1);
+  return static_cast<double>(lvl.size);
+}
+
+TradeExecution Market::GetLastTrade(const std::vector<uint32_t> &inst_ids) const {
+  TradeExecution latest_exec{};
+  for (uint32_t id : inst_ids) {
+    auto it = books_.find(id);
+    if (it != books_.end()) {
+      for (const auto &pub_book : it->second) {
+        const auto &current_exec = pub_book.book.GetLastExecution();
+        if (current_exec.ts_recv > latest_exec.ts_recv) {
+          latest_exec = current_exec;
+        }
       }
     }
   }
   return latest_exec;
+}
+
+TradeExecution Market::GetLastTrade(uint32_t instrument_id) const {
+  return GetLastTrade(std::vector<uint32_t>{instrument_id});
 }
