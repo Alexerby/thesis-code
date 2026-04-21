@@ -34,10 +34,15 @@ class Application {
   void InitGLFW();
   void InitImGui();
   void Shutdown();
+  void LoadFile(const std::string &path);
+  void RenderFilePicker();
 
   GLFWwindow *m_window = nullptr;
   Config m_cfg;
 
   std::unique_ptr<ReplayController> m_controller;
   std::unique_ptr<Dashboard> m_dashboard;
+
+  bool m_file_loaded = false;
+  char m_path_buf[512] = {};
 };

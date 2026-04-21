@@ -1,6 +1,9 @@
 #include "app/gui_application.hpp"
 
+#include <cstring>
+#include <filesystem>
 #include <stdexcept>
+#include <string>
 
 // GLFW and OpenGL
 #include <GLFW/glfw3.h>
@@ -11,20 +14,41 @@
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
 
+namespace fs = std::filesystem;
+
+// Known event files — shown as quick-pick buttons in the file picker
+static const struct { const char *label; const char *path; } kKnownFiles[] = {
+    {"Oct 25 2022 (event)",    "data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst"},
+    {"Dec 15 2022 (event)",    "data/MANIPULATION_WINDOWS/MULN_20221215.dbn.zst"},
+    {"Jun 06 2023 (event)",    "data/MANIPULATION_WINDOWS/MULN_20230606.dbn.zst"},
+    {"Aug 17 2023 (event)",    "data/MANIPULATION_WINDOWS/MULN_20230817.dbn.zst"},
+    {"Oct 25 2022 (baseline)", "data/BASELINE/MULN_20221025_BASELINE.dbn.zst"},
+    {"Dec 15 2022 (baseline)", "data/BASELINE/MULN_20221215_BASELINE.dbn.zst"},
+    {"Jun 06 2023 (baseline)", "data/BASELINE/MULN_20230606_BASELINE.dbn.zst"},
+    {"Aug 17 2023 (baseline)", "data/BASELINE/MULN_20230817_BASELINE.dbn.zst"},
+};
+
 Application::Application(const Config &cfg) : m_cfg(cfg) {
   InitGLFW();
   InitImGui();
 
-  m_controller =
-      std::make_unique<ReplayController>(cfg.data_path, cfg.focus_instrument);
-  m_dashboard = std::make_unique<Dashboard>();
-
-  m_controller->Start();
+  if (!cfg.data_path.empty()) {
+    std::strncpy(m_path_buf, cfg.data_path.c_str(), sizeof(m_path_buf) - 1);
+    LoadFile(cfg.data_path);
+  }
 }
 
 Application::~Application() {
-  m_controller->Stop();
+  if (m_controller) m_controller->Stop();
   Shutdown();
+}
+
+void Application::LoadFile(const std::string &path) {
+  if (m_controller) m_controller->Stop();
+  m_controller = std::make_unique<ReplayController>(path, m_cfg.focus_instrument);
+  if (!m_dashboard) m_dashboard = std::make_unique<Dashboard>();
+  m_controller->Start();
+  m_file_loaded = true;
 }
 
 void Application::InitGLFW() {
@@ -37,7 +61,7 @@ void Application::InitGLFW() {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   m_window = glfwCreateWindow(m_cfg.width, m_cfg.height,
-                              "Thesis Market Visualizer", nullptr, nullptr);
+                              "Market Visualizer", nullptr, nullptr);
   if (!m_window) {
     glfwTerminate();
     throw std::runtime_error("Failed to create GLFW window");
@@ -61,6 +85,53 @@ void Application::InitImGui() {
   ImGui_ImplOpenGL3_Init("#version 330");
 }
 
+void Application::RenderFilePicker() {
+  ImGuiIO &io = ImGui::GetIO();
+  const float W = 560.0f, H = 340.0f;
+  ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - W) * 0.5f,
+                                 (io.DisplaySize.y - H) * 0.5f),
+                          ImGuiCond_Always);
+  ImGui::SetNextWindowSize(ImVec2(W, H), ImGuiCond_Always);
+  ImGui::Begin("Load DBN File", nullptr,
+               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+               ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+
+  ImGui::TextDisabled("Quick pick:");
+  ImGui::Spacing();
+
+  // Two-column button grid
+  ImGui::Columns(2, "QuickPick", false);
+  for (const auto &f : kKnownFiles) {
+    bool exists = fs::exists(f.path);
+    if (!exists) ImGui::BeginDisabled();
+    if (ImGui::Button(f.label, ImVec2(-1, 0))) {
+      std::strncpy(m_path_buf, f.path, sizeof(m_path_buf) - 1);
+      LoadFile(f.path);
+    }
+    if (!exists) {
+      ImGui::EndDisabled();
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("File not found: %s", f.path);
+    }
+    ImGui::NextColumn();
+  }
+  ImGui::Columns(1);
+
+  ImGui::Spacing();
+  ImGui::Separator();
+  ImGui::Spacing();
+
+  ImGui::TextDisabled("Or enter path manually:");
+  ImGui::SetNextItemWidth(-80);
+  ImGui::InputText("##Path", m_path_buf, sizeof(m_path_buf));
+  ImGui::SameLine();
+  if (ImGui::Button("Load", ImVec2(70, 0)) && m_path_buf[0] != '\0') {
+    LoadFile(std::string(m_path_buf));
+  }
+
+  ImGui::End();
+}
+
 void Application::Run() {
   while (!glfwWindowShouldClose(m_window)) {
     glfwPollEvents();
@@ -76,18 +147,15 @@ void Application::Run() {
     glClearColor(0.08f, 0.08f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Get an updated snapshot of the market
-    MarketSnapshot snap = m_controller->GetLatestSnapshot();
-
-    // Render the updated snapshot
-    m_dashboard->Render(snap, *m_controller);
-
-    // Kill condition
-    if (m_dashboard->ShouldQuit()) {
-      glfwSetWindowShouldClose(m_window, true);
+    if (!m_file_loaded) {
+      RenderFilePicker();
+    } else {
+      MarketSnapshot snap = m_controller->GetLatestSnapshot();
+      m_dashboard->Render(snap, *m_controller);
+      if (m_dashboard->ShouldQuit())
+        glfwSetWindowShouldClose(m_window, true);
     }
 
-    //
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

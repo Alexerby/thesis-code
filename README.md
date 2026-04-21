@@ -20,7 +20,7 @@ A C++ implementation of a spoofing detection framework for limit order book (LOB
 - **Order Life-Cycle Reconstruction**: Efficiently tracks individual orders from `Add` to `Fill` or `Cancel` using raw MBO (Market-By-Order) data.
 - **Real-time Visualization**: OpenGL-based market visualizer for inspecting order book dynamics and liquidity clusters.
 - **L3/MBO Support**: Native support for Databento's DBN format and XNAS.ITCH schema.
-- **Performance-Oriented**: Core logic implemented in C++17.
+- **Performance-Oriented**: Core logic implemented in C++20.
 
 ## Requirements
 

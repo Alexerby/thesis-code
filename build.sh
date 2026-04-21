@@ -15,7 +15,9 @@ SAFE_CORES=$(( CPU_JOBS < MEM_JOBS ? CPU_JOBS : MEM_JOBS ))
 mkdir -p "$BUILD_DIR"
 mkdir -p "$DIST_DIR"
 
-cmake -S . -B "$BUILD_DIR" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "$@"
+cmake -S . -B "$BUILD_DIR" \
+  -DCMAKE_CXX_COMPILER=g++-13 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON "$@"
 
 echo "--- Building (Using $SAFE_CORES cores) ---"
 cmake --build "$BUILD_DIR" -j "$SAFE_CORES" -- -l "$SAFE_CORES"

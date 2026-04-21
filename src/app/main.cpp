@@ -113,11 +113,12 @@ Config parse_args(int argc, char **argv) {
     if (cfg.fetch_output_path.empty())
       cfg.fetch_output_path = "./data/multi_instrument.dbn.zst";
   } else {
-    if (argc < 3) {
+    // gui can run without a file — user picks it inside the app
+    if (cfg.command != "gui" && argc < 3) {
       print_usage();
       throw std::runtime_error("Missing data_path for command: " + cfg.command);
     }
-    cfg.data_path = argv[2];
+    if (argc >= 3) cfg.data_path = argv[2];
 
     bool symbol_set = false;
     for (int i = 3; i < argc; ++i) {
