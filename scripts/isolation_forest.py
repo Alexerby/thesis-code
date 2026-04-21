@@ -134,6 +134,48 @@ class KPIFEnsemble:
         return np.mean(scores, axis=0)
 
 
+def train(train_paths, tier=1, k=3, contamination=0.01, save_model=None):
+    """Train k-PIF on baseline CSV(s). Returns (ensemble, scaler)."""
+    features = TIERS[tier]
+    scaler = None
+    train_dfs = []
+    for path in train_paths:
+        df, s = load_and_preprocess(path, features, scaler=None)
+        if scaler is None:
+            scaler = s
+        train_dfs.append(df)
+    train_df = pd.concat(train_dfs, ignore_index=True)
+    print(f"  {len(train_df):,} records used for training (after filtering for pure cancels)")
+    ensemble = KPIFEnsemble(features, k=k, contamination=contamination)
+    ensemble.fit(train_df)
+    if save_model:
+        save_dir = os.path.dirname(save_model)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        joblib.dump({"ensemble": ensemble, "scaler": scaler}, save_model)
+        print(f"Model and scaler saved to {save_model}")
+    return ensemble, scaler
+
+
+def score(test_path, model_path, threshold_pct=1.0, output=None):
+    """Score a CSV using a saved model. Writes output CSV and returns DataFrame."""
+    checkpoint = joblib.load(model_path)
+    ensemble = checkpoint["ensemble"]
+    scaler = checkpoint["scaler"]
+    features = ensemble.features
+    test_df, _ = load_and_preprocess(test_path, features, scaler=scaler)
+    scores_arr = ensemble.decision_function(test_df)
+    threshold = np.percentile(scores_arr, threshold_pct)
+    anomalies = (scores_arr <= threshold).astype(int)
+    output_df = test_df.copy()
+    output_df["anomaly_score"] = scores_arr
+    output_df["anomaly"] = anomalies
+    if output:
+        output_df.to_csv(output, index=False)
+        print(f"Scores written to {output}")
+    return output_df
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="k-PIF Spoofing Detector")
     # Action arguments

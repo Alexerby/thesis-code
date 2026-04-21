@@ -150,35 +150,36 @@ def write_full_metrics_sheet(wb, df):
     ws.sheet_view.showGridLines = False
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--input",  default="output/comparison.csv")
-    p.add_argument("--output", default="output/comparison.xlsx")
-    args = p.parse_args()
-
-    df = pd.read_csv(args.input)
-    df["SNR"]    = pd.to_numeric(df["SNR"],    errors="coerce")
-    df["T_Stat"] = pd.to_numeric(df["T_Stat"], errors="coerce")
+def build_sheet(input_path="output/comparison.csv", output_path="output/comparison.xlsx"):
+    """Build a formatted Excel workbook from comparison.csv."""
+    df = pd.read_csv(input_path)
+    df["SNR"]     = pd.to_numeric(df["SNR"],     errors="coerce")
+    df["T_Stat"]  = pd.to_numeric(df["T_Stat"],  errors="coerce")
     df["P_Value"] = pd.to_numeric(df["P_Value"], errors="coerce")
-    df["Tier"]   = df["Tier"].astype(int)
+    df["Tier"]    = df["Tier"].astype(int)
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
     write_snr_sheet(wb, df)
-    # T-statistic sheet — higher is better, green=high
     _pivot_sheet(wb, df, "T_Stat", "T-Statistic by Tier", "T-Stat", "T-Stat", "Average T-Stat",
                  ColorScaleRule(start_type="min",  start_color="F8696B",
                                 mid_type="percentile", mid_value=50, mid_color="FFEB84",
                                 end_type="max",   end_color="63BE7B"))
-    # P-value sheet — lower is better, green=low
     _pivot_sheet(wb, df, "P_Value", "P-Value by Tier", "P-Value", "p-value", "Average p-value",
                  ColorScaleRule(start_type="min",  start_color="63BE7B",
                                 mid_type="percentile", mid_value=50, mid_color="FFEB84",
                                 end_type="max",   end_color="F8696B"))
     write_full_metrics_sheet(wb, df)
+    wb.save(output_path)
+    print(f"Saved {output_path}")
 
-    wb.save(args.output)
-    print(f"Saved {args.output}")
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--input",  default="output/comparison.csv")
+    p.add_argument("--output", default="output/comparison.xlsx")
+    args = p.parse_args()
+    build_sheet(args.input, args.output)
 
 
 if __name__ == "__main__":

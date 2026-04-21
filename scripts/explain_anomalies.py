@@ -174,6 +174,32 @@ def plot_comparison(shap_per_window, feature_names, labels, output_path):
     print(f"Saved: {output_path}")
 
 
+def explain_single(model_path, data_path, time_str, output_path):
+    """Compute SHAP for all orders in a 1-minute window and save beeswarm+bar plot."""
+    checkpoint = joblib.load(model_path)
+    ensemble = checkpoint['ensemble']
+    features = ensemble.features
+    model_predict = make_predictor(ensemble, features)
+
+    df = pd.read_csv(data_path)
+    df['dt_et'] = pd.to_datetime(df['ts_recv'], unit='ns', utc=True).dt.tz_convert('US/Eastern')
+
+    background_data = (
+        df[df['anomaly'] == 0]
+        .sample(min(100, (df['anomaly'] == 0).sum()), random_state=42)[features]
+        .values
+    )
+
+    window = get_window(df, time_str)
+    if len(window) == 0:
+        print(f"Warning: No data found at {time_str} ET — skipping SHAP for {output_path}")
+        return
+
+    print(f"  SHAP: {len(window)} orders at {time_str} ET")
+    sv = compute_shap(model_predict, background_data, window[features].values)
+    plot_single(sv, window[features], time_str, output_path)
+
+
 def main():
     args = parse_args()
     labels = args.labels if args.labels else args.time
