@@ -44,33 +44,55 @@ def main():
     # CRITICAL: Convert index to naive local time for plotting to fix alignment
     density.index = density.index.tz_localize(None)
 
-    # 3. Plotting (Single Plot)
-    plt.figure(figsize=(12, 5))
-    plt.plot(density.index, density['anomalies'], color='firebrick', lw=1.5, label='Anomaly Count')
-    plt.fill_between(density.index, density['anomalies'], color='firebrick', alpha=0.15)
+    # 3. Plotting (Enhanced for False Positive Analysis)
+    plt.figure(figsize=(12, 6))
     
-    # Highlight the SEC Window: 14:26:10 - 14:28:10 ET
+    # Calculate a baseline threshold for "significant" noise
+    # (Median + 3*Std of the intraday activity)
+    threshold_val = density['anomalies'].median() + 3 * density['anomalies'].std()
+    
+    # Split data for color coding
     if args.target_date:
         target_dt = pd.to_datetime(args.target_date).date()
         win_start = pd.Timestamp.combine(target_dt, datetime.strptime("14:26:10", "%H:%M:%S").time())
         win_end = pd.Timestamp.combine(target_dt, datetime.strptime("14:28:10", "%H:%M:%S").time())
         
-        plt.axvspan(win_start, win_end, color='yellow', alpha=0.4, label='SEC Spoofing Window')
+        in_window_mask = (density.index >= (win_start - pd.Timedelta(bin_freq))) & (density.index <= win_end)
+        
+        # Plot True Positives (Green) and False Positives (Orange)
+        plt.scatter(density.index[in_window_mask], density['anomalies'][in_window_mask], 
+                    color='forestgreen', s=10, zorder=5, label='True Positive (In Window)')
+        plt.scatter(density.index[~in_window_mask], density['anomalies'][~in_window_mask], 
+                    color='darkorange', s=5, zorder=4, label='False Positive / Noise')
+    else:
+        plt.scatter(density.index, density['anomalies'], color='firebrick', s=5)
+
+    plt.fill_between(density.index, density['anomalies'], color='gray', alpha=0.1)
+    plt.axhline(threshold_val, color='red', linestyle='--', alpha=0.5, label='Significance Threshold (Median+3σ)')
+
+    # Highlight the SEC Window
+    if args.target_date:
+        plt.axvspan(win_start, win_end, color='yellow', alpha=0.3, label='SEC Spoofing Window')
     
-    plt.title(f"Anomaly Density (Ticker: MULN, Date: {args.target_date})", fontsize=14)
+    # Annotate Top 3 False Positives
+    if args.target_date:
+        top_fps = density[~in_window_mask].sort_values('anomalies', ascending=False).head(3)
+        for idx, row in top_fps.iterrows():
+            plt.annotate(f"FP: {idx.strftime('%H:%M')}", (idx, row['anomalies']), 
+                         textcoords="offset points", xytext=(0,10), ha='center', fontsize=8, color='darkorange')
+
+    plt.title(f"Anomaly Density & False Positive Analysis (Ticker: MULN, Date: {args.target_date})", fontsize=14)
     plt.ylabel("Anomalies per Bin")
     plt.xlabel("Time (Eastern Time)")
     
-    # Standardize X-Axis: HH:MM with 45 deg tilt
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     plt.xticks(rotation=45)
-    
-    plt.legend(loc='upper left')
-    plt.grid(alpha=0.3, linestyle='--')
+    plt.legend(loc='upper left', fontsize=9)
+    plt.grid(alpha=0.2, linestyle='--')
     plt.tight_layout()
     
     plt.savefig(args.output, dpi=150)
-    print(f"Clean density plot saved to {args.output}")
+    print(f"Enhanced density plot saved to {args.output}")
 
     # 4. Statistical Summary (Local Date only)
     if args.target_date:
