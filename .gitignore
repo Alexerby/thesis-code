@@ -5,6 +5,7 @@ dist/
 compile_commands.json
 
 # Root data/ and features/
+/data
 /data/
 /features/
 /logging/
@@ -25,3 +26,4 @@ docs/
 # Python stuff
 __pycache__
 output/
+data/
