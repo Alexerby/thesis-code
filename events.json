@@ -1,0 +1,46 @@
+{
+  "case": "SEC v. Mullen Automotive Inc., Case 1:23-cv-07613",
+  "ticker": "MULN",
+  "events": [
+    {
+      "date": "2022-10-25",
+      "complaint_paragraph": 112,
+      "window_start": "14:26:10",
+      "window_end": "14:28:10",
+      "dbn": {
+        "event":    "data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst",
+        "baseline": "data/BASELINE/MULN_20221025_BASELINE.dbn.zst"
+      }
+    },
+    {
+      "date": "2022-12-15",
+      "complaint_paragraph": 124,
+      "window_start": "13:25:30",
+      "window_end": "13:27:30",
+      "dbn": {
+        "event":    "data/MANIPULATION_WINDOWS/MULN_20221215.dbn.zst",
+        "baseline": "data/BASELINE/MULN_20221215_BASELINE.dbn.zst"
+      }
+    },
+    {
+      "date": "2023-06-06",
+      "complaint_paragraph": 118,
+      "window_start": "15:50:59",
+      "window_end": "15:52:59",
+      "dbn": {
+        "event":    "data/MANIPULATION_WINDOWS/MULN_20230606.dbn.zst",
+        "baseline": "data/BASELINE/MULN_20230606_BASELINE.dbn.zst"
+      }
+    },
+    {
+      "date": "2023-08-17",
+      "complaint_paragraph": 130,
+      "window_start": "15:53:27",
+      "window_end": "15:55:27",
+      "dbn": {
+        "event":    "data/MANIPULATION_WINDOWS/MULN_20230817.dbn.zst",
+        "baseline": "data/BASELINE/MULN_20230817_BASELINE.dbn.zst"
+      }
+    }
+  ]
+}

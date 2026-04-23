@@ -48,6 +48,7 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
  * @brief Feature vector x_i for a single order lifecycle.
  */
 struct FeatureRecord {
+  uint64_t order_id{0};      ///< Order ID (primary key)
   double delta_t;            ///< \Delta t_i
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   double volume_ahead;       ///< Total volume between order and BBO at add-time 

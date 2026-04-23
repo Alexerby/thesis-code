@@ -349,34 +349,34 @@ void ReplayController::RecordEvent(const db::MboMsg &mbo,
       break;
   }
 
+  char side = '-';
+  if (mbo.side == db::Side::Bid)
+    side = 'B';
+  else if (mbo.side == db::Side::Ask)
+    side = 'S';
+
+  uint64_t ts_ns = mbo.ts_recv.time_since_epoch().count();
+  double ts_s = static_cast<double>(ts_ns) / 1e9;
+
+  std::lock_guard<std::mutex> lock(m_mutex);
+
+  SpreadPoint pt{
+      ts_s,
+      snap.best_bid,
+      snap.best_ask,
+      m_last_snap.best_bid,
+      m_last_snap.best_ask,
+      high_signal ? act : '\0',
+      side,
+      static_cast<double>(mbo.price) / 1e9,
+      mbo.size,
+  };
+  m_spread_history.push_back(pt);
+  if (m_spread_history.size() > kMaxSpreadHistory) {
+    m_spread_history.pop_front();
+  }
+
   if (high_signal) {
-    char side = '-';
-    if (mbo.side == db::Side::Bid)
-      side = 'B';
-    else if (mbo.side == db::Side::Ask)
-      side = 'S';
-
-    uint64_t ts_ns = mbo.ts_recv.time_since_epoch().count();
-    double ts_s = static_cast<double>(ts_ns) / 1e9;
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    SpreadPoint pt{
-        ts_s,
-        snap.best_bid,
-        snap.best_ask,
-        m_last_snap.best_bid,
-        m_last_snap.best_ask,
-        act,
-        side,
-        static_cast<double>(mbo.price) / 1e9,
-        mbo.size,
-    };
-    m_spread_history.push_back(pt);
-    if (m_spread_history.size() > kMaxSpreadHistory) {
-      m_spread_history.pop_front();
-    }
-
     OrderEvent ev{
         ts_ns, ts_s, act, side, static_cast<double>(mbo.price) / 1e9, mbo.size,
     };

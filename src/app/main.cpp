@@ -244,6 +244,7 @@ void run_extract_features(const Config &cfg) {
     return;
   }
 
+  csv.Write("order_id");
   csv.Write("ts_recv");
   csv.Write("cancel_type");
   csv.Write("delta_t");
@@ -255,6 +256,7 @@ void run_extract_features(const Config &cfg) {
   csv.Write("mid_price", /*is_last=*/true);
 
   for (const auto &r : records) {
+    csv.Write(r.order_id);
     csv.Write(r.ts_recv);
     csv.Write(static_cast<int>(r.cancel_type));
     csv.Write(r.delta_t);

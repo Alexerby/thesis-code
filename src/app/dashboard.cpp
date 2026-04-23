@@ -86,7 +86,7 @@ static ETTime ToET(double epoch_seconds) {
   year_month_day ymd{day_tp};
   hh_mm_ss hms{lt - day_tp};
   int ms = (int)duration_cast<milliseconds>(lt - floor<seconds>(lt)).count();
-  return {int(ymd.year()), unsigned(ymd.month()), unsigned(ymd.day()),
+  return {int(ymd.year()), int(unsigned(ymd.month())), int(unsigned(ymd.day())),
           (int)hms.hours().count(), (int)hms.minutes().count(),
           (int)hms.seconds().count(), ms};
 }
@@ -286,6 +286,8 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   std::vector<double> fill_ts, fill_px;
   std::vector<double> cancel_ts, cancel_px;
   std::vector<double> add_ts, add_px;
+  std::vector<double> trade_buy_ts, trade_buy_px;   // T/S: buyer hit ask → green
+  std::vector<double> trade_sell_ts, trade_sell_px; // T/B: seller hit bid → red
 
   times.reserve(history.size());
   bids.reserve(history.size());
@@ -305,11 +307,18 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
     }
 
     // Filter events for markers
-    if (pt.action == 'F' || pt.action == 'T') {
+    if (pt.action == 'F') {
       fill_ts.push_back(pt.ts);
-      // If it was a bid fill, it should be at the OLD bid
-      // If it was an ask fill, it should be at the OLD ask
       fill_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask);
+    } else if (pt.action == 'T') {
+      double px = pt.side == 'B' ? pt.pre_bid : pt.pre_ask;
+      if (pt.side == 'S') {
+        trade_buy_ts.push_back(pt.ts);   // buyer aggressor hit ask
+        trade_buy_px.push_back(px);
+      } else if (pt.side == 'B') {
+        trade_sell_ts.push_back(pt.ts);  // seller aggressor hit bid
+        trade_sell_px.push_back(px);
+      }
     } else if (pt.action == 'C') {
       cancel_ts.push_back(pt.ts);
       cancel_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask);
@@ -341,11 +350,9 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
 
   ImGui::SliderFloat("Window (s)", &m_window_secs, 10.0f, 600.0f, "%.0fs");
   ImGui::SameLine();
-  ImGui::Checkbox("Fills", &m_show_fills);
+  ImGui::Checkbox("Order Events", &m_show_order_events);
   ImGui::SameLine();
-  ImGui::Checkbox("Cancels", &m_show_cancels);
-  ImGui::SameLine();
-  ImGui::Checkbox("Adds", &m_show_adds);
+  ImGui::Checkbox("Trades", &m_show_trades);
 
   const ImGuiCond x_cond = m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once;
   const ImGuiCond y_cond = m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once;
@@ -408,26 +415,40 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
     ImPlot::PlotLine("Ask", times.data(), asks.data(), n);
 
     // Event markers
-    if (m_show_fills && !fill_ts.empty()) {
+    if (m_show_order_events && !fill_ts.empty()) {
       ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f,
-                                 ImVec4(1.0f, 0.88f, 0.1f, 1.0f), 1.0f,
-                                 ImVec4(1.0f, 0.88f, 0.1f, 1.0f));
+                                 ImVec4(0.85f, 0.3f, 0.9f, 1.0f), 1.0f,
+                                 ImVec4(0.85f, 0.3f, 0.9f, 1.0f));
       ImPlot::PlotScatter("Fills", fill_ts.data(), fill_px.data(),
                           (int)fill_ts.size());
     }
-    if (m_show_cancels && !cancel_ts.empty()) {
+    if (m_show_order_events && !cancel_ts.empty()) {
       ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 3.0f,
-                                 ImVec4(0.9f, 0.2f, 0.2f, 0.8f), 1.0f,
-                                 ImVec4(0.9f, 0.2f, 0.2f, 0.4f));
+                                 ImVec4(0.9f, 0.4f, 0.75f, 0.8f), 1.0f,
+                                 ImVec4(0.9f, 0.4f, 0.75f, 0.4f));
       ImPlot::PlotScatter("Cancels", cancel_ts.data(), cancel_px.data(),
                           (int)cancel_ts.size());
     }
-    if (m_show_adds && !add_ts.empty()) {
+    if (m_show_order_events && !add_ts.empty()) {
       ImPlot::SetNextMarkerStyle(ImPlotMarker_Up, 3.0f,
-                                 ImVec4(0.2f, 0.9f, 0.2f, 0.8f), 1.0f,
-                                 ImVec4(0.2f, 0.9f, 0.2f, 0.4f));
+                                 ImVec4(0.7f, 0.2f, 0.9f, 0.8f), 1.0f,
+                                 ImVec4(0.7f, 0.2f, 0.9f, 0.4f));
       ImPlot::PlotScatter("Adds", add_ts.data(), add_px.data(),
                           (int)add_ts.size());
+    }
+    if (m_show_trades && !trade_buy_ts.empty()) {
+      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f,
+                                 ImVec4(0.15f, 0.85f, 0.3f, 1.0f), 1.0f,
+                                 ImVec4(0.15f, 0.85f, 0.3f, 0.6f));
+      ImPlot::PlotScatter("Trade (buy)", trade_buy_ts.data(), trade_buy_px.data(),
+                          (int)trade_buy_ts.size());
+    }
+    if (m_show_trades && !trade_sell_ts.empty()) {
+      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f,
+                                 ImVec4(0.9f, 0.25f, 0.25f, 1.0f), 1.0f,
+                                 ImVec4(0.9f, 0.25f, 0.25f, 0.6f));
+      ImPlot::PlotScatter("Trade (sell)", trade_sell_ts.data(), trade_sell_px.data(),
+                          (int)trade_sell_ts.size());
     }
 
     // Current-position cursor

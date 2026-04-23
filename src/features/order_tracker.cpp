@@ -210,6 +210,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
   }
 
   feature_records_.push_back(FeatureRecord{
+      order.order_id,
       delta_t,
       order.induced_imbalance,
       static_cast<double>(order.volume_ahead),

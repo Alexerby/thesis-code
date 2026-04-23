@@ -31,9 +31,8 @@ class Dashboard {
 
   // Visual toggles
 
-  bool m_show_fills = true;
-  bool m_show_cancels = false;
-  bool m_show_adds = false;
+  bool m_show_order_events = true;
+  bool m_show_trades       = true;
 
   char m_jump_time[32] = "2023-05-30 09:30:00";
   char m_range_start[32] = "2023-05-30 09:30:00";
