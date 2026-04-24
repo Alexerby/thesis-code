@@ -137,6 +137,7 @@ void OrderTracker::Fill(const db::MboMsg &mbo) {
     Reconcile(mbo);
   }
 }
+
 void OrderTracker::Cancel(const db::MboMsg &mbo) {
   if (!mbo.flags.IsLast()) {  // More messages expected for this OrderID
     // Pure Cancel: Reduce OrderMap size directly via OrderID
@@ -190,7 +191,7 @@ double OrderTracker::OrderDeltaT(const Order &order, const db::MboMsg &mbo) cons
 
 void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
                                      CancelType cancel_type) {
-  double delta_t = OrderDeltaT(order, mbo);
+  double order_lifetime_ns = OrderDeltaT(order, mbo);
 
   // Override using cross-event fill history. staged_vol (pending_volume_map_)
   // only covers fills within the current event; total_filled persists across
@@ -201,7 +202,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
   double spread_bps = 0.0;
   double mid_price = 0.0;
   auto [bid, ask] = market_.AggregatedBbo(mbo.hd.instrument_id);
-  if (bid && ask) {
+  if (bid && ask && ask.price > bid.price) {
     double mid_raw = static_cast<double>(bid.price + ask.price) / 2.0;
     if (mid_raw > 0.0) {
       spread_bps = static_cast<double>(ask.price - bid.price) / mid_raw * 10000.0;
@@ -211,7 +212,7 @@ void OrderTracker::EmitFeatureRecord(const Order &order, const db::MboMsg &mbo,
 
   feature_records_.push_back(FeatureRecord{
       order.order_id,
-      delta_t,
+      order_lifetime_ns,
       order.induced_imbalance,
       static_cast<double>(order.volume_ahead),
       order.relative_size,

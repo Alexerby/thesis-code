@@ -49,7 +49,7 @@ enum class CancelType : uint8_t { Pure = 0, Fill = 1 };
  */
 struct FeatureRecord {
   uint64_t order_id{0};      ///< Order ID (primary key)
-  double delta_t;            ///< \Delta t_i
+  double order_lifetime_ns;  ///< \Delta t_i — elapsed ns between add and cancel (matching-engine clock)
   double induced_imbalance;  ///< \Delta \mathcal{I}_i
   double volume_ahead;       ///< Total volume between order and BBO at add-time 
                              ///< (computed by Book::GetVolumeAhead)
@@ -77,7 +77,7 @@ struct FeatureDef {
 };
 
 inline const FeatureDef kFeatures[] = {
-    {"delta_t", [](const FeatureRecord &r) { return r.delta_t; }},  // 0
+    {"order_lifetime_ns", [](const FeatureRecord &r) { return r.order_lifetime_ns; }},  // 0
     {"volume_ahead",
      [](const FeatureRecord &r) { return r.volume_ahead; }},  // 1
     {"induced_imbalance",

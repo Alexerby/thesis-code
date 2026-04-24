@@ -247,7 +247,7 @@ void run_extract_features(const Config &cfg) {
   csv.Write("order_id");
   csv.Write("ts_recv");
   csv.Write("cancel_type");
-  csv.Write("delta_t");
+  csv.Write("order_lifetime_ns");
   csv.Write("volume_ahead");
   csv.Write("induced_imbalance");
   csv.Write("relative_size");
@@ -259,7 +259,7 @@ void run_extract_features(const Config &cfg) {
     csv.Write(r.order_id);
     csv.Write(r.ts_recv);
     csv.Write(static_cast<int>(r.cancel_type));
-    csv.Write(r.delta_t);
+    csv.Write(r.order_lifetime_ns);
     csv.Write(r.volume_ahead);
     csv.Write(r.induced_imbalance);
     csv.Write(r.relative_size);
