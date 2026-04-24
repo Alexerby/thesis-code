@@ -155,6 +155,18 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   SessionStats stats = controller.GetSessionStats();
   PlaybackState state = controller.GetPlaybackState();
 
+  if (!m_times_initialized && stats.start_ts > 0) {
+    auto t0 = ToET(static_cast<double>(stats.start_ts) / 1e9);
+    auto t1 = ToET(static_cast<double>(stats.end_ts)   / 1e9);
+    std::snprintf(m_jump_time,   sizeof(m_jump_time),
+                  "%04d-%02d-%02d %02d:%02d:%02d", t0.y, t0.mon, t0.d, t0.h, t0.m, t0.s);
+    std::snprintf(m_range_start, sizeof(m_range_start),
+                  "%04d-%02d-%02d %02d:%02d:%02d", t0.y, t0.mon, t0.d, t0.h, t0.m, t0.s);
+    std::snprintf(m_range_end,   sizeof(m_range_end),
+                  "%04d-%02d-%02d %02d:%02d:%02d", t1.y, t1.mon, t1.d, t1.h, t1.m, t1.s);
+    m_times_initialized = true;
+  }
+
   if (state == PlaybackState::Paused) {
     if (ImGui::Button(" Play "))
       controller.SetPlaybackState(PlaybackState::Playing);
@@ -192,15 +204,25 @@ void Dashboard::RenderPlaybackControls(ReplayController &controller) {
   ImGui::SetNextItemWidth(170);
   ImGui::InputText("##RangeEnd", m_range_end, IM_ARRAYSIZE(m_range_end));
   ImGui::SameLine(0, 10);
+  ImGui::SameLine(0, 8);
+  ImGui::SetNextItemWidth(60);
+  ImGui::InputInt("##Pad", &m_range_context_secs, 0, 0);
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Context seconds on each side of the range");
+  ImGui::SameLine(0, 4);
+  ImGui::TextDisabled("s");
+  ImGui::SameLine(0, 10);
   if (ImGui::Button("Play Range")) {
     uint64_t anchor = stats.current_ts ? stats.current_ts : stats.start_ts;
     uint64_t t0 = TimeStringToNanos(m_range_start, anchor);
     uint64_t t1 = TimeStringToNanos(m_range_end,   anchor);
     if (t0 > 0 && t1 > t0) {
-      controller.PlayRange(t0, t1);
-      float range_secs = static_cast<float>((t1 - t0) / 1e9);
-      m_window_secs  = 120.0f + range_secs + 120.0f + 10.0f;
-      m_spread_follow = true;
+      const uint64_t context_ns = static_cast<uint64_t>(m_range_context_secs) * 1'000'000'000ULL;
+      controller.PlayRange(t0, t1, context_ns);
+      // Pin the chart to [t0 - pad, t1 + pad] — view does not scroll
+      m_reset_x_min   = static_cast<double>(t0) / 1e9 - m_range_context_secs;
+      m_reset_x_max   = static_cast<double>(t1) / 1e9 + m_range_context_secs;
+      m_reset_view    = true;
+      m_spread_follow = false;
     }
   }
 
@@ -270,192 +292,215 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   ImGui::BeginChild("SpreadGraph", ImVec2(width, height), true);
 
   auto history = controller.GetSpreadHistory();
-
   if (history.empty()) {
     ImGui::TextDisabled("Press Play to begin...");
     ImGui::EndChild();
     return;
   }
 
-  // Rolling window: show last 30 seconds of market time
   const double t_latest = history.back().ts;
-  const double t_min_window = t_latest - m_window_secs;
 
-  // Filter to only points in (or just before) the window for tight y-autofit
+  // Data load window: in follow mode use rolling window; in free mode load from
+  // last-known view start so the visible range is always fully populated.
+  double t_min_load;
+  if (m_spread_follow) {
+    t_min_load = t_latest - m_window_secs - 1.0;
+  } else if (m_view_x_min > 0.0) {
+    t_min_load = m_view_x_min - 1.0;
+  } else {
+    t_min_load = history.front().ts - 1.0;
+  }
+
   std::vector<double> times, bids, asks;
   std::vector<double> fill_ts, fill_px;
   std::vector<double> cancel_ts, cancel_px;
   std::vector<double> add_ts, add_px;
-  std::vector<double> trade_buy_ts, trade_buy_px;   // T/S: buyer hit ask → green
-  std::vector<double> trade_sell_ts, trade_sell_px; // T/B: seller hit bid → red
+  std::vector<double> trade_buy_ts, trade_buy_px;
+  std::vector<double> trade_sell_ts, trade_sell_px;
 
-  times.reserve(history.size());
-  bids.reserve(history.size());
-  asks.reserve(history.size());
+  times.reserve(4096);
+  bids.reserve(4096);
+  asks.reserve(4096);
 
-  // Efficient Binary Search for the window start: O(log N) instead of O(N)
-  auto it_start = std::lower_bound(history.begin(), history.end(), t_min_window - 1.0,
+  auto it_start = std::lower_bound(history.begin(), history.end(), t_min_load,
                                    [](const SpreadPoint &pt, double val) { return pt.ts < val; });
-
   for (auto it = it_start; it != history.end(); ++it) {
     const auto &pt = *it;
-
     if (pt.bid > 0.0 && pt.ask > 0.0) {
       times.push_back(pt.ts);
       bids.push_back(pt.bid);
       asks.push_back(pt.ask);
     }
-
-    // Filter events for markers
-    if (pt.action == 'F') {
-      fill_ts.push_back(pt.ts);
-      fill_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask);
-    } else if (pt.action == 'T') {
+    if      (pt.action == 'F') { fill_ts.push_back(pt.ts);   fill_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask); }
+    else if (pt.action == 'C') { cancel_ts.push_back(pt.ts); cancel_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask); }
+    else if (pt.action == 'A') { add_ts.push_back(pt.ts);    add_px.push_back(pt.side == 'B' ? pt.bid : pt.ask); }
+    else if (pt.action == 'T') {
       double px = pt.side == 'B' ? pt.pre_bid : pt.pre_ask;
-      if (pt.side == 'S') {
-        trade_buy_ts.push_back(pt.ts);   // buyer aggressor hit ask
-        trade_buy_px.push_back(px);
-      } else if (pt.side == 'B') {
-        trade_sell_ts.push_back(pt.ts);  // seller aggressor hit bid
-        trade_sell_px.push_back(px);
-      }
-    } else if (pt.action == 'C') {
-      cancel_ts.push_back(pt.ts);
-      cancel_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask);
-    } else if (pt.action == 'A') {
-      add_ts.push_back(pt.ts);
-      add_px.push_back(pt.side == 'B' ? pt.bid : pt.ask); // Add is on NEW state
+      if      (pt.side == 'S') { trade_buy_ts.push_back(pt.ts);  trade_buy_px.push_back(px); }
+      else if (pt.side == 'B') { trade_sell_ts.push_back(pt.ts); trade_sell_px.push_back(px); }
     }
   }
 
   SessionStats stats = controller.GetSessionStats();
-  double current_ts_s = static_cast<double>(stats.current_ts) / 1e9;
+  const double current_ts_s    = static_cast<double>(stats.current_ts) / 1e9;
+  const double session_start_s = static_cast<double>(stats.start_ts)   / 1e9;
+  const double session_end_s   = static_cast<double>(stats.end_ts)     / 1e9;
 
-  // Y bounds driven only by BBO lines — event markers can be at deep prices
-  // (e.g. $5.00 asks) that would blow out the scale if included here.
   double min_p = 1e18, max_p = -1e18;
   for (double b : bids) if (b > 0) min_p = std::min(min_p, b);
   for (double a : asks) if (a > 0) max_p = std::max(max_p, a);
+  if (min_p > max_p) { min_p = 0; max_p = 100; }
 
-  if (min_p > max_p) { min_p = 0; max_p = 100; } // Fallback
-
-  // Visual Controls
+  // ── Controls row ────────────────────────────────────────────────────────
   ImGui::Checkbox("Follow", &m_spread_follow);
-  if (!m_spread_follow) {
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(120);
-  }
-  ImGui::SameLine(0, 20);
-  ImGui::SetNextItemWidth(120);
-
-  ImGui::SliderFloat("Window (s)", &m_window_secs, 10.0f, 600.0f, "%.0fs");
-  ImGui::SameLine();
-  ImGui::Checkbox("Order Events", &m_show_order_events);
+  ImGui::SameLine(0, 16);
+  ImGui::Checkbox("Events", &m_show_order_events);
   ImGui::SameLine();
   ImGui::Checkbox("Trades", &m_show_trades);
+  ImGui::SameLine(0, 20);
 
-  const ImGuiCond x_cond = m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once;
-  const ImGuiCond y_cond = m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once;
+  // Helper: set a one-shot view reset
+  auto zoom_to = [&](double x0, double x1) {
+    m_reset_x_min   = x0;
+    m_reset_x_max   = x1;
+    m_reset_view    = true;
+    m_spread_follow = false;
+  };
+
+  if (ImGui::Button("5s"))  { m_window_secs =   5.f; m_spread_follow = true; } ImGui::SameLine();
+  if (ImGui::Button("30s")) { m_window_secs =  30.f; m_spread_follow = true; } ImGui::SameLine();
+  if (ImGui::Button("2m"))  { m_window_secs = 120.f; m_spread_follow = true; } ImGui::SameLine();
+  if (ImGui::Button("10m")) { m_window_secs = 600.f; m_spread_follow = true; } ImGui::SameLine();
+  if (ImGui::Button("Full") && session_end_s > session_start_s)
+    zoom_to(session_start_s, session_end_s);
+
+  // LOD hint (uses previous-frame visible_secs so it's one frame delayed — imperceptible)
+  if (m_visible_secs > 601.0 && (m_show_order_events || m_show_trades)) {
+    ImGui::SameLine(0, 16);
+    ImGui::TextDisabled("(zoom < 5m for event markers)");
+  }
 
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(6, 6));
-  const float plot_h = height - 50.0f;
+  const float plot_h = height - 60.0f;
 
-  if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus)) {
-    ImPlot::SetupAxes("Time", "Price (USD)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+  // NoInputs disables ImPlot's built-in pan/zoom/select so LMB is fully
+  // owned by the custom rubber-band selection below.
+  if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus | ImPlotFlags_NoInputs)) {
+    ImPlot::SetupAxes("Time", "Price (USD)");
     ImPlot::SetupAxisFormat(ImAxis_X1, TimeAxisFormatter);
-    ImPlot::SetupAxisLimits(ImAxis_X1, t_min_window, t_latest + 0.5, x_cond);
 
-    if (m_spread_follow) {
-      double padding = (max_p - min_p) * 0.1;
-      if (padding < 1e-6) padding = (max_p > 0 ? max_p : 1.0) * 0.001;
-      ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - padding, max_p + padding, ImGuiCond_Always);
-    } else if (!times.empty()) {
-      double mid = (bids.back() + asks.back()) * 0.5;
-      ImPlot::SetupAxisLimits(ImAxis_Y1, mid - m_y_range * 0.5, mid + m_y_range * 0.5, y_cond);
+    // X-axis limits
+    if (m_reset_view) {
+      ImPlot::SetupAxisLimits(ImAxis_X1, m_reset_x_min, m_reset_x_max, ImGuiCond_Always);
+      m_reset_view = false;
+    } else if (m_spread_follow) {
+      ImPlot::SetupAxisLimits(ImAxis_X1, t_latest - m_window_secs, t_latest + 0.5, ImGuiCond_Always);
+    }
+    // else: free mode — ImPlot retains its own limits from last frame
+
+    // Y-axis: always auto-fit to visible BBO data
+    if (min_p < max_p) {
+      double pad = std::max((max_p - min_p) * 0.1, max_p * 0.0005);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - pad, max_p + pad,
+                              m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once);
     }
 
-    const int n = static_cast<int>(times.size());
+    // Read current limits — used for LOD, shading, and rubber-band drawing
+    const ImPlotRect limits = ImPlot::GetPlotLimits();
+    m_view_x_min   = limits.X.Min;
+    m_view_x_max   = limits.X.Max;
+    m_visible_secs = limits.X.Max - limits.X.Min;
+    const double plot_min = limits.Y.Min;
+    const double plot_max = limits.Y.Max;
+    const int    n        = static_cast<int>(times.size());
 
-    // Shading: Red above Ask, Green below Bid
-    ImPlotRect limits = ImPlot::GetPlotLimits();
-    double plot_min = limits.Y.Min;
-    double plot_max = limits.Y.Max;
-
+    // Spread shading
     if (n > 0) {
-      std::vector<double> y_top(n, plot_max);
-      std::vector<double> y_bottom(n, plot_min);
-
+      std::vector<double> y_top(n, plot_max), y_bot(n, plot_min);
       ImPlot::SetNextFillStyle(ImVec4(0.9f, 0.25f, 0.25f, 0.15f));
       ImPlot::PlotShaded("##AskShade", times.data(), asks.data(), y_top.data(), n);
-
       ImPlot::SetNextFillStyle(ImVec4(0.15f, 0.85f, 0.3f, 0.15f));
-      ImPlot::PlotShaded("##BidShade", times.data(), bids.data(), y_bottom.data(), n);
+      ImPlot::PlotShaded("##BidShade", times.data(), bids.data(), y_bot.data(), n);
     }
 
-    // Range highlight band
+    // Range highlight
     auto hl = controller.GetRangeHighlight();
     if (hl.active) {
-      double xs[]    = {hl.start_s, hl.end_s};
-      double y_bot[] = {plot_min, plot_min};
-      double y_top[] = {plot_max, plot_max};
+      double xs[] = {hl.start_s, hl.end_s}, ry0[] = {plot_min, plot_min}, ry1[] = {plot_max, plot_max};
       ImPlot::SetNextFillStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.10f));
-      ImPlot::PlotShaded("##RangeHL", xs, y_bot, y_top, 2);
+      ImPlot::PlotShaded("##RangeHL", xs, ry0, ry1, 2);
       ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.60f), 1.5f);
       ImPlot::PlotInfLines("##RangeStart", &hl.start_s, 1);
       ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.85f, 0.0f, 0.60f), 1.5f);
       ImPlot::PlotInfLines("##RangeEnd", &hl.end_s, 1);
     }
 
-    // Bid (green)
+    // BBO lines — always rendered at any zoom level
     ImPlot::SetNextLineStyle(ImVec4(0.15f, 0.85f, 0.3f, 1.0f), 1.5f);
     ImPlot::PlotLine("Bid", times.data(), bids.data(), n);
-
-    // Ask (red)
     ImPlot::SetNextLineStyle(ImVec4(0.9f, 0.25f, 0.25f, 1.0f), 1.5f);
     ImPlot::PlotLine("Ask", times.data(), asks.data(), n);
 
-    // Event markers
-    if (m_show_order_events && !fill_ts.empty()) {
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f,
-                                 ImVec4(0.85f, 0.3f, 0.9f, 1.0f), 1.0f,
-                                 ImVec4(0.85f, 0.3f, 0.9f, 1.0f));
-      ImPlot::PlotScatter("Fills", fill_ts.data(), fill_px.data(),
-                          (int)fill_ts.size());
-    }
-    if (m_show_order_events && !cancel_ts.empty()) {
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 3.0f,
-                                 ImVec4(0.9f, 0.4f, 0.75f, 0.8f), 1.0f,
-                                 ImVec4(0.9f, 0.4f, 0.75f, 0.4f));
-      ImPlot::PlotScatter("Cancels", cancel_ts.data(), cancel_px.data(),
-                          (int)cancel_ts.size());
-    }
-    if (m_show_order_events && !add_ts.empty()) {
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Up, 3.0f,
-                                 ImVec4(0.7f, 0.2f, 0.9f, 0.8f), 1.0f,
-                                 ImVec4(0.7f, 0.2f, 0.9f, 0.4f));
-      ImPlot::PlotScatter("Adds", add_ts.data(), add_px.data(),
-                          (int)add_ts.size());
-    }
-    if (m_show_trades && !trade_buy_ts.empty()) {
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f,
-                                 ImVec4(0.15f, 0.85f, 0.3f, 1.0f), 1.0f,
-                                 ImVec4(0.15f, 0.85f, 0.3f, 0.6f));
-      ImPlot::PlotScatter("Trade (buy)", trade_buy_ts.data(), trade_buy_px.data(),
-                          (int)trade_buy_ts.size());
-    }
-    if (m_show_trades && !trade_sell_ts.empty()) {
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f,
-                                 ImVec4(0.9f, 0.25f, 0.25f, 1.0f), 1.0f,
-                                 ImVec4(0.9f, 0.25f, 0.25f, 0.6f));
-      ImPlot::PlotScatter("Trade (sell)", trade_sell_ts.data(), trade_sell_px.data(),
-                          (int)trade_sell_ts.size());
+    // LOD: suppress scatter markers when the window is too wide to be useful
+    if (m_visible_secs <= 601.0) {
+      if (m_show_order_events && !fill_ts.empty()) {
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(0.85f, 0.3f, 0.9f, 1.0f), 1.0f, ImVec4(0.85f, 0.3f, 0.9f, 1.0f));
+        ImPlot::PlotScatter("Fills", fill_ts.data(), fill_px.data(), (int)fill_ts.size());
+      }
+      if (m_show_order_events && !cancel_ts.empty()) {
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Square, 3.0f, ImVec4(0.9f, 0.4f, 0.75f, 0.8f), 1.0f, ImVec4(0.9f, 0.4f, 0.75f, 0.4f));
+        ImPlot::PlotScatter("Cancels", cancel_ts.data(), cancel_px.data(), (int)cancel_ts.size());
+      }
+      if (m_show_order_events && !add_ts.empty()) {
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Up, 3.0f, ImVec4(0.7f, 0.2f, 0.9f, 0.8f), 1.0f, ImVec4(0.7f, 0.2f, 0.9f, 0.4f));
+        ImPlot::PlotScatter("Adds", add_ts.data(), add_px.data(), (int)add_ts.size());
+      }
+      if (m_show_trades && !trade_buy_ts.empty()) {
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f, ImVec4(0.15f, 0.85f, 0.3f, 1.0f), 1.0f, ImVec4(0.15f, 0.85f, 0.3f, 0.6f));
+        ImPlot::PlotScatter("Trade (buy)", trade_buy_ts.data(), trade_buy_px.data(), (int)trade_buy_ts.size());
+      }
+      if (m_show_trades && !trade_sell_ts.empty()) {
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f, ImVec4(0.9f, 0.25f, 0.25f, 1.0f), 1.0f, ImVec4(0.9f, 0.25f, 0.25f, 0.6f));
+        ImPlot::PlotScatter("Trade (sell)", trade_sell_ts.data(), trade_sell_px.data(), (int)trade_sell_ts.size());
+      }
     }
 
-    // Current-position cursor
+    // Playback cursor
     if (current_ts_s > 0.0) {
       double pos[] = {current_ts_s};
       ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 1.0f, 0.55f), 1.5f);
       ImPlot::PlotInfLines("##cursor", pos, 1);
+    }
+
+    // ── Rubber-band time selection (LMB drag) ───────────────────────────
+    // Start: click inside the plot
+    if (!m_is_selecting && ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+      m_is_selecting    = true;
+      m_select_anchor_s = ImPlot::GetPlotMousePos().x;
+      m_select_cursor_s = m_select_anchor_s;
+    }
+    // Continue: update cursor while held (even if mouse leaves plot)
+    if (m_is_selecting) {
+      if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        if (ImPlot::IsPlotHovered())
+          m_select_cursor_s = ImPlot::GetPlotMousePos().x;
+
+        double sx0 = std::min(m_select_anchor_s, m_select_cursor_s);
+        double sx1 = std::max(m_select_anchor_s, m_select_cursor_s);
+        double sy0[] = {plot_min, plot_min}, sy1[] = {plot_max, plot_max}, sxs[] = {sx0, sx1};
+        ImPlot::SetNextFillStyle(ImVec4(0.45f, 0.65f, 1.0f, 0.18f));
+        ImPlot::PlotShaded("##Sel", sxs, sy0, sy1, 2);
+        ImPlot::SetNextLineStyle(ImVec4(0.55f, 0.75f, 1.0f, 0.9f), 1.2f);
+        ImPlot::PlotInfLines("##SelL", &sx0, 1);
+        ImPlot::SetNextLineStyle(ImVec4(0.55f, 0.75f, 1.0f, 0.9f), 1.2f);
+        ImPlot::PlotInfLines("##SelR", &sx1, 1);
+      } else {
+        // Released — apply if wide enough to be intentional (> 0.5 s)
+        if (std::abs(m_select_cursor_s - m_select_anchor_s) > 0.5)
+          zoom_to(std::min(m_select_anchor_s, m_select_cursor_s),
+                  std::max(m_select_anchor_s, m_select_cursor_s));
+        m_is_selecting = false;
+      }
     }
 
     ImPlot::EndPlot();

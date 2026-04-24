@@ -65,7 +65,8 @@ class ReplayController {
 
   // Navigation
   void SeekToTime(uint64_t target_ts);
-  void PlayRange(uint64_t start_ts, uint64_t end_ts);
+  void PlayRange(uint64_t start_ts, uint64_t end_ts,
+                 uint64_t context_ns = 120ULL * 1'000'000'000ULL);
   SessionStats GetSessionStats();
 
   // Ticker Management (one logical ticker may span multiple instrument IDs across days)

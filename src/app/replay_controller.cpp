@@ -107,13 +107,11 @@ std::vector<OrderEvent> ReplayController::GetOrderEvents() {
   return {m_order_events.begin(), m_order_events.end()};
 }
 
-void ReplayController::PlayRange(uint64_t start_ts, uint64_t end_ts) {
-  constexpr uint64_t kPreBufferNs  = 120ULL * 1'000'000'000ULL;
-  constexpr uint64_t kPostBufferNs = 120ULL * 1'000'000'000ULL;
+void ReplayController::PlayRange(uint64_t start_ts, uint64_t end_ts, uint64_t context_ns) {
   m_range_highlight_start = start_ts;
   m_range_highlight_end   = end_ts;
-  uint64_t seek_to  = (start_ts > kPreBufferNs) ? start_ts - kPreBufferNs : start_ts;
-  uint64_t pause_at = end_ts + kPostBufferNs;
+  uint64_t seek_to  = (context_ns < start_ts) ? start_ts - context_ns : 0;
+  uint64_t pause_at = end_ts + context_ns;
   SeekToTime(seek_to);   // clears m_range_end_ts
   m_range_end_ts = pause_at;
 }
