@@ -36,6 +36,7 @@ struct Config {
   std::string start_time;
   std::string end_time;
   std::string fetch_output_path;
+  bool auto_confirm = false;
 };
 
 void print_usage() {
@@ -62,7 +63,8 @@ void print_usage() {
       << "  --start   <ISO8601>          Start time, e.g. 2026-03-18T00:00:00Z\n"
       << "  --end     <ISO8601>          End time,   e.g. 2026-03-19T00:00:00Z\n"
       << "  --output  <path>             Output path (default: "
-         "./data/multi_instrument.dbn.zst)\n";
+         "./data/multi_instrument.dbn.zst)\n"
+  << "  --yes                        Auto-confirm if estimated cost < $5\n";
 }
 
 Config parse_args(int argc, char **argv) {
@@ -96,6 +98,8 @@ Config parse_args(int argc, char **argv) {
         cfg.end_time = argv[++i];
       } else if (arg == "--output" && i + 1 < argc) {
         cfg.fetch_output_path = argv[++i];
+      } else if (arg == "--yes") {
+        cfg.auto_confirm = true;
       } else {
         throw std::runtime_error("Unknown or malformed option: " + arg);
       }
@@ -318,12 +322,16 @@ void run_downloader(const Config &cfg) {
     throw std::runtime_error("Estimated cost exceeds $" +
                              std::to_string(MAX_COST_USD) + " limit.");
 
-  std::cout << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
-  std::string response;
-  std::getline(std::cin, response);
-  if (response != "y" && response != "Y") {
-    std::cout << "Aborted.\n";
-    return;
+  if (cfg.auto_confirm) {
+    std::cout << "Auto-confirming (--yes, cost under $" << MAX_COST_USD << ").\n";
+  } else {
+    std::cout << "\nWARN: This operation will incur real-world costs. Proceed? [y/N]: ";
+    std::string response;
+    std::getline(std::cin, response);
+    if (response != "y" && response != "Y") {
+      std::cout << "Aborted.\n";
+      return;
+    }
   }
 
   fs::path out_path(cfg.fetch_output_path);

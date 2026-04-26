@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <ctime>
 #include <iomanip>
+#include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -130,9 +133,16 @@ void Dashboard::Render(const MarketSnapshot &snapshot,
     const float sidebar_w = 400.0f;
     const float graph_w = avail_x - sidebar_w - ImGui::GetStyle().ItemSpacing.x;
     
-    // Main Area: Spread Graph
-    RenderSpreadGraph(controller, graph_w, avail_y);
-    
+    // Main Area: Price chart (top) + Volume bars (bottom)
+    ImGui::BeginGroup();
+    {
+      const float vol_h  = 130.0f;
+      const float spr_h  = avail_y - vol_h - ImGui::GetStyle().ItemSpacing.y;
+      RenderSpreadGraph(controller, graph_w, spr_h);
+      RenderVolumeChart(controller, graph_w, vol_h);
+    }
+    ImGui::EndGroup();
+
     ImGui::SameLine();
     
     // Sidebar Area: Events (Top) and Book (Bottom)
@@ -331,13 +341,12 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
       bids.push_back(pt.bid);
       asks.push_back(pt.ask);
     }
-    if      (pt.action == 'F') { fill_ts.push_back(pt.ts);   fill_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask); }
-    else if (pt.action == 'C') { cancel_ts.push_back(pt.ts); cancel_px.push_back(pt.side == 'B' ? pt.pre_bid : pt.pre_ask); }
-    else if (pt.action == 'A') { add_ts.push_back(pt.ts);    add_px.push_back(pt.side == 'B' ? pt.bid : pt.ask); }
+    if      (pt.action == 'F') { fill_ts.push_back(pt.ts);   fill_px.push_back(pt.price); }
+    else if (pt.action == 'C') { cancel_ts.push_back(pt.ts); cancel_px.push_back(pt.price); }
+    else if (pt.action == 'A') { add_ts.push_back(pt.ts);    add_px.push_back(pt.price); }
     else if (pt.action == 'T') {
-      double px = pt.side == 'B' ? pt.pre_bid : pt.pre_ask;
-      if      (pt.side == 'S') { trade_buy_ts.push_back(pt.ts);  trade_buy_px.push_back(px); }
-      else if (pt.side == 'B') { trade_sell_ts.push_back(pt.ts); trade_sell_px.push_back(px); }
+      if      (pt.side == 'S') { trade_buy_ts.push_back(pt.ts);  trade_buy_px.push_back(pt.price); }
+      else if (pt.side == 'B') { trade_sell_ts.push_back(pt.ts); trade_sell_px.push_back(pt.price); }
     }
   }
 
@@ -350,6 +359,7 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   for (double b : bids) if (b > 0) min_p = std::min(min_p, b);
   for (double a : asks) if (a > 0) max_p = std::max(max_p, a);
   if (min_p > max_p) { min_p = 0; max_p = 100; }
+
 
   // ── Controls row ────────────────────────────────────────────────────────
   ImGui::Checkbox("Follow", &m_spread_follow);
@@ -383,11 +393,13 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
   ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(6, 6));
   const float plot_h = height - 60.0f;
 
-  // NoInputs disables ImPlot's built-in pan/zoom/select so LMB is fully
-  // owned by the custom rubber-band selection below.
-  if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus | ImPlotFlags_NoInputs)) {
-    ImPlot::SetupAxes("Time", "Price (USD)");
+  // NoBoxSelect disables ImPlot's LMB box-zoom so LMB is fully owned by the
+  // rubber-band below. Scroll/RMB-pan are handled by ImPlot natively.
+  if (ImPlot::BeginPlot("##SpreadChart", ImVec2(-1, plot_h), ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect)) {
+    // Y axis locked so scroll/pan only affects the time (X) axis
+    ImPlot::SetupAxes("Time", "Price (USD)", ImPlotAxisFlags_None, ImPlotAxisFlags_Lock);
     ImPlot::SetupAxisFormat(ImAxis_X1, TimeAxisFormatter);
+    ImPlot::SetupAxisLinks(ImAxis_X1, &m_view_x_min, &m_view_x_max);
 
     // X-axis limits
     if (m_reset_view) {
@@ -398,11 +410,18 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
     }
     // else: free mode — ImPlot retains its own limits from last frame
 
-    // Y-axis: always auto-fit to visible BBO data
-    if (min_p < max_p) {
+    // Y-axis: manual override wins; follow mode auto-fits; free mode sets once
+    if (m_spread_follow) {
+      if (min_p < max_p) {
+        double pad = std::max((max_p - min_p) * 0.1, max_p * 0.0005);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - pad, max_p + pad, ImGuiCond_Always);
+      }
+    } else if (m_reset_y) {
+      ImPlot::SetupAxisLimits(ImAxis_Y1, m_reset_y_min, m_reset_y_max, ImGuiCond_Always);
+      m_reset_y = false;
+    } else if (min_p < max_p) {
       double pad = std::max((max_p - min_p) * 0.1, max_p * 0.0005);
-      ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - pad, max_p + pad,
-                              m_spread_follow ? ImGuiCond_Always : ImGuiCond_Once);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, min_p - pad, max_p + pad, ImGuiCond_Once);
     }
 
     // Read current limits — used for LOD, shading, and rubber-band drawing
@@ -410,6 +429,8 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
     m_view_x_min   = limits.X.Min;
     m_view_x_max   = limits.X.Max;
     m_visible_secs = limits.X.Max - limits.X.Min;
+    m_view_y_min   = limits.Y.Min;
+    m_view_y_max   = limits.Y.Max;
     const double plot_min = limits.Y.Min;
     const double plot_max = limits.Y.Max;
     const int    n        = static_cast<int>(times.size());
@@ -503,9 +524,92 @@ void Dashboard::RenderSpreadGraph(ReplayController &controller, float width, flo
       }
     }
 
+    // Scroll on plot area: exit follow mode so ImPlot zooms X (Y stays locked)
+    if (ImPlot::IsPlotHovered() && ImGui::GetIO().MouseWheel != 0.0f)
+      m_spread_follow = false;
+
+    // Scroll on Y axis: manual Y zoom centered on current mid-price
+    if (ImPlot::IsAxisHovered(ImAxis_Y1)) {
+      float wheel = ImGui::GetIO().MouseWheel;
+      if (wheel != 0.0f) {
+        double center = (m_view_y_min + m_view_y_max) * 0.5;
+        double half   = (m_view_y_max - m_view_y_min) * 0.5;
+        double factor = (wheel > 0) ? 0.7 : (1.0 / 0.7);
+        m_reset_y_min   = center - half * factor;
+        m_reset_y_max   = center + half * factor;
+        m_reset_y       = true;
+        m_spread_follow = false;
+      }
+    }
+
     ImPlot::EndPlot();
   }
 
+  ImPlot::PopStyleVar();
+  ImGui::EndChild();
+}
+
+void Dashboard::RenderVolumeChart(ReplayController &controller, float width, float height) {
+  ImGui::BeginChild("VolumeChart", ImVec2(width, height), true);
+
+  auto history = controller.GetSpreadHistory();
+  if (history.empty()) {
+    ImGui::TextDisabled("No data...");
+    ImGui::EndChild();
+    return;
+  }
+
+  // Bucket traded volume into 1-second intervals, split by aggressor side.
+  // In DBN MBO, 'side' is the resting side: 'S' resting = buy aggressor, 'B' resting = sell aggressor.
+  const double bucket_s = 1.0;
+  std::map<int64_t, double> buy_buckets, sell_buckets;
+
+  const double load_min = (m_view_x_min > 0.0) ? m_view_x_min - 60.0 : history.front().ts;
+  const double load_max = (m_view_x_max > 0.0) ? m_view_x_max + 60.0 : history.back().ts;
+
+  for (const auto &pt : history) {
+    if (pt.action != 'T' || pt.size == 0) continue;
+    if (pt.ts < load_min || pt.ts > load_max) continue;
+    int64_t key = static_cast<int64_t>(std::floor(pt.ts / bucket_s));
+    if (pt.side == 'S')
+      buy_buckets[key]  += pt.size;
+    else if (pt.side == 'B')
+      sell_buckets[key] += pt.size;
+  }
+
+  std::vector<double> buy_ts, buy_vol, sell_ts, sell_vol;
+  {
+    std::set<int64_t> all_keys;
+    for (auto &[k, v] : buy_buckets)  all_keys.insert(k);
+    for (auto &[k, v] : sell_buckets) all_keys.insert(k);
+    for (int64_t k : all_keys) {
+      double t = k * bucket_s + bucket_s * 0.5;
+      if (auto it = buy_buckets.find(k);  it != buy_buckets.end())  { buy_ts.push_back(t);  buy_vol.push_back(it->second); }
+      if (auto it = sell_buckets.find(k); it != sell_buckets.end()) { sell_ts.push_back(t); sell_vol.push_back(it->second); }
+    }
+  }
+
+  ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(6, 4));
+  if (ImPlot::BeginPlot("##Volume", ImVec2(-1, -1),
+                        ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect)) {
+    ImPlot::SetupAxes(nullptr, "Vol",
+                      ImPlotAxisFlags_NoTickLabels,
+                      ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
+    ImPlot::SetupAxisFormat(ImAxis_X1, TimeAxisFormatter);
+    ImPlot::SetupAxisLinks(ImAxis_X1, &m_view_x_min, &m_view_x_max);
+
+    const double bar_w = bucket_s * 0.45;
+    if (!buy_ts.empty()) {
+      ImPlot::SetNextFillStyle(ImVec4(0.15f, 0.85f, 0.3f, 0.75f));
+      ImPlot::PlotBars("Buy",  buy_ts.data(),  buy_vol.data(),  (int)buy_ts.size(),  bar_w);
+    }
+    if (!sell_ts.empty()) {
+      ImPlot::SetNextFillStyle(ImVec4(0.9f, 0.25f, 0.25f, 0.75f));
+      ImPlot::PlotBars("Sell", sell_ts.data(), sell_vol.data(), (int)sell_ts.size(), bar_w);
+    }
+
+    ImPlot::EndPlot();
+  }
   ImPlot::PopStyleVar();
   ImGui::EndChild();
 }

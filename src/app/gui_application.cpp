@@ -29,19 +29,7 @@ static uint64_t MarketOpenNanos(uint64_t file_start_ns) {
       duration_cast<nanoseconds>(open_utc.time_since_epoch()).count());
 }
 
-// Known event files — shown as quick-pick buttons in the file picker
-static constexpr const char *kDataRoot = "/home/aleri/git-repos/thesis-code/data";
-
-static const struct { const char *label; const char *subpath; } kKnownFiles[] = {
-    {"Oct 25 2022 (event)",    "MANIPULATION_WINDOWS/MULN_20221025.dbn.zst"},
-    {"Dec 15 2022 (event)",    "MANIPULATION_WINDOWS/MULN_20221215.dbn.zst"},
-    {"Jun 06 2023 (event)",    "MANIPULATION_WINDOWS/MULN_20230606.dbn.zst"},
-    {"Aug 17 2023 (event)",    "MANIPULATION_WINDOWS/MULN_20230817.dbn.zst"},
-    {"Oct 25 2022 (baseline)", "BASELINE/MULN_20221025_BASELINE.dbn.zst"},
-    {"Dec 15 2022 (baseline)", "BASELINE/MULN_20221215_BASELINE.dbn.zst"},
-    {"Jun 06 2023 (baseline)", "BASELINE/MULN_20230606_BASELINE.dbn.zst"},
-    {"Aug 17 2023 (baseline)", "BASELINE/MULN_20230817_BASELINE.dbn.zst"},
-};
+static constexpr const char *kDataRoot = "data";
 
 Application::Application(const Config &cfg) : m_cfg(cfg) {
   InitGLFW();
@@ -108,7 +96,7 @@ void Application::InitImGui() {
 
 void Application::RenderFilePicker() {
   ImGuiIO &io = ImGui::GetIO();
-  const float W = 560.0f, H = 340.0f;
+  const float W = 560.0f, H = 420.0f;
   ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x - W) * 0.5f,
                                  (io.DisplaySize.y - H) * 0.5f),
                           ImGuiCond_Always);
@@ -117,39 +105,53 @@ void Application::RenderFilePicker() {
                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
-  ImGui::TextDisabled("Quick pick:");
-  ImGui::Spacing();
-
-  // Two-column button grid
-  ImGui::Columns(2, "QuickPick", false);
-  for (const auto &f : kKnownFiles) {
-    std::string full_path = std::string(kDataRoot) + "/" + f.subpath;
-    bool exists = fs::exists(full_path);
-    if (!exists) ImGui::BeginDisabled();
-    if (ImGui::Button(f.label, ImVec2(-1, 0))) {
-      std::strncpy(m_path_buf, full_path.c_str(), sizeof(m_path_buf) - 1);
-      LoadFile(full_path);
+  // Scan ./data once; refresh on demand
+  static std::vector<std::string> s_files;
+  static bool s_scanned = false;
+  auto rescan = [&]() {
+    s_files.clear();
+    const fs::path root{kDataRoot};
+    if (fs::exists(root)) {
+      for (const auto &entry : fs::recursive_directory_iterator(
+               root, fs::directory_options::skip_permission_denied)) {
+        if (!entry.is_regular_file()) continue;
+        const auto name = entry.path().filename().string();
+        if (name.ends_with(".dbn.zst") || name.ends_with(".dbn"))
+          s_files.push_back(entry.path().string());
+      }
+      std::sort(s_files.begin(), s_files.end());
     }
-    if (!exists) {
-      ImGui::EndDisabled();
-      if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-        ImGui::SetTooltip("File not found: %s", full_path.c_str());
-    }
-    ImGui::NextColumn();
-  }
-  ImGui::Columns(1);
+    s_scanned = true;
+  };
+  if (!s_scanned) rescan();
 
-  ImGui::Spacing();
+  ImGui::Text("./data");
+  ImGui::SameLine(0, 16);
+  if (ImGui::SmallButton("Refresh")) rescan();
   ImGui::Separator();
-  ImGui::Spacing();
 
+  ImGui::BeginChild("FileList", ImVec2(0, -65), true);
+  if (s_files.empty()) {
+    ImGui::TextDisabled("No .dbn / .dbn.zst files found under ./data");
+  } else {
+    const fs::path root{kDataRoot};
+    for (const auto &full : s_files) {
+      std::string rel = fs::relative(full, root).string();
+      if (ImGui::Selectable(rel.c_str())) {
+        std::strncpy(m_path_buf, full.c_str(), sizeof(m_path_buf) - 1);
+        LoadFile(full);
+      }
+    }
+  }
+  ImGui::EndChild();
+
+  ImGui::Spacing();
   ImGui::TextDisabled("Or enter path manually:");
   ImGui::SetNextItemWidth(-80);
   ImGui::InputText("##Path", m_path_buf, sizeof(m_path_buf));
   ImGui::SameLine();
-  if (ImGui::Button("Load", ImVec2(70, 0)) && m_path_buf[0] != '\0') {
+  if (ImGui::Button("Load", ImVec2(70, 0)) && m_path_buf[0] != '\0')
     LoadFile(std::string(m_path_buf));
-  }
 
   ImGui::End();
 }

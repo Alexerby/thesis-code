@@ -21,6 +21,7 @@ class Dashboard {
                     ReplayController &controller);
   void RenderPlaybackControls(ReplayController &controller);
   void RenderSpreadGraph(ReplayController &controller, float width, float height);
+  void RenderVolumeChart(ReplayController &controller, float width, float height);
   void RenderOrderEventList(ReplayController &controller, float width, float height);
   void RenderOrderBookDepth(const MarketSnapshot &snapshot, float width, float height);
   bool  m_use_cumulative    = true;
@@ -54,5 +55,12 @@ class Dashboard {
   double m_view_x_min    = 0.0;
   double m_view_x_max    = 0.0;
   double m_visible_secs  = 0.0;  // updated each frame inside the plot
+
+  // Y-axis manual override (applied via Y-axis hover + scroll)
+  bool   m_reset_y     = false;
+  double m_reset_y_min = 0.0;
+  double m_reset_y_max = 0.0;
+  double m_view_y_min  = 0.0;
+  double m_view_y_max  = 0.0;
 };
 

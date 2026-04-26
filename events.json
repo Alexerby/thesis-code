@@ -3,44 +3,188 @@
   "ticker": "MULN",
   "events": [
     {
+      "date": "2022-10-12",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20221012.dbn.zst" }
+    },
+    {
+      "date": "2022-10-20",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20221020.dbn.zst" }
+    },
+    {
       "date": "2022-10-25",
       "complaint_paragraph": 112,
       "window_start": "14:26:10",
       "window_end": "14:28:10",
+      "window_exact": true,
       "dbn": {
         "event":    "data/MANIPULATION_WINDOWS/MULN_20221025.dbn.zst",
         "baseline": "data/BASELINE/MULN_20221025_BASELINE.dbn.zst"
       }
     },
     {
+      "date": "2022-11-03",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20221103.dbn.zst" }
+    },
+    {
+      "date": "2022-11-07",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20221107.dbn.zst" }
+    },
+    {
+      "date": "2022-11-21",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20221121.dbn.zst" }
+    },
+    {
       "date": "2022-12-15",
       "complaint_paragraph": 124,
       "window_start": "13:25:30",
       "window_end": "13:27:30",
+      "window_exact": true,
       "dbn": {
         "event":    "data/MANIPULATION_WINDOWS/MULN_20221215.dbn.zst",
         "baseline": "data/BASELINE/MULN_20221215_BASELINE.dbn.zst"
       }
     },
     {
+      "date": "2023-02-09",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230209.dbn.zst" }
+    },
+    {
+      "date": "2023-02-14",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230214.dbn.zst" }
+    },
+    {
+      "date": "2023-02-15",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230215.dbn.zst" }
+    },
+    {
+      "date": "2023-02-23",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230223.dbn.zst" }
+    },
+    {
+      "date": "2023-02-27",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230227.dbn.zst" }
+    },
+    {
+      "date": "2023-02-28",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230228.dbn.zst" }
+    },
+    {
+      "date": "2023-03-01",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230301.dbn.zst" }
+    },
+    {
+      "date": "2023-03-13",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230313.dbn.zst" }
+    },
+    {
+      "date": "2023-03-20",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230320.dbn.zst" }
+    },
+    {
+      "date": "2023-03-24",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230324.dbn.zst" }
+    },
+    {
       "date": "2023-06-06",
       "complaint_paragraph": 118,
       "window_start": "15:50:59",
       "window_end": "15:52:59",
+      "window_exact": true,
       "dbn": {
         "event":    "data/MANIPULATION_WINDOWS/MULN_20230606.dbn.zst",
         "baseline": "data/BASELINE/MULN_20230606_BASELINE.dbn.zst"
       }
     },
     {
+      "date": "2023-06-15",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230615.dbn.zst" }
+    },
+    {
+      "date": "2023-06-16",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230616.dbn.zst" }
+    },
+    {
+      "date": "2023-06-29",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230629.dbn.zst" }
+    },
+    {
+      "date": "2023-06-30",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230630.dbn.zst" }
+    },
+    {
       "date": "2023-08-17",
       "complaint_paragraph": 130,
       "window_start": "15:53:27",
       "window_end": "15:55:27",
+      "window_exact": true,
       "dbn": {
         "event":    "data/MANIPULATION_WINDOWS/MULN_20230817.dbn.zst",
         "baseline": "data/BASELINE/MULN_20230817_BASELINE.dbn.zst"
       }
+    },
+    {
+      "date": "2023-09-15",
+      "window_start": "15:45:00",
+      "window_end": "16:00:00",
+      "window_exact": false,
+      "dbn": { "event": "data/MANIPULATION_WINDOWS/MULN_20230915.dbn.zst" }
     }
   ]
 }

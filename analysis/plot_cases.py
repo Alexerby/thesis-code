@@ -185,7 +185,7 @@ def main():
     context_min = args.context
 
     with open(EVENTS_FILE) as f:
-        events = json.load(f)["events"]
+        events = [e for e in json.load(f)["events"] if e.get("window_exact")]
 
     os.makedirs("output", exist_ok=True)
 
