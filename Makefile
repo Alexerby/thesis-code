@@ -14,12 +14,11 @@ PROJECT_DIR := $(shell pwd)
 all: build
 
 build:
-	cmake --build build --parallel
+	cmake --build build --parallel 4
 
 install: build
-	sudo install -d $(PREFIX)
-	sudo install -m 755 $(BINARY) $(PREFIX)/$(BINNAME)
-	sudo ln -sf $(PREFIX)/$(BINNAME) $(LINKDIR)/$(BINNAME)
+	sudo cmake --install build --prefix $(PREFIX)
+	sudo ln -sf $(PREFIX)/thesis $(LINKDIR)/$(BINNAME)
 	mkdir -p $(APPDIR)
 	@{ \
 	  echo '[Desktop Entry]'; \
@@ -27,7 +26,7 @@ install: build
 	  echo 'Type=Application'; \
 	  echo 'Name=Market Visualizer'; \
 	  echo 'Comment=MULN spoofing detection — thesis research tool'; \
-	  echo 'Exec=$(PREFIX)/$(BINNAME) gui'; \
+	  echo 'Exec=$(PREFIX)/thesis gui'; \
 	  echo 'Path=$(PROJECT_DIR)'; \
 	  echo 'Icon=utilities-system-monitor'; \
 	  echo 'Categories=Science;Education;'; \
@@ -36,7 +35,7 @@ install: build
 	} > $(DESKTOP)
 	update-desktop-database $(APPDIR) 2>/dev/null || true
 	@echo ""
-	@echo "Installed:    $(PREFIX)/$(BINNAME)"
+	@echo "Installed:    $(PREFIX)/thesis"
 	@echo "Symlink:      $(LINKDIR)/$(BINNAME)"
 	@echo "Desktop:      $(DESKTOP)"
 	@echo "Working dir:  $(PROJECT_DIR)"
